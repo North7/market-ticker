@@ -167,8 +167,8 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
   <div class="c stocks" id="stocks"><div class="hd"><h3 id="wlTitle">Watchlist</h3><span class="k" id="wlSub">TWSE · NYSE · NASDAQ</span></div></div>
 </div>
 
-<script src="feed.js"></script>
-<script src="draw.js"></script>
+<script src="feed.js?v=__VERSION__"></script>
+<script src="draw.js?v=__VERSION__"></script>
 <script>
 const { S, fmt, fmtBig, pct } = Feed;
 const $ = (id) => document.getElementById(id);

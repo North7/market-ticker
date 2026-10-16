@@ -85,8 +85,8 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
   <div class="foot"><span>1 column = 1 minute · ◎ up body · ▢ down body · ✕ large drop · ✚ wick · ■ volume spike (top 10%, height = volume) · 4H bars = return per 4 hours</span><b>MARKET<br>INTERFACE</b></div>
 </div>
 
-<script src="feed.js"></script>
-<script src="draw.js"></script>
+<script src="feed.js?v=__VERSION__"></script>
+<script src="draw.js?v=__VERSION__"></script>
 <script>
 const { S, fmt, pct } = Feed;
 const $ = (id) => document.getElementById(id);

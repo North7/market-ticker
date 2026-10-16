@@ -66,8 +66,8 @@ body { background: radial-gradient(circle at 33% 50%, #12141a 0%, var(--bg) 60%)
 </div>
 <div class="legend" id="legend"><div><i></i>outer orbit · 4H closes · 30 days</div><div><i style="opacity:.5"></i>inner orbit · 1M candles · 60 minutes</div><div><i style="opacity:.25"></i>sweep · seconds</div><div><i style="opacity:.5"></i>orbs · line vs prev close · arc = day range</div></div>
 
-<script src="feed.js"></script>
-<script src="draw.js"></script>
+<script src="feed.js?v=__VERSION__"></script>
+<script src="draw.js?v=__VERSION__"></script>
 <script>
 const { S, fmt, pct } = Feed;
 const $ = (id) => document.getElementById(id);

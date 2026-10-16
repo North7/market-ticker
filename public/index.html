@@ -53,6 +53,10 @@ body.idle, body.idle * { cursor: none !important; }
 @media (hover: none) { .dock button i, .help { display: none; } }   /* 觸控裝置沒有鍵盤，不顯示按鍵提示 */
 @media (max-width: 600px) { .dock { bottom: calc(12px + env(safe-area-inset-bottom)); gap: 2px; padding: 5px; } .dock button { padding: 8px 10px; font-size: 12.5px; } .dock .sep { margin: 0 2px; } }
 .nofs .fsbtn, .nofs .dock .fs { display: none; }
+.ver { position: fixed; left: calc(16px + env(safe-area-inset-left)); top: calc(16px + env(safe-area-inset-top)); z-index: 10; height: 28px; padding: 0 12px; border-radius: 999px; display: flex; align-items: center;
+  font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: .04em; color: rgba(255,255,255,.8); background: rgba(18,18,20,.74); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); opacity: 0; pointer-events: none; transition: opacity .35s; }
+.ver.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -60,6 +64,7 @@ body.idle, body.idle * { cursor: none !important; }
 <nav class="dock" id="dock"></nav>
 <button class="fsbtn" id="fsbtn" title="全螢幕（F）"><svg viewBox="0 0 24 24"><path id="fsIcon" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 <div class="toast" id="toast"></div>
+<div class="ver" id="ver"></div>
 <div class="help" id="help">1–8 / ← → 切換主題<br>A 自動輪播 · F 全螢幕</div>
 
 <script>
@@ -74,6 +79,9 @@ const THEMES = [
   { id: 'vital', file: 'themes/q-vital.html', name: 'Vital', zh: '脈動' },
 ];
 const AUTO_MS = 10 * 60 * 1000;
+// 版本：部署時由 GitHub Actions 換成 v<commit 數> 與台北部署時間；本機執行保持原樣顯示 local
+const VERSION = '__VERSION__', BUILT = '__BUILT__';
+const DEPLOYED = /^v\d+$/.test(VERSION);
 const store = {
   get(k, d) { try { const v = localStorage.getItem('mt.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('mt.' + k, JSON.stringify(v)); } catch { /* ignore */ } },
@@ -129,7 +137,7 @@ function go(i, silent) {
   paintDock();
   const old = [...stage.querySelectorAll('iframe')];
   const f = document.createElement('iframe');
-  f.src = t.file;
+  f.src = DEPLOYED ? `${t.file}?v=${VERSION}` : t.file;
   f.title = t.name;
   f.onload = () => {
     wire(f);
@@ -202,9 +210,9 @@ addEventListener('keydown', onKey);
 // ---- 滑鼠一動就顯示選單，閒置 2.5 秒隱藏（含游標）
 let idleT;
 function wake() {
-  dock.classList.add('show'); $('help').classList.add('show'); $('fsbtn').classList.add('show'); document.body.classList.remove('idle');
+  dock.classList.add('show'); $('help').classList.add('show'); $('fsbtn').classList.add('show'); $('ver').classList.add('show'); document.body.classList.remove('idle');
   clearTimeout(idleT);
-  idleT = setTimeout(() => { if (!dock.matches(':hover') && !$('fsbtn').matches(':hover')) { dock.classList.remove('show'); $('help').classList.remove('show'); $('fsbtn').classList.remove('show'); document.body.classList.add('idle'); } else wake(); }, matchMedia('(hover: none)').matches ? 4000 : 2500);
+  idleT = setTimeout(() => { if (!dock.matches(':hover') && !$('fsbtn').matches(':hover')) { dock.classList.remove('show'); $('help').classList.remove('show'); $('fsbtn').classList.remove('show'); $('ver').classList.remove('show'); document.body.classList.add('idle'); } else wake(); }, matchMedia('(hover: none)').matches ? 4000 : 2500);
 }
 addEventListener('mousemove', wake);
 
@@ -213,6 +221,22 @@ async function keepAwake() { try { if ('wakeLock' in navigator) await navigator.
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
 keepAwake();
 setInterval(() => { const r = () => Math.round((Math.random() - 0.5) * 6); stage.style.transform = `translate(${r()}px, ${r()}px)`; }, 180000);
+
+// ---- 版本顯示與自動更新：線上版每 5 分鐘、或切回分頁時檢查，有新版就帶新版本號重新載入（繞過快取）
+$('ver').textContent = DEPLOYED ? `${VERSION} · ${BUILT}` : 'local';
+if (DEPLOYED) {
+  if (store.get('ver', null) && store.get('ver', null) !== VERSION) setTimeout(() => toast(`已更新 ${VERSION}`), 600);
+  store.set('ver', VERSION);
+  const checkVersion = async () => {
+    try {
+      const j = await (await fetch('version.json', { cache: 'no-store' })).json();
+      if (j.version && j.version !== VERSION) { const u = new URL(location.href); u.searchParams.set('v', j.version); location.replace(u.toString()); }
+    } catch { /* 離線就下次再查 */ }
+  };
+  setTimeout(checkVersion, 3000);
+  setInterval(checkVersion, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkVersion(); });
+}
 
 go(idx, true);
 document.body.classList.add('idle');

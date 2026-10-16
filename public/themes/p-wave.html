@@ -68,8 +68,8 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
 <div class="note">The sphere bends with the last minute:<br>each bulge is a 5-second return,<br>fold depth is the 60-second range,<br>its tremor is the live trade rate.<br><br>Below, every wave is 2 seconds of trading —<br>up above the line, down below it,<br>flowing in from the right.</div>
 <div class="foot"><span>SPHERE —<b>5-sec returns · 60 s</b></span><span>WAVES —<b>2-sec returns · 120 s</b></span><span>TPE —<b id="tpe">—</b></span><span>NYC —<b id="nyc">—</b></span><span>24H AMP —<b class="y" id="amp">—</b></span><span>TRADES / S —<b id="tps">—</b></span></div>
 
-<script src="feed.js"></script>
-<script src="draw.js"></script>
+<script src="feed.js?v=__VERSION__"></script>
+<script src="draw.js?v=__VERSION__"></script>
 <script>
 const { S, fmt, pct } = Feed;
 const $ = (id) => document.getElementById(id);
