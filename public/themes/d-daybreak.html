@@ -30,13 +30,6 @@ body { background: var(--void); color: var(--ink); overflow: hidden; font-family
 .wrap { height: 100vh; display: grid; grid-template-rows: 66px minmax(0, 1fr) minmax(150px, 22vh) minmax(120px, 15.5vh) 38px; padding: 0 36px; }
 
 .mast { display: flex; align-items: center; gap: 16px; border-top: 6px solid var(--ink); margin-top: 18px; padding-top: 10px; }
-.brand { display: flex; align-items: center; gap: 10px; }
-.brand svg { width: 34px; height: 34px; overflow: visible; }
-.brand svg path:first-child { stroke-dasharray: 50; stroke-dashoffset: 50; animation: rise 1.4s var(--snap) .2s forwards; }
-@keyframes rise { to { stroke-dashoffset: 0; } }
-.wm { display: grid; line-height: 1; }
-.wm b { font-stretch: 112%; font-weight: 900; font-size: 18px; letter-spacing: .04em; }
-.wm span { font-size: 11px; color: var(--ink-3); letter-spacing: .5em; margin-top: 5px; }
 .dateline { flex: 1; display: flex; align-items: center; gap: 14px; font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); letter-spacing: .06em; }
 .dateline b { font-family: var(--f-cjk); font-weight: 900; font-size: 13px; color: #fff; background: var(--red); padding: 1px 8px; letter-spacing: .1em; }
 .dateline hr { flex: 1; border: 0; border-top: 1px solid var(--line); margin: 0; }
@@ -44,7 +37,7 @@ body { background: var(--void); color: var(--ink); overflow: hidden; font-family
 #date { white-space: nowrap; }
 
 .mega { position: relative; container-type: size; border-bottom: 1px solid var(--line); min-height: 0; }
-.mega .big { position: absolute; left: -4px; bottom: 0.16em; font-stretch: 62%; font-weight: 900; font-size: min(27cqw, 72cqh); line-height: .9; letter-spacing: -.035em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mega .big { position: absolute; left: -4px; bottom: 0.16em; font-stretch: 62%; font-weight: 900; font-size: min(27cqw, 72cqh, calc((100cqh - var(--hud, 34px)) * .92)); line-height: .9; letter-spacing: -.035em; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .mega .big .dec { font-size: .4em; letter-spacing: -.02em; color: var(--ink-3); }
 .mega .big span { display: inline-block; }
 .mega .big span.dc { color: var(--red); }
@@ -107,6 +100,7 @@ body { background: var(--void); color: var(--ink); overflow: hidden; font-family
   .dateline { flex-basis: 100%; gap: 4px 10px; font-size: 10px; }
   .dateline hr { display: none; }
   .hud.tl { right: 0; flex-wrap: wrap; font-size: 10px; row-gap: 2px; }
+  .mega { --hud: 52px; }
   .hud.tr { display: none; }
   .mega canvas { top: 46px; }
   .mid { grid-template-columns: 1fr; gap: 10px; height: auto; }
@@ -136,8 +130,6 @@ body { background: var(--void); color: var(--ink); overflow: hidden; font-family
 <body>
 <div class="wrap">
   <header class="mast">
-    <div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 40a14 14 0 0 1 28 0" fill="none" stroke="var(--red)" stroke-width="5"/><path d="M6 40h52" stroke="var(--ink)" stroke-width="5"/></svg>
-      <span class="wm"><b>DAYBREAK</b><span>破曉</span></span></div>
     <div class="dateline"><b>即時</b><span id="date">—</span><span id="xtra" class="xtra"></span><hr><span>台北 <span class="k" id="tpe">—</span></span><span>紐約 <span class="k" id="nyc">—</span></span></div>
   </header>
 
