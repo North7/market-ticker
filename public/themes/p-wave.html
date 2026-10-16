@@ -19,9 +19,14 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
 .chg .ring { display: inline-grid; place-items: center; height: 40px; padding: 0 16px; border: 1.5px solid #f5f35c; border-radius: 999px; color: #f5f35c; font-weight: 500; font-size: 17px; }
 .list { position: fixed; left: 42px; top: calc(96px + min(19vh, 172px) + 92px); z-index: 2; font-size: 13px; line-height: 1.55; color: #d6d6da; width: 330px; }
 .list .r { display: grid; grid-template-columns: 1fr auto auto; gap: 14px; padding: 5px 0; border-bottom: 1px solid #1c1c1f; }
-.list .r span { color: #8a8a90; }
+.list .r span { color: #8a8a90; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .list .r b { font-weight: 500; color: #fff; font-variant-numeric: tabular-nums; }
 .list .r i { font-style: normal; font-variant-numeric: tabular-nums; min-width: 58px; text-align: right; }
+@media (max-height: 760px) {   /* 矮視窗：清單改兩欄，避免壓到波形 */
+  .list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; width: min(540px, 46vw); font-size: 12px; line-height: 1.4; }
+  .list .r { padding: 3px 0; gap: 10px; }
+  .list .r i { min-width: 48px; }
+}
 .note { position: fixed; right: 40px; top: 40px; z-index: 2; font-size: 12.5px; line-height: 1.45; color: #b5b5bb; text-align: left; width: 230px; }
 .foot { position: fixed; left: 40px; right: 40px; bottom: 22px; z-index: 2; display: flex; justify-content: space-between; font-size: 12px; color: #d6d6da; }
 .foot span b { font-weight: 500; color: #fff; margin-left: 10px; }

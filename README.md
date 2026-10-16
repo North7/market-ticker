@@ -19,7 +19,7 @@
 | 主動買賣比 | 合約主動買量 ÷ 主動賣量（5 分） | Binance Futures |
 | Coinbase 溢價 | Coinbase BTC-USD 減 Binance BTCUSDT，正值代表美國買盤強 | Coinbase |
 | 恐懼貪婪 | 0–100 情緒指數與昨日、7 日前比較 | alternative.me |
-| 趨勢體檢 | 價格對 200 日線判斷牛熊，4H RSI 標超買超賣 | Binance 日 K／4H K |
+| 200 日線乖離 | 現價相對 200 日均線的百分比，小字附 4H RSI(14) | Binance 日 K／4H K |
 
 標題小字另外顯示 ETH 價格和穩定幣總供給（DefiLlama）。
 本機版也可以加 `?mode=crypto` 強制看加密指標，`?mode=stocks` 則強制股票模式。

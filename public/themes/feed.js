@@ -181,16 +181,15 @@
       out.push({ ...base, id: 'FNG', code: 'F&G', icon: 'FG', name: '恐懼貪婪', venue: 'alternative.me · 每日', price: v, display: String(v), chg: v - 50, pct: v - 50,
         chgText: now ? ZH[now.c] || now.c : '—', pos: v / 100, prevClose: 50, amp: v / 20, posLabel: '指數', slots: 30,
         sub: prev ? `昨日 ${prev.v} · 7 日均 ${Math.round(f.slice(-7).reduce((a, x) => a + x.v, 0) / Math.min(7, f.length))}` : '—', bars: series(f.map((x) => x.v), f.length ? f[0].t : 0, 86400) }); }
-    // 6 趨勢體檢：牛熊（200 日線、50/200 交叉）＋ RSI 超買超賣
-    { const dc = CR.daily.map((b) => b.c), ma200 = sma(dc, 200), ma50 = sma(dc, 50), px = S.price || dc[dc.length - 1];
-      const r4 = rsi((S.bars['4h'] || []).map((b) => b.c)), r1d = rsi(dc), r1h = rsi(CR.h1.map((b) => b.c));
-      let label = '—', chg = 0;
-      if (ma200 && ma50 && px) { const above = px >= ma200; label = above ? (ma50 >= ma200 ? '牛市' : '轉強') : (ma50 < ma200 ? '熊市' : '轉弱'); chg = px - ma200; }
-      const tag = (r) => (r == null ? '' : r >= 70 ? ' 超買' : r <= 30 ? ' 超賣' : '');
+    // 6 200 日線乖離：現價相對 200 日均線的百分比（純數值，不下牛熊結論）＋ 4H RSI(14)
+    { const dc = CR.daily.map((b) => b.c), ma200 = sma(dc, 200), px = S.price || dc[dc.length - 1];
+      const r4 = rsi((S.bars['4h'] || []).map((b) => b.c)), r1d = rsi(dc);
+      const dev = ma200 && px ? (px / ma200 - 1) * 100 : null, chg = dev != null ? px - ma200 : 0;
       const d60 = dc.slice(-60);
-      out.push({ ...base, id: 'TREND', code: 'TREND', icon: 'TR', name: '趨勢體檢', venue: '日線 200MA · RSI(14)', price: chg, display: label, chg, pct: ma200 ? (px / ma200 - 1) * 100 : 0,
-        chgText: r4 != null ? `RSI ${Math.round(r4)}${tag(r4)}` : '—', pos: r4 != null ? r4 / 100 : 0.5, prevClose: ma200 || 0, amp: (r4 || 50) / 20, posLabel: 'RSI 4H', slots: 60,
-        sub: ma200 ? `距 200 日線 ${signed((px / ma200 - 1) * 100, (v) => v.toFixed(1) + '%')} · 1H ${r1h != null ? Math.round(r1h) : '—'} · 1D ${r1d != null ? Math.round(r1d) : '—'}` : '—',
+      out.push({ ...base, id: 'TREND', code: 'MA200', icon: 'MA', name: '200 日線乖離', venue: 'Binance 日線 · RSI(14)', price: chg,
+        display: dev != null ? signed(dev, (v) => v.toFixed(1) + '%') : '—', chg, pct: dev || 0,
+        chgText: r4 != null ? `RSI ${Math.round(r4)}` : '—', pos: r4 != null ? r4 / 100 : 0.5, prevClose: ma200 || 0, amp: (r4 || 50) / 20, posLabel: 'RSI 4H', slots: 60,
+        sub: ma200 ? `200 日線 ${fmt(ma200, 0)} · RSI 4H ${r4 != null ? Math.round(r4) : '—'} · 1D ${r1d != null ? Math.round(r1d) : '—'}` : '—',
         bars: series(d60, CR.daily.length ? CR.daily[CR.daily.length - d60.length].t : 0, 86400) }); }
     S.markets = out;
     emit('markets');

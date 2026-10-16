@@ -13,24 +13,27 @@
 html, body { margin: 0; height: 100%; }
 body { background: radial-gradient(circle at 33% 50%, #12141a 0%, var(--bg) 60%); color: var(--fg); overflow: hidden; font-family: 'Geist', 'Noto Sans TC', sans-serif; }
 #cv { position: fixed; inset: 0; width: 100%; height: 100%; }
-.price { position: fixed; right: 40px; top: 70px; text-align: right; z-index: 2; mix-blend-mode: difference; }
-.price .big { font-weight: 100; font-size: min(27vh, 240px); line-height: .9; letter-spacing: -.05em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.col { position: fixed; left: var(--L, 55vw); right: 36px; top: 64px; bottom: 22px; z-index: 2; display: flex; flex-direction: column; align-items: flex-end; container-type: size; }
+.price { text-align: right; mix-blend-mode: difference; flex: none; }
+.price .big { font-weight: 100; font-size: min(27vh, 240px, 29cqw); line-height: .9; letter-spacing: -.05em; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .price .big small { font-size: .36em; font-weight: 200; letter-spacing: -.02em; }
 .price .cap { font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .3em; color: #8c8e95; text-transform: uppercase; margin-bottom: 8px; }
-.chg { position: fixed; right: 44px; top: calc(70px + min(27vh, 240px) + 30px); display: flex; gap: 28px; align-items: baseline; font-family: 'Geist Mono'; font-size: 13px; color: var(--mute); z-index: 2; }
-.chg .p { font-family: 'Geist'; font-weight: 300; font-size: 40px; letter-spacing: -.02em; }
+.chg { flex: none; margin: clamp(10px, 3vh, 30px) 4px 0 0; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px clamp(14px, 2.4cqw, 28px); align-items: baseline; font-family: 'Geist Mono'; font-size: 13px; color: var(--mute); white-space: nowrap; }
+.chg .p { font-family: 'Geist'; font-weight: 300; font-size: clamp(26px, 5.4vh, 40px); letter-spacing: -.02em; }
 .chg b { color: var(--fg); font-weight: 400; margin-left: 6px; }
 .corner { position: fixed; left: 32px; top: 26px; font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .28em; color: var(--mute); text-transform: uppercase; z-index: 2; }
 .corner b { color: var(--fg); font-weight: 400; }
 .legend { position: fixed; left: 32px; top: 52px; font-family: 'Geist Mono'; font-size: 10.5px; letter-spacing: .2em; color: var(--mute); text-transform: uppercase; z-index: 2; line-height: 1.9; }
+@media (max-height: 760px) { .legend { font-size: 9.5px; letter-spacing: .14em; line-height: 1.75; } }
 .legend i { display: inline-block; width: 18px; height: 1px; background: var(--fg); vertical-align: middle; margin-right: 10px; }
-.orbs { position: fixed; right: 24px; bottom: 26px; width: 560px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 10px; z-index: 2; }
-.orb { position: relative; height: 176px; }
-.orb canvas { position: absolute; left: 50%; top: 0; width: 150px; height: 150px; margin-left: -75px; }
-.orb .in { position: absolute; left: 0; right: 0; top: 46px; text-align: center; }
-.orb .px { font-weight: 300; font-size: 22px; letter-spacing: -.02em; }
-.orb .pc { font-family: 'Geist Mono'; font-size: 11px; margin-top: 2px; }
-.orb .nm { position: absolute; left: 0; right: 0; top: 150px; text-align: center; font-size: 12px; font-weight: 500; color: #a9abb1; white-space: nowrap; }
+.orbs { flex: 1; min-height: 0; width: min(100%, 560px); margin-top: clamp(8px, 2.4vh, 24px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 6px 10px; }
+.orb { position: relative; container-type: size; min-height: 0; }
+.orb > * { --s: min(100cqw, calc(100cqh - 22px), 150px); }
+.orb canvas { position: absolute; left: 50%; bottom: 22px; width: var(--s); height: var(--s); transform: translateX(-50%); }
+.orb .in { position: absolute; left: 0; right: 0; bottom: 22px; height: var(--s); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+.orb .px { font-weight: 300; font-size: max(13px, calc(var(--s) * .15)); letter-spacing: -.02em; white-space: nowrap; }
+.orb .pc { font-family: 'Geist Mono'; font-size: max(9px, calc(var(--s) * .073)); margin-top: 2px; white-space: nowrap; }
+.orb .nm { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font-size: 12px; font-weight: 500; color: #a9abb1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .orb .nm small { font-family: 'Geist Mono'; font-size: 10px; color: var(--mute); margin-left: 6px; letter-spacing: .12em; }
 .u { color: var(--up); } .d { color: var(--down); }
 .xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
@@ -39,10 +42,12 @@ body { background: radial-gradient(circle at 33% 50%, #12141a 0%, var(--bg) 60%)
 <body>
 <canvas id="cv"></canvas>
 <div class="corner"><b>Orbit</b> · BTC / USDT · TPE <b id="tpe">--</b> · NYC <b id="nyc">--</b> · <span id="xtra" class="xtra"></span></div>
+<div class="col">
 <div class="price"><div class="cap">Bitcoin · last trade</div><div class="big" id="price">—</div></div>
 <div class="chg"><span class="p" id="pct">—</span><span>H<b id="h">—</b></span><span>L<b id="l">—</b></span><span>AMP<b id="amp">—</b></span></div>
-<div class="legend"><div><i></i>outer orbit · 4H closes · 30 days</div><div><i style="opacity:.5"></i>inner orbit · 1M candles · 60 minutes</div><div><i style="opacity:.25"></i>sweep · seconds</div><div><i style="opacity:.5"></i>orbs · line vs prev close · arc = day range</div></div>
 <div class="orbs" id="orbs"></div>
+</div>
+<div class="legend"><div><i></i>outer orbit · 4H closes · 30 days</div><div><i style="opacity:.5"></i>inner orbit · 1M candles · 60 minutes</div><div><i style="opacity:.25"></i>sweep · seconds</div><div><i style="opacity:.5"></i>orbs · line vs prev close · arc = day range</div></div>
 
 <script src="feed.js"></script>
 <script src="draw.js"></script>
@@ -59,7 +64,9 @@ const ang = (i, n) => -Math.PI / 2 + TAU * GAP / 2 + (i / Math.max(1, n - 1)) * 
 
 function orbit() {
   const { ctx, w, h } = Draw.fit($('cv'));
-  const cx = w * 0.31, cy = h * 0.54, R = Math.min(h * 0.43, w * 0.29);
+  const R = Math.min(h * 0.43, w * 0.29), cx = Math.min(w * 0.31, R + 72), cy = h * 0.54;
+  const L = Math.round(cx + R + 56) + 'px';
+  if (document.documentElement.style.getPropertyValue('--L') !== L) document.documentElement.style.setProperty('--L', L);
   // 刻度環：對齊外環 4H 資料，短刻度＝1 根 4H，長刻度＝1 天，標出天數
   ctx.save();
   const N4 = Math.min(180, (S.bars['4h'] || []).length || 180);
@@ -176,14 +183,14 @@ Feed.on('markets', () => {
     o.q('.pc').textContent = Feed.chgTxt(s); o.q('.pc').className = 'pc ' + cls(s.chg);
     // 迷你軌道：整個交易時段一圈，半徑＝相對昨收
     const { ctx, w, h } = Draw.fit(o.q('canvas'));
-    const cx = w / 2, cy = h / 2, R = 56, slots = Feed.slots(s);
+    const cx = w / 2, cy = h / 2, R = w * 0.35, slots = Feed.slots(s);
     const bars = s.bars || [];
     ctx.strokeStyle = 'rgba(236,234,228,.12)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
     if (!bars.length || s.prevClose == null) return;
     const maxAbs = Math.max(...bars.map((b) => Math.abs(b.c - s.prevClose)), 1e-12);
     const a = (i) => -Math.PI / 2 + i / slots * TAU;
-    const r = (p) => R + (p - s.prevClose) / maxAbs * 16;
+    const r = (p) => R + (p - s.prevClose) / maxAbs * w * 0.1;
     ctx.beginPath();
     bars.forEach((b, i) => { const x = cx + Math.cos(a(i)) * r(b.c), y = cy + Math.sin(a(i)) * r(b.c); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
     ctx.strokeStyle = s.chg >= 0 ? UP : DOWN; ctx.lineWidth = 1.5; ctx.stroke();
@@ -191,7 +198,7 @@ Feed.on('markets', () => {
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx + Math.cos(a(li)) * r(bars[li].c), cy + Math.sin(a(li)) * r(bars[li].c), 2.5, 0, TAU); ctx.fill();
     // 振幅弧
     ctx.strokeStyle = 'rgba(236,234,228,.5)'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(cx, cy, R + 22, -Math.PI / 2, -Math.PI / 2 + Math.min(1, s.amp / 5) * TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, w * 0.48, -Math.PI / 2, -Math.PI / 2 + Math.min(1, s.amp / 5) * TAU); ctx.stroke();
   });
 });
 

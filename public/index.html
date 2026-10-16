@@ -42,6 +42,8 @@ body.idle, body.idle * { cursor: none !important; }
 .help { position: fixed; right: 22px; bottom: 30px; z-index: 10; font-family: 'Geist Mono'; font-size: 10.5px; letter-spacing: .12em; color: rgba(255, 255, 255, .55);
   opacity: 0; transition: opacity .35s; pointer-events: none; text-align: right; line-height: 1.8; mix-blend-mode: difference; }
 .help.show { opacity: 1; }
+@media (max-width: 1480px) { .help { display: none; } }   /* 窄螢幕讓位給底部選單，按鍵說明已在選單按鈕上 */
+@media (max-width: 1080px) { .dock button small { display: none; } }
 </style>
 </head>
 <body>
