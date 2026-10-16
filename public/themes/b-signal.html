@@ -13,7 +13,7 @@
 html, body { margin: 0; height: 100%; }
 body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 'Geist', 'Noto Sans TC', sans-serif; }
 .wrap { height: 100vh; display: grid; grid-template-rows: 38px minmax(0, 1fr) clamp(140px, 22vh, 196px); }
-.top { display: flex; align-items: center; gap: 28px; padding: 0 28px; font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); border-bottom: 1px solid var(--line); }
+.top { display: flex; align-items: center; gap: 22px; white-space: nowrap; overflow: hidden; padding: 0 28px; font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); border-bottom: 1px solid var(--line); }
 .top b { color: var(--ink); font-weight: 500; }
 .top .sp { margin-left: auto; }
 .top .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--btc); display: inline-block; margin-right: 8px; animation: blink 1.2s steps(2) infinite; }
@@ -43,15 +43,17 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 .col .sp { position: relative; min-height: 0; margin: 8px 0 6px; }
 .col .sp canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .col .ch { font-family: 'Geist Mono'; font-size: clamp(10px, .85vw, 12px); display: flex; justify-content: space-between; gap: 6px; white-space: nowrap; }
-.col .ch em { font-style: normal; color: var(--mute); }
+.col .ch em { font-style: normal; color: var(--mute); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.col .ch .p { flex: none; }
 .col.tick .px { animation: tk .8s ease-out; }
 @keyframes tk { from { color: var(--btc); } }
 .u { color: var(--up); } .d { color: var(--down); }
+.xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><span><span class="dot"></span><b>Signal</b> — BTC / USDT — Binance spot</span><span>1 column = 1 minute · disc height = 24H range position</span>
+  <div class="top"><span><span class="dot"></span><b>Signal</b> — BTC / USDT — Binance spot</span><span>1 col = 1 min · disc = 24H pos</span><span id="xtra" class="xtra"></span>
     <span class="sp">TPE <b id="tpe">--</b></span><span>NYC <b id="nyc">--</b></span><span>UTC <b id="utc">--</b></span></div>
   <section class="field" id="field">
     <canvas id="cv"></canvas>
@@ -72,6 +74,7 @@ const $ = (id) => document.getElementById(id);
 const BTC = '#f7931a', INK = '#171717', UPC = '#e2700c';
 const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
 Feed.start({ '1m': 120, '4h': 90 });
+Feed.mountExtras('#xtra');
 
 // 5×7 點陣字形
 const G = {
@@ -212,23 +215,23 @@ Feed.on('markets', () => {
     if (c.last != null && c.last !== s.price) { c.el.classList.remove('tick'); void c.el.offsetWidth; c.el.classList.add('tick'); }
     c.last = s.price;
     c.q('.code i').textContent = s.isOpen ? '● LIVE' : 'CLOSED'; c.q('.code i').className = s.isOpen ? 'on' : '';
-    c.q('.px').textContent = fmt(s.price, s.dec);
-    c.q('.p').textContent = pct(s.pct); c.q('.p').className = 'p ' + cls(s.chg);
-    c.q('.a').textContent = 'AMP ' + s.amp.toFixed(2) + '%';
+    c.q('.px').textContent = Feed.val(s);
+    c.q('.p').textContent = Feed.chgTxt(s); c.q('.p').className = 'p ' + cls(s.chg);
+    c.q('.a').textContent = Feed.sub(s, 'AMP');
     // 點陣迷你圖
     const cv = c.q('canvas');
     const { ctx, w, h } = Draw.fit(cv);
-    const slots = s.market === 'TW' ? 54 : 78, bars = s.bars || [];
+    const slots = Feed.slots(s), bars = s.bars || [];
     if (!bars.length) return;
-    let hi = Math.max(s.prevClose || -Infinity, ...bars.map((b) => b.h)), lo = Math.min(s.prevClose || Infinity, ...bars.map((b) => b.l));
+    let hi = Math.max(s.prevClose ?? -Infinity, ...bars.map((b) => b.h)), lo = Math.min(s.prevClose ?? Infinity, ...bars.map((b) => b.l));
     const step = 4, rowsN = Math.floor(h / step), colsN = Math.floor(w / step);
     const Y = (p) => Math.round((hi - p) / (hi - lo || 1) * (rowsN - 1));
     for (let x = 0; x < colsN; x++) for (let y = 0; y < rowsN; y++) { ctx.fillStyle = 'rgba(0,0,0,.06)'; ctx.fillRect(x * step, y * step, 2, 2); }
-    const by = s.prevClose ? Y(s.prevClose) : null;
+    const by = s.prevClose != null ? Y(s.prevClose) : null;
     bars.forEach((b, k) => {
       const x = Math.floor(k / slots * colsN);
       const y = Y(b.c);
-      ctx.fillStyle = b.c >= (s.prevClose || b.o) ? UPC : INK;
+      ctx.fillStyle = b.c >= (s.prevClose ?? b.o) ? UPC : INK;
       if (by != null) { const [a, z] = y < by ? [y, by] : [by, y]; for (let r = a; r <= z; r++) { ctx.globalAlpha = r === y ? 1 : 0.28; ctx.fillRect(x * step, r * step, 3, 3); } ctx.globalAlpha = 1; }
       else ctx.fillRect(x * step, y * step, 3, 3);
     });

@@ -81,11 +81,12 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
   .wrap { grid-template-rows: 40px clamp(120px, 23vh, 206px) minmax(0, 1fr) clamp(84px, 14vh, 128px); }
   .tl { display: none; }
 }
+.xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><i>◈</i><span>Mission Control Dashboard · BTC / USDT</span><span class="sp" id="date">—</span></div>
+  <div class="top"><i>◈</i><span>Mission Control Dashboard · BTC / USDT</span><span id="xtra" class="xtra"></span><span class="sp" id="date">—</span></div>
   <section class="hero">
     <div class="title"><div class="price" id="price">—</div><div class="sub">Bitcoin Expedition<span>Binance spot · live telemetry</span></div></div>
     <div class="box sage"><div class="meter"><i id="mPos"></i></div><div class="lab"><span>24H High</span><span id="mPosT">—</span></div>
@@ -111,8 +112,11 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 const { S, fmt, pct } = Feed;
 const $ = (id) => document.getElementById(id);
 Feed.start({ '1m': 150, '4h': 90 });
+Feed.mountExtras('#xtra');
 
 // ---- 交易時段甘特圖（台北時間 24 小時軸）
+// 沒有股票資料時（加密模式）用時鐘判斷是否開盤（不含假日）
+function clockOpen(t, o, c) { const h = +t.hh + +t.mm / 60; return !['Sat', 'Sun'].includes(t.wd) && h >= o && h < c; }
 function timeline() {
   const el = $('tl');
   const tp = Feed.tzNow('Asia/Taipei'), ny = Feed.tzNow('America/New_York');
@@ -127,8 +131,8 @@ function timeline() {
   segs.forEach(([a, b], k) => { html += `<div class="blk b" style="left:${pctX(a)};width:${((b - a) / 24 * 100)}%">${k ? '' : '⚑ NYSE · NASDAQ'}</div>`; });
   html += `<div class="blk btc" style="left:0;width:100%">BTC · 24 / 7 · always on</div>`;
   const tw = S.markets.find((m) => m.market === 'TW'), us = S.markets.find((m) => m.market === 'US');
-  html += `<div class="note a" style="left:${pctX(9)}">台股 ${tw && tw.isOpen ? '交易中' : '休市'}<br>加權 ${tw ? pct(tw.pct) : '—'}</div>`;
-  html += `<div class="note b" style="left:${pctX(Math.min(21, usOpen % 24))}">美股 ${us && us.isOpen ? '交易中' : '休市'}<br>SPY ${us ? pct(us.pct) : '—'}</div>`;
+  html += `<div class="note a" style="left:${pctX(9)}">台股 ${(tw ? tw.isOpen : clockOpen(tp, 9, 13.5)) ? '交易中' : '休市'}${tw ? `<br>加權 ${pct(tw.pct)}` : ''}</div>`;
+  html += `<div class="note b" style="left:${pctX(Math.min(21, usOpen % 24))}">美股 ${(us ? us.isOpen : clockOpen(ny, 9.5, 16)) ? '交易中' : '休市'}${us ? `<br>SPY ${pct(us.pct)}` : ''}</div>`;
   html += `<div class="now" style="left:${pctX(nowH)}"><b>${tp.hh}:${tp.mm}</b></div>`;
   el.innerHTML = html;
 }
@@ -160,16 +164,17 @@ Feed.on('markets', () => {
     if (!c) {
       const el = document.createElement('div');
       el.className = 'tile';
-      el.innerHTML = `<div class="lab"><span>${s.market === 'TW' ? 'TWSE' : 'NYSE'} · ${s.code}</span><span class="st"></span></div><div class="nm">${s.name.replace(' ETF', '')}</div><div class="pc">—</div><div class="px"><span class="p">—</span><span class="a">—</span></div><canvas></canvas>`;
+      el.innerHTML = `<div class="lab"><span>${Feed.venue(s)} · ${s.code}</span><span class="st"></span></div><div class="nm">${s.name.replace(' ETF', '')}</div><div class="pc">—</div><div class="px"><span class="p">—</span><span class="a">—</span></div><canvas></canvas>`;
       $('tiles').appendChild(el);
       c = tiles[s.id] = { el, q: (x) => el.querySelector(x) };
     }
     if (s.price == null) return;
     c.q('.st').textContent = s.isOpen ? '● LIVE' : 'HOLD';
-    c.q('.pc').textContent = pct(s.pct);
-    c.q('.p').textContent = fmt(s.price, s.dec); c.q('.a').textContent = 'AMP ' + s.amp.toFixed(2) + '%';
+    const cr = s.market === 'CR';
+    c.q('.pc').textContent = cr ? Feed.val(s) : Feed.chgTxt(s);
+    c.q('.p').textContent = cr ? Feed.chgTxt(s) : Feed.val(s); c.q('.a').textContent = Feed.sub(s, 'AMP');
     const dark = getComputedStyle(c.el).color !== 'rgb(28, 29, 27)';
-    Draw.spark(c.q('canvas'), s.bars, { mode: 'line', slots: s.market === 'TW' ? 54 : 78, base: s.prevClose, line: dark ? '#e6eee8' : '#1c1d1b', lineWidth: 1.6, baseColor: dark ? 'rgba(230,238,232,.35)' : 'rgba(28,29,27,.35)', baseDash: [2, 3] });
+    Draw.spark(c.q('canvas'), s.bars, { mode: 'line', slots: Feed.slots(s), base: s.prevClose, line: dark ? '#e6eee8' : '#1c1d1b', lineWidth: 1.6, baseColor: dark ? 'rgba(230,238,232,.35)' : 'rgba(28,29,27,.35)', baseDash: [2, 3] });
   });
 });
 

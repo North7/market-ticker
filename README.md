@@ -7,6 +7,23 @@
 雙擊 `start.command` 啟動（本機伺服器＋防休眠＋Chrome 全螢幕），雙擊 `stop.command` 停止。
 只需要 macOS 內建的 `python3`；網頁需要連網（行情、字型）。
 
+### 線上版（GitHub Pages）
+
+<https://north7.github.io/market-ticker/> 不用安裝，但沒有本機伺服器，所以拿不到台美股，
+六張小卡改成加密指標（純前端直連各交易所公開 API）：
+
+| 卡片 | 內容 | 來源 |
+|---|---|---|
+| 鯨魚買賣 | 近 1 小時 ≥ 10 萬美元大單的淨買賣額 | Binance 現貨＋合約逐筆 |
+| 爆倉 | 開頁以來多空爆倉金額（無免費歷史，從開頁開始累積） | Binance＋Bybit 爆倉推播 |
+| 主動買賣比 | 合約主動買量 ÷ 主動賣量（5 分） | Binance Futures |
+| Coinbase 溢價 | Coinbase BTC-USD 減 Binance BTCUSDT，正值代表美國買盤強 | Coinbase |
+| 恐懼貪婪 | 0–100 情緒指數與昨日、7 日前比較 | alternative.me |
+| 趨勢體檢 | 價格對 200 日線判斷牛熊，4H RSI 標超買超賣 | Binance 日 K／4H K |
+
+標題小字另外顯示 ETH 價格和穩定幣總供給（DefiLlama）。
+本機版也可以加 `?mode=crypto` 強制看加密指標，`?mode=stocks` 則強制股票模式。
+
 ## 主題
 
 | 鍵 | 主題 | 概念 |

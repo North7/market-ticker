@@ -80,10 +80,23 @@
   }
   setInterval(() => { if (ws && ws.readyState === 1 && Date.now() - lastMsg > 15000) ws.close(); }, 5000);
 
+  // ---- 模式：本機有 server.py 就顯示台美股（stocks）；連不到（例如 GitHub Pages）就換成加密指標（crypto）
+  // 網址加 ?mode=crypto 或 ?mode=stocks 可強制（外殼的網址參數也會傳給主題）
+  function forcedMode() {
+    const q = (u) => { try { return new URLSearchParams(u).get('mode'); } catch { return null; } };
+    let m = q(location.search);
+    if (!m && window.parent !== window) { try { m = q(window.parent.location.search); } catch { /* 跨網域就算了 */ } }
+    return m === 'crypto' || m === 'stocks' ? m : null;
+  }
+  S.mode = forcedMode();
+  let stockTimer = null;
+
   async function pollMarkets() {
     try {
       const r = await fetch('/api/markets', { cache: 'no-store' });
+      if (!r.ok) throw new Error('no api');
       const d = await r.json();
+      if (!S.mode) { S.mode = 'stocks'; emit('mode'); }
       S.markets = d.symbols.map((s) => {
         const chg = s.price != null && s.prevClose ? s.price - s.prevClose : 0;
         const pct = s.prevClose ? chg / s.prevClose * 100 : 0;
@@ -95,13 +108,154 @@
         return { ...s, chg, pct, amp, pos, dec, rangeLo: lo, rangeHi: hi };
       });
       emit('markets');
-    } catch { /* 下一輪再試 */ }
+    } catch {
+      // 第一次就連不到 → 沒有本機伺服器，切到加密模式
+      if (!S.mode && !/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname)) { S.mode = 'crypto'; clearInterval(stockTimer); emit('mode'); startCrypto(); }
+    }
   }
 
   const fmt = (v, d = 2) => (v == null || !isFinite(v)) ? '--' : v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
   const fmtBig = (v) => v >= 1e9 ? (v / 1e9).toFixed(2) + 'B' : v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : fmt(v, 0);
   const sgn = (v) => (v > 0 ? '+' : v < 0 ? '−' : '');
   const pct = (v) => `${sgn(v)}${Math.abs(v).toFixed(2)}%`;
+
+  // =====================================================================
+  // 加密模式：6 個指標＋ETH／穩定幣，全部是可跨網域的公開 API，不需要伺服器或金鑰
+  // =====================================================================
+  const WHALE_USD = 100000, HOUR = 3600e3;
+  const CR = { whales: [], liqs: [], since: Date.now(), taker: [], cb: null, cbHist: [], fng: [], daily: [], h1: [], eth: null, stable: null };
+  const jget = (u) => fetch(u, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  const money = (v) => { const a = Math.abs(v); return '$' + (a >= 1e9 ? (a / 1e9).toFixed(2) + 'B' : a >= 1e6 ? (a / 1e6).toFixed(2) + 'M' : a >= 1e3 ? (a / 1e3).toFixed(0) + 'K' : a.toFixed(0)); };
+  const signed = (v, f) => (v > 0 ? '+' : v < 0 ? '−' : '') + f(Math.abs(v));
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+  const trim = (arr) => { const cut = Date.now() - HOUR; let k = 0; while (k < arr.length && arr[k].T < cut) k++; if (k) arr.splice(0, k); };
+  function rsi(closes, n = 14) {
+    if (closes.length <= n) return null;
+    let g = 0, l = 0;
+    for (let i = 1; i <= n; i++) { const d = closes[i] - closes[i - 1]; if (d > 0) g += d; else l -= d; }
+    g /= n; l /= n;
+    for (let i = n + 1; i < closes.length; i++) { const d = closes[i] - closes[i - 1]; g = (g * (n - 1) + Math.max(0, d)) / n; l = (l * (n - 1) + Math.max(0, -d)) / n; }
+    return l === 0 ? 100 : 100 - 100 / (1 + g / l);
+  }
+  const sma = (a, n) => (a.length >= n ? a.slice(-n).reduce((x, y) => x + y, 0) / n : null);
+  // 把一串數值變成迷你圖用的 bars（o=前一點）
+  const series = (vals, t0, step) => vals.map((v, i) => ({ t: t0 + i * step, o: i ? vals[i - 1] : v, h: Math.max(v, i ? vals[i - 1] : v), l: Math.min(v, i ? vals[i - 1] : v), c: v }));
+  // 事件流（鯨魚、爆倉）→ 12 段 5 分鐘的累計曲線
+  function cumulative(list, f) {
+    const now = Date.now(), out = []; let acc = 0;
+    for (let k = 11; k >= 0; k--) { const a = now - (k + 1) * 300e3, b = now - k * 300e3; for (const x of list) if (x.T >= a && x.T < b) acc += f(x); out.push(acc); }
+    return series(out, Math.floor((now - HOUR) / 1000), 300);
+  }
+  const ago = () => { const m = Math.round((Date.now() - CR.since) / 60000); return m < 60 ? `開頁 ${m} 分鐘內` : '近 1 小時'; };
+
+  function buildCrypto() {
+    trim(CR.whales); trim(CR.liqs);
+    const out = [];
+    const base = { market: 'CR', isOpen: true, statusText: 'LIVE', slots: 12, dec: 2 };
+    // 1 鯨魚買賣
+    { const buy = CR.whales.filter((x) => x.side === 'buy').reduce((a, x) => a + x.usd, 0), sell = CR.whales.filter((x) => x.side === 'sell').reduce((a, x) => a + x.usd, 0);
+      const net = buy - sell, share = buy + sell ? buy / (buy + sell) : 0.5, big = CR.whales.reduce((m, x) => (!m || x.usd > m.usd ? x : m), null);
+      out.push({ ...base, id: 'WHALE', code: 'WHALE', icon: 'WH', name: '鯨魚買賣', venue: '現貨＋期貨 ≥$100K', price: net, display: signed(net, money), chg: net, pct: (share - 0.5) * 100,
+        chgText: CR.whales.length ? `買 ${Math.round(share * 100)}%` : '等待大單', pos: share, prevClose: 0, amp: share * 5, posLabel: '買方',
+        sub: `${CR.whales.length} 筆 · ${big ? '最大 ' + money(big.usd) + (big.side === 'buy' ? ' 買' : ' 賣') : ago()}`, bars: cumulative(CR.whales, (x) => (x.side === 'buy' ? x.usd : -x.usd)) }); }
+    // 2 爆倉
+    { const longs = CR.liqs.filter((x) => x.side === 'long').reduce((a, x) => a + x.usd, 0), shorts = CR.liqs.filter((x) => x.side === 'short').reduce((a, x) => a + x.usd, 0);
+      const tot = longs + shorts, ls = tot ? longs / tot : 0.5, big = CR.liqs.reduce((m, x) => (!m || x.usd > m.usd ? x : m), null);
+      out.push({ ...base, id: 'LIQ', code: 'LIQ', icon: 'LQ', name: '爆倉', venue: 'Binance＋Bybit', price: tot, display: money(tot), chg: shorts - longs, pct: (0.5 - ls) * 100,
+        chgText: tot ? `多單 ${Math.round(ls * 100)}%` : '暫無爆倉', pos: ls, prevClose: 0, amp: ls * 5, posLabel: '多單',
+        sub: big ? `最大 ${money(big.usd)} ${big.side === 'long' ? '多單' : '空單'}` : ago(), bars: cumulative(CR.liqs, (x) => x.usd) }); }
+    // 3 主動買賣比（期貨 taker）
+    { const t = CR.taker, last = t[t.length - 1];
+      const ratio = last ? last.r : 1, share = ratio / (1 + ratio);
+      out.push({ ...base, id: 'TAKER', code: 'TAKER', icon: 'TK', name: '主動買賣比', venue: 'Binance 期貨 · 5 分', price: ratio, display: ratio.toFixed(2), chg: ratio - 1, pct: (ratio - 1) * 100,
+        chgText: `買 ${Math.round(share * 100)}%`, pos: share, prevClose: 1, amp: share * 5, posLabel: '買方', slots: 48,
+        sub: last ? `買 ${money(last.buy * (S.price || 0))} · 賣 ${money(last.sell * (S.price || 0))}` : '—', bars: series(t.map((x) => x.r), t.length ? Math.floor(t[0].T / 1000) : 0, 300) }); }
+    // 4 Coinbase 溢價
+    { const prem = CR.cb != null && S.price ? CR.cb - S.price : 0, pp = S.price ? prem / S.price * 100 : 0;
+      out.push({ ...base, id: 'CBP', code: 'CB PREM', icon: 'CB', name: 'Coinbase 溢價', venue: 'Coinbase − Binance', price: prem, display: signed(prem, (v) => '$' + v.toFixed(1)), chg: prem, pct: pp,
+        chgText: signed(pp, (v) => v.toFixed(3) + '%'), pos: clamp01(0.5 + pp / 0.2), prevClose: 0, amp: clamp01(0.5 + pp / 0.2) * 5, posLabel: '溢價', slots: 120,
+        sub: prem >= 0 ? '美國現貨買盤較強' : '美國現貨買盤較弱', bars: CR.cbHist }); }
+    // 5 恐懼貪婪
+    { const f = CR.fng, now = f[f.length - 1], prev = f[f.length - 2];
+      const v = now ? now.v : 50, ZH = { 'Extreme Fear': '極度恐懼', Fear: '恐懼', Neutral: '中性', Greed: '貪婪', 'Extreme Greed': '極度貪婪' };
+      out.push({ ...base, id: 'FNG', code: 'F&G', icon: 'FG', name: '恐懼貪婪', venue: 'alternative.me · 每日', price: v, display: String(v), chg: v - 50, pct: v - 50,
+        chgText: now ? ZH[now.c] || now.c : '—', pos: v / 100, prevClose: 50, amp: v / 20, posLabel: '指數', slots: 30,
+        sub: prev ? `昨日 ${prev.v} · 7 日均 ${Math.round(f.slice(-7).reduce((a, x) => a + x.v, 0) / Math.min(7, f.length))}` : '—', bars: series(f.map((x) => x.v), f.length ? f[0].t : 0, 86400) }); }
+    // 6 趨勢體檢：牛熊（200 日線、50/200 交叉）＋ RSI 超買超賣
+    { const dc = CR.daily.map((b) => b.c), ma200 = sma(dc, 200), ma50 = sma(dc, 50), px = S.price || dc[dc.length - 1];
+      const r4 = rsi((S.bars['4h'] || []).map((b) => b.c)), r1d = rsi(dc), r1h = rsi(CR.h1.map((b) => b.c));
+      let label = '—', chg = 0;
+      if (ma200 && ma50 && px) { const above = px >= ma200; label = above ? (ma50 >= ma200 ? '牛市' : '轉強') : (ma50 < ma200 ? '熊市' : '轉弱'); chg = px - ma200; }
+      const tag = (r) => (r == null ? '' : r >= 70 ? ' 超買' : r <= 30 ? ' 超賣' : '');
+      const d60 = dc.slice(-60);
+      out.push({ ...base, id: 'TREND', code: 'TREND', icon: 'TR', name: '趨勢體檢', venue: '日線 200MA · RSI(14)', price: chg, display: label, chg, pct: ma200 ? (px / ma200 - 1) * 100 : 0,
+        chgText: r4 != null ? `RSI ${Math.round(r4)}${tag(r4)}` : '—', pos: r4 != null ? r4 / 100 : 0.5, prevClose: ma200 || 0, amp: (r4 || 50) / 20, posLabel: 'RSI 4H', slots: 60,
+        sub: ma200 ? `距 200 日線 ${signed((px / ma200 - 1) * 100, (v) => v.toFixed(1) + '%')} · 1H ${r1h != null ? Math.round(r1h) : '—'} · 1D ${r1d != null ? Math.round(r1d) : '—'}` : '—',
+        bars: series(d60, CR.daily.length ? CR.daily[CR.daily.length - d60.length].t : 0, 86400) }); }
+    S.markets = out;
+    emit('markets');
+  }
+
+  function startCrypto() {
+    // 鯨魚：現貨逐筆（主連線已在收）＋期貨逐筆；爆倉：Binance forceOrder＋Bybit allLiquidation
+    (L.trade || (L.trade = [])).push((t) => { const usd = t.p * t.q; if (usd >= WHALE_USD) CR.whales.push({ T: t.T, usd, side: t.m ? 'sell' : 'buy' }); });
+    const fut = () => {
+      const w = new WebSocket('wss://fstream.binance.com/stream?streams=btcusdt@aggTrade/btcusdt@forceOrder');
+      let last = Date.now();
+      w.onmessage = (ev) => {
+        last = Date.now();
+        const { stream, data } = JSON.parse(ev.data);
+        if (stream.endsWith('@aggTrade')) { const usd = +data.p * +data.q; if (usd >= WHALE_USD) CR.whales.push({ T: data.T, usd, side: data.m ? 'sell' : 'buy' }); }
+        else if (data.o) { const o = data.o; CR.liqs.push({ T: o.T, usd: +o.ap * +o.z || +o.p * +o.q, side: o.S === 'SELL' ? 'long' : 'short', src: 'binance' }); }
+      };
+      w.onclose = () => setTimeout(fut, 3000); w.onerror = () => w.close();
+      const wd = setInterval(() => { if (Date.now() - last > 30000) { clearInterval(wd); w.close(); } }, 10000);
+    };
+    const bybit = () => {
+      const w = new WebSocket('wss://stream.bybit.com/v5/public/linear');
+      let ping;
+      w.onopen = () => { w.send(JSON.stringify({ op: 'subscribe', args: ['allLiquidation.BTCUSDT'] })); ping = setInterval(() => w.send('{"op":"ping"}'), 20000); };
+      w.onmessage = (ev) => { const m = JSON.parse(ev.data); if (m.topic && m.topic.startsWith('allLiquidation') && Array.isArray(m.data)) for (const x of m.data) CR.liqs.push({ T: +x.T, usd: +x.v * +x.p, side: x.S === 'Buy' ? 'long' : 'short', src: 'bybit' }); };
+      w.onclose = () => { clearInterval(ping); setTimeout(bybit, 3000); }; w.onerror = () => w.close();
+    };
+    fut(); bybit();
+    const seen = new Set();
+    const scanSeed = () => { for (const t of S.ticks) { const usd = t.p * t.q; if (usd >= WHALE_USD && !seen.has(t.T + ':' + usd)) { seen.add(t.T + ':' + usd); CR.whales.push({ T: t.T, usd, side: t.m ? 'sell' : 'buy' }); } } CR.whales.sort((a, b) => a.T - b.T); };
+    setTimeout(scanSeed, 3000); setTimeout(scanSeed, 8000);
+    const every = (ms, f) => { const run = () => f().catch(() => {}); run(); setInterval(run, ms); };
+    every(60e3, async () => { const d = await jget('https://fapi.binance.com/futures/data/takerlongshortRatio?symbol=BTCUSDT&period=5m&limit=48');
+      CR.taker = d.map((x) => ({ T: x.timestamp, r: +x.buySellRatio, buy: +x.buyVol, sell: +x.sellVol })); });
+    every(5e3, async () => { const d = await jget('https://api.exchange.coinbase.com/products/BTC-USD/ticker'); CR.cb = +d.price; });
+    every(60e3, async () => {
+      const d = await jget('https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=60');   // [time, low, high, open, close, vol]，新到舊
+      const bm = new Map((S.bars['1m'] || []).map((b) => [b.t, b.c]));
+      const pts = d.slice(0, 120).reverse().filter((c) => bm.has(c[0])).map((c) => ({ t: c[0], v: c[4] - bm.get(c[0]) }));
+      CR.cbHist = series(pts.map((p) => p.v), pts.length ? pts[0].t : 0, 60);
+    });
+    every(1800e3, async () => { const d = await jget('https://api.alternative.me/fng/?limit=30'); CR.fng = d.data.map((x) => ({ v: +x.value, c: x.value_classification, t: +x.timestamp })).reverse(); });
+    every(600e3, async () => { const d = await jget('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=300'); CR.daily = d.map((k) => ({ t: k[0] / 1000, c: +k[4] })); });
+    every(60e3, async () => { const d = await jget('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=100'); CR.h1 = d.map((k) => ({ t: k[0] / 1000, c: +k[4] })); });
+    every(10e3, async () => { const d = await jget('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT'); CR.eth = { price: +d.lastPrice, P: +d.priceChangePercent }; emit('extras'); });
+    every(3600e3, async () => {
+      const d = await jget('https://stablecoins.llama.fi/stablecoins?includePrices=false');
+      let now = 0, wk = 0; for (const a of d.peggedAssets) { now += (a.circulating && a.circulating.peggedUSD) || 0; wk += (a.circulatingPrevWeek && a.circulatingPrevWeek.peggedUSD) || 0; }
+      CR.stable = { total: now, wk: wk ? (now / wk - 1) * 100 : 0 }; emit('extras');
+    });
+    setInterval(buildCrypto, 1500); setTimeout(buildCrypto, 800);
+  }
+
+  // 頂部資訊列小字：加密模式下顯示 ETH 和穩定幣總供給
+  function extrasText() {
+    const e = CR.eth, st = CR.stable;
+    return [e ? `ETH ${fmt(e.price, 1)} ${pct(e.P)}` : null, st ? `穩定幣 ${money(st.total)}（7 日 ${pct(st.wk)}）` : null].filter(Boolean).join(' · ');
+  }
+
+  // 顯示用小工具：股票模式照舊；加密指標用自己的文字
+  const val = (s) => s.display ?? fmt(s.price, s.dec);
+  const chgTxt = (s) => s.chgText ?? pct(s.pct || 0);
+  const sub = (s, label) => s.sub ?? `${label} ${(s.amp || 0).toFixed(2)}%`;
+  const slots = (s) => s.slots ?? (s.market === 'TW' ? 54 : 78);
+  const venue = (s) => s.venue ?? (s.market === 'TW' ? 'TWSE' : 'NYSE');
 
   function tzNow(tz) {
     const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', weekday: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -110,15 +264,23 @@
   }
 
   window.Feed = {
-    S, fmt, fmtBig, sgn, pct, tzNow,
-    on(e, f) { (L[e] || (L[e] = [])).push(f); },
+    S, fmt, fmtBig, sgn, pct, tzNow, val, chgTxt, sub, slots, venue, extrasText,
+    get mode() { return S.mode; },
+    on(e, f) { (L[e] || (L[e] = [])).push(f); if (e === 'mode' && S.mode) f(); },   // 模式已定就立刻跑一次
+    // 把 ETH／穩定幣小字掛到某個元素上（只在加密模式顯示）
+    mountExtras(el) {
+      if (typeof el === 'string') el = document.querySelector(el);
+      if (!el) return;
+      const paint = () => { const t = S.mode === 'crypto' ? extrasText() : ''; el.textContent = t; el.style.display = t ? '' : 'none'; };
+      (L.extras || (L.extras = [])).push(paint); (L.mode || (L.mode = [])).push(paint); paint();
+    },
     start(limits = { '1m': 240, '4h': 180 }) {
       S.limit = limits;
       Object.keys(limits).forEach(loadBars);
       seedTicks();
       connect();
-      pollMarkets();
-      setInterval(pollMarkets, 5000);
+      if (S.mode === 'crypto') { emit('mode'); startCrypto(); }
+      else { pollMarkets(); stockTimer = setInterval(pollMarkets, 5000); }
       setInterval(() => Object.keys(limits).forEach(loadBars), 3600e3);
       if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => { /* 不支援或被拒就算了 */ });
     },

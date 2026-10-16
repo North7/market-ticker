@@ -36,13 +36,14 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 .foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; font-family: 'JetBrains Mono'; font-size: 10.5px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
 .foot b { font-family: 'Inter Tight'; font-weight: 700; font-size: 13px; color: var(--fg); letter-spacing: 0; }
 .u { color: var(--lime); } .d { color: #9a9aa0; }
+.xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="banner">
     <div class="price" id="price">—</div>
-    <div class="side"><div style="margin-bottom:6px"><i style="display:inline-block;width:8px;height:8px;background:var(--lime);margin-right:8px;animation:bl 1s steps(2) infinite"></i>LIVE · BTC / USDT · BINANCE SPOT</div><b id="pct">—</b>H <span id="h">—</span> · L <span id="l">—</span><br>AMP <span id="amp">—</span> · <span id="clk">—</span></div>
+    <div class="side"><div style="margin-bottom:6px"><i style="display:inline-block;width:8px;height:8px;background:var(--lime);margin-right:8px;animation:bl 1s steps(2) infinite"></i>LIVE · BTC / USDT · BINANCE SPOT · <span id="xtra" class="xtra"></span></div><b id="pct">—</b>H <span id="h">—</span> · L <span id="l">—</span><br>AMP <span id="amp">—</span> · <span id="clk">—</span></div>
   </div>
   <div class="mx"><canvas id="cv"></canvas></div>
   <div class="list" id="list"><div class="hd">MARKETS</div></div>
@@ -58,6 +59,8 @@ const $ = (id) => document.getElementById(id);
 const LIME = '#d2ff1f';
 const cls = (v) => (v >= 0 ? 'u' : 'd');
 Feed.start({ '1m': 200, '4h': 90 });
+Feed.on('mode', () => { if (Feed.mode === 'crypto') document.querySelector('.list .hd').textContent = 'SIGNALS'; });
+Feed.mountExtras('#xtra');
 
 // 符號
 function glyph(ctx, kind, x, y, s, col, a = 1) {
@@ -161,7 +164,7 @@ Feed.on('ticker', () => {
 });
 const rows = {};
 function renderList() {
-  const items = [{ id: 'BTC', code: 'BTC', name: 'Bitcoin', price: S.price, pct: S.ticker ? S.ticker.P : 0, dec: 2 }, ...S.markets.map((m) => ({ id: m.id, code: m.code, name: m.name, price: m.price, pct: m.pct, dec: m.dec, open: m.isOpen }))];
+  const items = [{ id: 'BTC', code: 'BTC', name: 'Bitcoin', price: S.price, pct: S.ticker ? S.ticker.P : 0, dec: 2 }, ...S.markets.map((m) => ({ ...m, open: m.isOpen }))];
   items.forEach((m) => {
     let r = rows[m.id];
     if (!r) {
@@ -172,8 +175,8 @@ function renderList() {
       r = rows[m.id] = { el, q: (x) => el.querySelector(x) };
     }
     if (m.price == null) return;
-    r.q('.rt b').textContent = fmt(m.price, m.dec);
-    r.q('.rt span').innerHTML = `<span class="${cls(m.pct || 0)}">${pct(m.pct || 0)}</span>${m.id !== 'BTC' && !m.open ? ' · CLOSED' : ''}`;
+    r.q('.rt b').textContent = Feed.val(m);
+    r.q('.rt span').innerHTML = `<span class="${cls(m.pct || 0)}">${Feed.chgTxt(m)}</span>${m.id !== 'BTC' && !m.open ? ' · CLOSED' : ''}`;
   });
 }
 Feed.on('markets', renderList);

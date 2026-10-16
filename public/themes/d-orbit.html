@@ -33,11 +33,12 @@ body { background: radial-gradient(circle at 33% 50%, #12141a 0%, var(--bg) 60%)
 .orb .nm { position: absolute; left: 0; right: 0; top: 150px; text-align: center; font-size: 12px; font-weight: 500; color: #a9abb1; white-space: nowrap; }
 .orb .nm small { font-family: 'Geist Mono'; font-size: 10px; color: var(--mute); margin-left: 6px; letter-spacing: .12em; }
 .u { color: var(--up); } .d { color: var(--down); }
+.xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
 </style>
 </head>
 <body>
 <canvas id="cv"></canvas>
-<div class="corner"><b>Orbit</b> · BTC / USDT · TPE <b id="tpe">--</b> · NYC <b id="nyc">--</b></div>
+<div class="corner"><b>Orbit</b> · BTC / USDT · TPE <b id="tpe">--</b> · NYC <b id="nyc">--</b> · <span id="xtra" class="xtra"></span></div>
 <div class="price"><div class="cap">Bitcoin · last trade</div><div class="big" id="price">—</div></div>
 <div class="chg"><span class="p" id="pct">—</span><span>H<b id="h">—</b></span><span>L<b id="l">—</b></span><span>AMP<b id="amp">—</b></span></div>
 <div class="legend"><div><i></i>outer orbit · 4H closes · 30 days</div><div><i style="opacity:.5"></i>inner orbit · 1M candles · 60 minutes</div><div><i style="opacity:.25"></i>sweep · seconds</div><div><i style="opacity:.5"></i>orbs · line vs prev close · arc = day range</div></div>
@@ -51,6 +52,8 @@ const $ = (id) => document.getElementById(id);
 const UP = '#ff5a3c', DOWN = '#4bd3a7', FG = '#eceae4';
 const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
 Feed.start({ '1m': 120, '4h': 180 });
+Feed.mountExtras('#xtra');
+Feed.on('mode', () => { if (Feed.mode === 'crypto') document.querySelectorAll('.legend div')[3].innerHTML = '<i style="opacity:.5"></i>orbs · line = recent history · arc = gauge (see label)'; });
 const TAU = Math.PI * 2, GAP = 0.05;   // 頂端留一道縫代表「現在」
 const ang = (i, n) => -Math.PI / 2 + TAU * GAP / 2 + (i / Math.max(1, n - 1)) * TAU * (1 - GAP);
 
@@ -169,16 +172,16 @@ Feed.on('markets', () => {
       o = orbs[s.id] = { el, q: (x) => el.querySelector(x) };
     }
     if (s.price == null) return;
-    o.q('.px').textContent = fmt(s.price, s.dec);
-    o.q('.pc').textContent = pct(s.pct); o.q('.pc').className = 'pc ' + cls(s.chg);
+    o.q('.px').textContent = Feed.val(s);
+    o.q('.pc').textContent = Feed.chgTxt(s); o.q('.pc').className = 'pc ' + cls(s.chg);
     // 迷你軌道：整個交易時段一圈，半徑＝相對昨收
     const { ctx, w, h } = Draw.fit(o.q('canvas'));
-    const cx = w / 2, cy = h / 2, R = 56, slots = s.market === 'TW' ? 54 : 78;
+    const cx = w / 2, cy = h / 2, R = 56, slots = Feed.slots(s);
     const bars = s.bars || [];
     ctx.strokeStyle = 'rgba(236,234,228,.12)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
-    if (!bars.length || !s.prevClose) return;
-    const maxAbs = Math.max(...bars.map((b) => Math.abs(b.c - s.prevClose)), 1e-9);
+    if (!bars.length || s.prevClose == null) return;
+    const maxAbs = Math.max(...bars.map((b) => Math.abs(b.c - s.prevClose)), 1e-12);
     const a = (i) => -Math.PI / 2 + i / slots * TAU;
     const r = (p) => R + (p - s.prevClose) / maxAbs * 16;
     ctx.beginPath();

@@ -85,6 +85,7 @@ body { background: var(--void); color: var(--ink); overflow: hidden; font-family
 @keyframes run { to { transform: translateX(-50%); } }
 .up { color: var(--red); } .dn { color: var(--orbit); }
 .tape .up { color: #FF6A50; } .tape .dn { color: #7A90FF; }
+.xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -92,7 +93,7 @@ body { background: var(--void); color: var(--ink); overflow: hidden; font-family
   <header class="mast">
     <div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 40a14 14 0 0 1 28 0" fill="none" stroke="var(--red)" stroke-width="5"/><path d="M6 40h52" stroke="var(--ink)" stroke-width="5"/></svg>
       <span class="wm"><b>DAYBREAK</b><span>破曉</span></span></div>
-    <div class="dateline"><b>即時</b><span id="date">—</span><hr><span>台北 <span class="k" id="tpe">—</span></span><span>紐約 <span class="k" id="nyc">—</span></span></div>
+    <div class="dateline"><b>即時</b><span id="date">—</span><span id="xtra" class="xtra"></span><hr><span>台北 <span class="k" id="tpe">—</span></span><span>紐約 <span class="k" id="nyc">—</span></span></div>
   </header>
 
   <section class="mega">
@@ -125,6 +126,7 @@ const $ = (id) => document.getElementById(id);
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const cls = (v) => (v > 0 ? 'up' : v < 0 ? 'dn' : '');
 Feed.start({ '1m': 180, '4h': 120 });
+Feed.mountExtras('#xtra');
 
 // 固定日刊（白天）模式
 document.documentElement.dataset.theme = 'light';
@@ -179,14 +181,15 @@ Feed.on('markets', () => {
       c = cols[s.id] = { el, q: (x) => el.querySelector(x) };
     }
     if (s.price == null) return;
-    c.q('.v').textContent = pct(s.pct); c.q('.v').className = 'v ' + cls(s.chg);
-    c.q('.px').textContent = `${fmt(s.price, s.dec)} · 振幅 ${s.amp.toFixed(2)}%`;
+    const cr = s.market === 'CR';
+    c.q('.v').textContent = cr ? Feed.val(s) : Feed.chgTxt(s); c.q('.v').className = 'v ' + cls(s.chg);
+    c.q('.px').textContent = cr ? `${Feed.chgTxt(s)} · ${Feed.sub(s)}` : `${Feed.val(s)} · ${Feed.sub(s, '振幅')}`;
     const tag = c.q('.k i'); tag.textContent = (s.isOpen ? '● ' : '') + s.code; tag.className = s.isOpen ? 'on' : '';
-    Draw.spark(c.q('canvas'), s.bars, { mode: 'line', slots: s.market === 'TW' ? 54 : 78, base: s.prevClose, line: css('--ink'), lineWidth: 1.4,
+    Draw.spark(c.q('canvas'), s.bars, { mode: 'line', slots: Feed.slots(s), base: s.prevClose, line: css('--ink'), lineWidth: 1.4,
       baseColor: css('--line'), baseDash: [2, 3], dot: css('--red'), dotR: 3 });
   });
   const items = [`<span><b>比特幣</b>${fmt(S.price)}<i class="${cls(S.ticker ? S.ticker.P : 0)}">${S.ticker ? pct(S.ticker.P) : ''}</i></span>`,
-    ...S.markets.map((s) => `<span><b>${s.name.replace(' ETF', '')}</b>${fmt(s.price, s.dec)}<i class="${cls(s.chg)}">${pct(s.pct)}</i></span>`)].join('');
+    ...S.markets.map((s) => `<span><b>${s.name.replace(' ETF', '')}</b>${Feed.val(s)}<i class="${cls(s.chg)}">${Feed.chgTxt(s)}</i></span>`)].join('');
   $('tape').innerHTML = items + items + items + items;
 });
 

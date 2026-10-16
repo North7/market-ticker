@@ -115,7 +115,7 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
   <div class="c turn"><canvas id="cturn"></canvas><div class="pills"><span class="pill">Volume · 4H × 4 days</span><span class="pill">● Binance</span></div>
     <div class="num"><b id="qv">—</b><span>24h turnover.</span></div></div>
   <div class="c bars"><canvas id="c4h"></canvas><div class="hd"><span class="k">4H closes · 4 days</span><b id="k4h">—</b></div></div>
-  <div class="c stocks" id="stocks"><div class="hd"><h3>Watchlist</h3><span class="k">TWSE · NYSE · NASDAQ</span></div></div>
+  <div class="c stocks" id="stocks"><div class="hd"><h3 id="wlTitle">Watchlist</h3><span class="k" id="wlSub">TWSE · NYSE · NASDAQ</span></div></div>
 </div>
 
 <script src="feed.js"></script>
@@ -125,6 +125,7 @@ const { S, fmt, fmtBig, pct } = Feed;
 const $ = (id) => document.getElementById(id);
 const LIME = '#c6f43a';
 Feed.start({ '1m': 180, '4h': 120 });
+Feed.on('mode', () => { if (Feed.mode === 'crypto') { $('wlTitle').textContent = 'Crypto signals'; Feed.mountExtras('#wlSub'); } });
 
 function smooth(ctx, pts) {
   ctx.moveTo(pts[0][0], pts[0][1]);
@@ -285,15 +286,15 @@ Feed.on('markets', () => {
     if (!c) {
       const el = document.createElement('div');
       el.className = 'tk';
-      el.innerHTML = `<div class="ic">${s.code.slice(0, 4)}</div><div class="nm"><b>${s.name.replace(' ETF', '')}</b><span>${s.code}</span></div><div class="rt"><b>—</b><span>—</span></div>`;
+      el.innerHTML = `<div class="ic">${s.icon ?? s.code.slice(0, 4)}</div><div class="nm"><b>${s.name.replace(' ETF', '')}</b><span>${s.code}</span></div><div class="rt"><b>—</b><span>—</span></div>`;
       $('stocks').appendChild(el);
       c = tks[s.id] = { el, q: (x) => el.querySelector(x) };
     }
     if (s.price == null) return;
-    c.q('.nm span').textContent = `${s.code} · ${s.isOpen ? 'Live' : 'Closed'}`;
+    c.q('.nm span').textContent = s.market === 'CR' ? Feed.venue(s) : `${s.code} · ${s.isOpen ? 'Live' : 'Closed'}`;
     c.el.classList.toggle('on', s.isOpen);
-    c.q('.rt b').textContent = fmt(s.price, s.dec);
-    const p = c.q('.rt span'); p.textContent = pct(s.pct); p.className = s.chg >= 0 ? 'u' : 'd';
+    c.q('.rt b').textContent = Feed.val(s);
+    const p = c.q('.rt span'); p.textContent = Feed.chgTxt(s); p.className = s.chg >= 0 ? 'u' : 'd';
   });
 });
 

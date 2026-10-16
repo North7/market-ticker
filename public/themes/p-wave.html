@@ -27,11 +27,12 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
 .foot span b { font-weight: 500; color: #fff; margin-left: 10px; }
 .foot .y { color: #f5f35c; }
 .u { color: #ff7a9a; } .d { color: #7aa2ff; }
+.xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
 </style>
 </head>
 <body>
 <canvas id="cv"></canvas>
-<div class="lab">BTC / USDT<br>live market collection</div>
+<div class="lab">BTC / USDT<br>live market collection<br><span id="xtra" class="xtra"></span></div>
 <div class="price" id="price">—</div>
 <div class="chg"><span class="ring" id="pct">—</span><span id="hl">—</span></div>
 <div class="list" id="list"></div>
@@ -45,6 +46,7 @@ const { S, fmt, pct } = Feed;
 const $ = (id) => document.getElementById(id);
 const cls = (v) => (v >= 0 ? 'u' : 'd');
 Feed.start({ '1m': 120, '4h': 60 });
+Feed.mountExtras('#xtra');
 
 // ---- 點陣球：費氏球面取點，每個點預先算好對 12 個鼓包中心的權重
 const N = 5200, K = 12;
@@ -177,7 +179,7 @@ Feed.on('ticker', () => {
   $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
 });
 Feed.on('markets', () => {
-  $('list').innerHTML = S.markets.map((s) => `<div class="r"><span>${s.name.replace(' ETF', '')} · ${s.code}</span><b>${fmt(s.price, s.dec)}</b><i class="${cls(s.pct || 0)}">${pct(s.pct || 0)}</i></div>`).join('');
+  $('list').innerHTML = S.markets.map((s) => `<div class="r"><span>${s.name.replace(' ETF', '')} · ${s.code}</span><b>${Feed.val(s)}</b><i class="${cls(s.pct || 0)}">${Feed.chgTxt(s)}</i></div>`).join('');
 });
 function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; }
 setInterval(clocks, 1000); clocks();
