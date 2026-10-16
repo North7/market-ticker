@@ -33,6 +33,30 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
 .foot .y { color: #f5f35c; }
 .u { color: #ff7a9a; } .d { color: #7aa2ff; }
 .xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
+/* 直式：價格在上、球體置中、清單兩欄在球體下方、波形在底部 */
+@media (orientation: portrait) {
+  .list { top: calc(43vh + min(30vw, 13vh) + 34px); display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; width: auto; right: 42px; }
+  .note { display: none; }
+  .foot { flex-wrap: wrap; gap: 4px 18px; justify-content: flex-start; }
+}
+@media (orientation: portrait) and (max-width: 640px) {
+  .lab { left: 16px; top: 16px; font-size: 13px; }
+  .price { left: 14px; top: 84px; font-size: min(19vh, 21vw); }
+  .chg { left: 16px; top: calc(84px + min(19vh, 21vw) + 10px); gap: 12px; font-size: 12px; }
+  .chg .ring { height: 32px; padding: 0 12px; font-size: 14px; }
+  .list { left: 16px; right: 16px; column-gap: 16px; font-size: 11px; line-height: 1.35; }
+  .list .r { gap: 6px; padding: 3px 0; grid-template-columns: minmax(0, 1fr) auto; }
+  .list .r i { display: none; }
+  .foot { left: 16px; right: 16px; bottom: 12px; font-size: 10px; gap: 2px 12px; }
+  .foot span b { margin-left: 5px; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .note, .list { display: none; }
+  .lab { top: 14px; left: 20px; font-size: 13px; }
+  .price { top: 64px; left: 18px; }
+  .chg { top: calc(64px + min(19vh, 172px) + 10px); left: 20px; }
+  .foot { bottom: 8px; left: 20px; right: 20px; font-size: 10px; }
+}
 </style>
 </head>
 <body>
@@ -91,7 +115,8 @@ function tickReturns(sec, n, now = Date.now()) {
 function sphere(ctx, w, h, t) {
   const r12 = tickReturns(5, K).r, mx = Math.max(0.00004, ...r12.map(Math.abs));
   for (let k = 0; k < K; k++) amp[k] += (r12[k] / mx - amp[k]) * 0.14;
-  const cx = w * 0.63, cy = h * 0.335, R = Math.min(h * 0.235, w * 0.18);
+  const port = h > w;   // 直式：球體置中，放在價格與清單之間
+  const cx = port ? w * (w < 640 ? 0.5 : 0.62) : w * 0.63, cy = port ? h * 0.43 : h * 0.335, R = port ? Math.min(w * 0.30, h * 0.13) : Math.min(h * 0.235, w * 0.18);
   const ry = t * 0.12, rx = 0.35 + Math.sin(t * 0.07) * 0.12;
   const cy1 = Math.cos(ry), sy1 = Math.sin(ry), cx1 = Math.cos(rx), sx1 = Math.sin(rx);
   const pts = [];
@@ -132,7 +157,7 @@ function waves(ctx, w, h) {
   const mx = Math.max(0.00003, ...r.map(Math.abs));
   waveMx += (mx - waveMx) * 0.04;                      // 尺度平滑，不會忽大忽小
   const frac = (now - end) / (SEC * 1000);             // 0..1，讓波形連續往左流
-  const base = h * 0.76, A = h * 0.125, sp = w / (N - 1.5), sig = sp * 0.42;
+  const port = h > w, base = h * (port ? 0.8 : 0.76), A = h * (port ? 0.07 : 0.125), sp = w / (N - 1.5), sig = sp * 0.42;
   const xs = r.map((_, k) => sp * (k + 0.5 - frac));
   const yAt = (x, f) => {
     let v = 0;
@@ -150,8 +175,8 @@ function waves(ctx, w, h) {
   const lx = xs[N - 1], ly = yAt(lx, 1);
   ctx.fillStyle = '#fff'; ctx.shadowBlur = 16; ctx.shadowColor = '#fff'; ctx.beginPath(); ctx.arc(lx, ly, 4, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
   ctx.fillStyle = '#6e6e74'; ctx.font = '11px Inter'; ctx.textAlign = 'center';
-  [[0, '−120s'], [15, '−90s'], [30, '−60s'], [45, '−30s']].forEach(([k, t]) => ctx.fillText(t, sp * (k + 0.5 - frac), base + A + 20));
-  ctx.textAlign = 'right'; ctx.fillText(`now · peak ±${(waveMx * 100).toFixed(3)}% / 2 s`, w - 40, base + A + 20);
+  [[0, '−120s'], [15, '−90s'], [30, '−60s'], [45, '−30s']].forEach(([k, t]) => { const x = sp * (k + 0.5 - frac); if (x > 16 && x < w - 190) ctx.fillText(t, x, base + A + 20); });
+  ctx.textAlign = 'right'; ctx.fillText(`now · peak ±${(waveMx * 100).toFixed(3)}% / 2 s`, w - (w < 500 ? 14 : 40), base + A + 20);
 }
 
 function candles(ctx, w, h) {

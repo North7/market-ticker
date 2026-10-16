@@ -2,20 +2,25 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ticker">
+<meta name="theme-color" content="#000000">
 <title>Market Ticker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400&family=Noto+Sans+TC:wght@500&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
 body.idle, body.idle * { cursor: none !important; }
-#stage { position: fixed; inset: 0; transition: transform 3s ease; }
+#stage { position: fixed; inset: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); transition: transform 3s ease; }   /* 避開瀏海與圓角 */
 #stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; opacity: 0; transition: opacity .9s ease; background: transparent; }
 #stage iframe.on { opacity: 1; }
 
-.dock { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 16px); opacity: 0; pointer-events: none; z-index: 10;
+.dock { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); max-width: calc(100vw - 20px); overflow-x: auto; scrollbar-width: none; transform: translate(-50%, 16px); opacity: 0; pointer-events: none; z-index: 10;
   display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 999px;
   background: rgba(18, 18, 20, .74); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4);
   box-shadow: 0 10px 40px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .08);
@@ -28,7 +33,8 @@ body.idle, body.idle * { cursor: none !important; }
 .dock button small { font-family: 'Noto Sans TC'; font-size: 11px; opacity: .6; }
 .dock .sep { width: 1px; height: 20px; background: rgba(255, 255, 255, .14); margin: 0 4px; }
 .dock .auto.on { background: #f7931a; color: #111; }
-.fsbtn { position: fixed; right: 18px; top: 16px; z-index: 10; width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
+.dock::-webkit-scrollbar { display: none; }
+.fsbtn { position: fixed; right: calc(18px + env(safe-area-inset-right)); top: calc(16px + env(safe-area-inset-top)); z-index: 10; width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
   background: rgba(18, 18, 20, .74); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: 0 8px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.1);
   opacity: 0; pointer-events: none; transition: opacity .35s, transform .2s; }
 .fsbtn.show { opacity: 1; pointer-events: auto; }
@@ -44,6 +50,9 @@ body.idle, body.idle * { cursor: none !important; }
 .help.show { opacity: 1; }
 @media (max-width: 1480px) { .help { display: none; } }   /* 窄螢幕讓位給底部選單，按鍵說明已在選單按鈕上 */
 @media (max-width: 1080px) { .dock button small { display: none; } }
+@media (hover: none) { .dock button i, .help { display: none; } }   /* 觸控裝置沒有鍵盤，不顯示按鍵提示 */
+@media (max-width: 600px) { .dock { bottom: calc(12px + env(safe-area-inset-bottom)); gap: 2px; padding: 5px; } .dock button { padding: 8px 10px; font-size: 12.5px; } .dock .sep { margin: 0 2px; } }
+.nofs .fsbtn, .nofs .dock .fs { display: none; }
 </style>
 </head>
 <body>
@@ -95,15 +104,19 @@ fsBtn.onclick = toggleFull;
 dock.appendChild(fsBtn);
 $('fsbtn').onclick = toggleFull;
 const ICON_IN = 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5', ICON_OUT = 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5';
-document.addEventListener('fullscreenchange', () => {
-  const on = !!document.fullscreenElement;
+const onFs = () => {
+  const on = !!fsEl();
   $('fsTxt').textContent = on ? '退出' : '全螢幕';
   $('fsIcon').setAttribute('d', on ? ICON_OUT : ICON_IN);
   $('fsbtn').title = on ? '退出全螢幕（F）' : '全螢幕（F）';
-});
+};
+document.addEventListener('fullscreenchange', onFs); document.addEventListener('webkitfullscreenchange', onFs);
 
 function paintDock() {
-  [...dock.querySelectorAll('button')].slice(0, THEMES.length).forEach((b, i) => b.classList.toggle('on', i === idx));
+  [...dock.querySelectorAll('button')].slice(0, THEMES.length).forEach((b, i) => {
+    b.classList.toggle('on', i === idx);
+    if (i === idx && dock.scrollWidth > dock.clientWidth) dock.scrollLeft = b.offsetLeft - (dock.clientWidth - b.offsetWidth) / 2;
+  });
   autoBtn.classList.toggle('on', auto);
 }
 
@@ -134,7 +147,21 @@ function wire(f) {
     const w = f.contentWindow;
     w.addEventListener('keydown', onKey);
     w.addEventListener('mousemove', wake);
+
+// ---- 觸控：左右滑切換主題，點一下叫出選單
+function touch(w) {
+  let x0, y0, t0;
+  w.addEventListener('touchstart', (e) => { if (e.target.closest && e.target.closest('.dock')) { x0 = null; return; } const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); }, { passive: true });
+  w.addEventListener('touchend', (e) => {
+    if (x0 == null) return;
+    const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6 && Date.now() - t0 < 700) go(idx + (dx < 0 ? 1 : -1));
+    wake();
+  }, { passive: true });
+}
+touch(window);
     w.addEventListener('dblclick', toggleFull);
+    touch(w);
   } catch { /* 同源才接得到 */ }
 }
 
@@ -152,7 +179,13 @@ function setAuto(v) {
 }
 function armAuto() { clearTimeout(autoTimer); autoTimer = setTimeout(() => go(idx + 1), AUTO_MS); }
 
-function toggleFull() { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); }
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+function toggleFull() {
+  const d = document, el = d.documentElement;
+  if (fsEl()) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+  else { const r = (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el); if (r && r.catch) r.catch(() => {}); }
+}
+if (!(document.fullscreenEnabled || document.webkitFullscreenEnabled)) document.body.classList.add('nofs');
 
 function onKey(e) {
   const k = e.key;
@@ -171,7 +204,7 @@ let idleT;
 function wake() {
   dock.classList.add('show'); $('help').classList.add('show'); $('fsbtn').classList.add('show'); document.body.classList.remove('idle');
   clearTimeout(idleT);
-  idleT = setTimeout(() => { if (!dock.matches(':hover') && !$('fsbtn').matches(':hover')) { dock.classList.remove('show'); $('help').classList.remove('show'); $('fsbtn').classList.remove('show'); document.body.classList.add('idle'); } else wake(); }, 2500);
+  idleT = setTimeout(() => { if (!dock.matches(':hover') && !$('fsbtn').matches(':hover')) { dock.classList.remove('show'); $('help').classList.remove('show'); $('fsbtn').classList.remove('show'); document.body.classList.add('idle'); } else wake(); }, matchMedia('(hover: none)').matches ? 4000 : 2500);
 }
 addEventListener('mousemove', wake);
 

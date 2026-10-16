@@ -41,6 +41,7 @@ body { background: var(--void); color: var(--ink); overflow: hidden; font-family
 .dateline b { font-family: var(--f-cjk); font-weight: 900; font-size: 13px; color: #fff; background: var(--red); padding: 1px 8px; letter-spacing: .1em; }
 .dateline hr { flex: 1; border: 0; border-top: 1px solid var(--line); margin: 0; }
 .dateline .k { color: var(--ink); }
+#date { white-space: nowrap; }
 
 .mega { position: relative; container-type: size; border-bottom: 1px solid var(--line); min-height: 0; }
 .mega .big { position: absolute; left: -4px; bottom: 0.16em; font-stretch: 62%; font-weight: 900; font-size: min(27cqw, 72cqh); line-height: .9; letter-spacing: -.035em; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -86,6 +87,49 @@ body { background: var(--void); color: var(--ink); overflow: hidden; font-family
 .up { color: var(--red); } .dn { color: var(--orbit); }
 .tape .up { color: #FF6A50; } .tape .dn { color: #7A90FF; }
 .xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
+
+/* 直式：K 線與 24H 區塊、六張卡片改成上下排 */
+@media (orientation: portrait) {
+  .wrap { height: 100%; grid-template-rows: auto minmax(0, 1fr) auto auto 36px; padding: 0 24px; }
+  .tape { margin: 0 -24px; }
+  .mast { flex-wrap: wrap; row-gap: 6px; padding-bottom: 8px; }
+  .dateline { flex-wrap: wrap; row-gap: 4px; }
+  .mid { height: clamp(220px, 26vh, 320px); }
+  .stocks { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 14px; }
+  .st { height: clamp(104px, 11vh, 140px); }
+  .st:nth-child(3n + 1) { border-left: 0; padding-left: 0; }
+}
+@media (orientation: portrait) and (max-width: 640px) {
+  .wrap { padding: 0 16px; }
+  .tape { margin: 0 -16px; }
+  .mast { margin-top: 12px; gap: 10px; }
+  .dateline { flex-basis: 100%; gap: 4px 10px; font-size: 10px; }
+  .dateline hr { display: none; }
+  .hud.tl { right: 0; flex-wrap: wrap; font-size: 10px; row-gap: 2px; }
+  .hud.tr { display: none; }
+  .mega canvas { top: 46px; }
+  .mid { grid-template-columns: 1fr; gap: 10px; height: auto; }
+  .h4 { height: 150px; }
+  .h4 h3 { white-space: nowrap; overflow: hidden; }
+  .h4 h3 small { overflow: hidden; text-overflow: ellipsis; }
+  .st .k i { display: none; }
+  .st .k b { overflow: hidden; text-overflow: ellipsis; }
+  .watch { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: auto auto; row-gap: 4px; }
+  .watch div.c { padding: 0 8px; }
+  .watch div.c:nth-child(2) { border-left: 0; padding-left: 0; }
+  .watch .v { font-size: 22px; }
+  .st { padding: 0 8px; height: 96px; }
+  .st .k b { font-size: 12px; }
+  .st .v { font-size: 24px; }
+}
+/* 手機橫放：只保留大價格、24H 與卡片 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .wrap { grid-template-rows: 52px minmax(0, 1fr) minmax(96px, 30vh) 30px; }   /* .mid 隱藏後不佔列 */
+  .mast { margin-top: 10px; padding-top: 6px; }
+  .mid { display: none; }
+  .st .px { display: none; }
+  #date { display: none; }
+}
 </style>
 </head>
 <body>

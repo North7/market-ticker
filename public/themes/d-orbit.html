@@ -15,7 +15,7 @@ body { background: radial-gradient(circle at 33% 50%, #12141a 0%, var(--bg) 60%)
 #cv { position: fixed; inset: 0; width: 100%; height: 100%; }
 .col { position: fixed; left: var(--L, 55vw); right: 36px; top: 64px; bottom: 22px; z-index: 2; display: flex; flex-direction: column; align-items: flex-end; container-type: size; }
 .price { text-align: right; mix-blend-mode: difference; flex: none; }
-.price .big { font-weight: 100; font-size: min(27vh, 240px, 29cqw); line-height: .9; letter-spacing: -.05em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.price .big { font-weight: 100; font-size: min(27vh, 400px, 29cqw); line-height: .9; letter-spacing: -.05em; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .price .big small { font-size: .36em; font-weight: 200; letter-spacing: -.02em; }
 .price .cap { font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .3em; color: #8c8e95; text-transform: uppercase; margin-bottom: 8px; }
 .chg { flex: none; margin: clamp(10px, 3vh, 30px) 4px 0 0; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px clamp(14px, 2.4cqw, 28px); align-items: baseline; font-family: 'Geist Mono'; font-size: 13px; color: var(--mute); white-space: nowrap; }
@@ -29,6 +29,7 @@ body { background: radial-gradient(circle at 33% 50%, #12141a 0%, var(--bg) 60%)
 .orbs { flex: 1; min-height: 0; width: min(100%, 560px); margin-top: clamp(8px, 2.4vh, 24px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 6px 10px; }
 .orb { position: relative; container-type: size; min-height: 0; }
 .orb > * { --s: min(100cqw, calc(100cqh - 22px), 150px); }
+@media (min-height: 1100px) { .orbs { width: min(100%, 52vh); } .orb > * { --s: min(100cqw, calc(100cqh - 22px), 14vh); } }
 .orb canvas { position: absolute; left: 50%; bottom: 22px; width: var(--s); height: var(--s); transform: translateX(-50%); }
 .orb .in { position: absolute; left: 0; right: 0; bottom: 22px; height: var(--s); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
 .orb .px { font-weight: 300; font-size: max(13px, calc(var(--s) * .15)); letter-spacing: -.02em; white-space: nowrap; }
@@ -37,6 +38,22 @@ body { background: radial-gradient(circle at 33% 50%, #12141a 0%, var(--bg) 60%)
 .orb .nm small { font-family: 'Geist Mono'; font-size: 10px; color: var(--mute); margin-left: 6px; letter-spacing: .12em; }
 .u { color: var(--up); } .d { color: var(--down); }
 .xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
+
+/* 直式：大軌道在上、價格與小軌道在下（位置由 JS 依軌道大小寫入 --T） */
+@media (orientation: portrait) {
+  .corner { right: 16px; left: 16px; top: 14px; line-height: 1.7; font-size: 10px; letter-spacing: .12em; }
+  .corner .xtra { display: block; margin-left: 0; white-space: normal; letter-spacing: .06em; }
+  .legend { left: 16px; right: 16px; top: auto; position: absolute; font-size: 9.5px; letter-spacing: .08em; line-height: 1.7; white-space: nowrap; overflow: hidden; }
+  .legend i { width: 12px; margin-right: 7px; }
+  .col { left: 16px; right: 16px; top: var(--T, 55vh); bottom: 14px; align-items: center; }
+  .price { text-align: center; }
+  .price .big { font-size: min(11vh, 200px, 21cqw); }
+  .price .cap { margin-bottom: 4px; }
+  .chg { justify-content: center; margin: 6px 0 0; gap: 4px 14px; }
+  .chg .p { font-size: clamp(22px, 3.4vh, 40px); }
+  .orbs { width: min(100%, 620px); }
+}
+@media (orientation: landscape) and (max-height: 500px) { .legend { display: none; } }
 </style>
 </head>
 <body>
@@ -47,7 +64,7 @@ body { background: radial-gradient(circle at 33% 50%, #12141a 0%, var(--bg) 60%)
 <div class="chg"><span class="p" id="pct">—</span><span>H<b id="h">—</b></span><span>L<b id="l">—</b></span><span>AMP<b id="amp">—</b></span></div>
 <div class="orbs" id="orbs"></div>
 </div>
-<div class="legend"><div><i></i>outer orbit · 4H closes · 30 days</div><div><i style="opacity:.5"></i>inner orbit · 1M candles · 60 minutes</div><div><i style="opacity:.25"></i>sweep · seconds</div><div><i style="opacity:.5"></i>orbs · line vs prev close · arc = day range</div></div>
+<div class="legend" id="legend"><div><i></i>outer orbit · 4H closes · 30 days</div><div><i style="opacity:.5"></i>inner orbit · 1M candles · 60 minutes</div><div><i style="opacity:.25"></i>sweep · seconds</div><div><i style="opacity:.5"></i>orbs · line vs prev close · arc = day range</div></div>
 
 <script src="feed.js"></script>
 <script src="draw.js"></script>
@@ -64,9 +81,20 @@ const ang = (i, n) => -Math.PI / 2 + TAU * GAP / 2 + (i / Math.max(1, n - 1)) * 
 
 function orbit() {
   const { ctx, w, h } = Draw.fit($('cv'));
-  const R = Math.min(h * 0.43, w * 0.29), cx = Math.min(w * 0.31, R + 72), cy = h * 0.54;
-  const L = Math.round(cx + R + 56) + 'px';
-  if (document.documentElement.style.getPropertyValue('--L') !== L) document.documentElement.style.setProperty('--L', L);
+  let R, cx, cy;
+  const root = document.documentElement.style, setVar = (k, v) => { if (root.getPropertyValue(k) !== v) root.setProperty(k, v); };
+  if (h > w) {
+    // 直式：圖例放在 corner 下方，軌道接在圖例下面置中，右欄移到軌道下方
+    const lg = $('legend'), cb = document.querySelector('.corner').getBoundingClientRect().bottom;
+    lg.style.top = (cb + 8) + 'px';
+    const top = cb + 8 + lg.offsetHeight + 46;
+    R = Math.max(60, Math.min(w * 0.40, (h - top - 40 - Math.max(340, h * 0.42)) / 2)); cx = w / 2; cy = top + R;   // 下方至少留 340px 給價格與小軌道
+    setVar('--T', Math.round(cy + R + 40) + 'px');
+  } else {
+    R = Math.min(h * 0.43, w * 0.29); cx = Math.min(w * 0.31, R + 72); cy = h * 0.54;
+    $('legend').style.top = '';
+    setVar('--L', Math.round(cx + R + 56) + 'px');
+  }
   // 刻度環：對齊外環 4H 資料，短刻度＝1 根 4H，長刻度＝1 天，標出天數
   ctx.save();
   const N4 = Math.min(180, (S.bars['4h'] || []).length || 180);

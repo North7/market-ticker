@@ -97,6 +97,54 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
   .tk .ic { display: none; } .tk .rt { text-align: left; } .tk .nm span { display: none; }
   .cd .digits b { font-size: 30px; } .chg .num b { font-size: 38px; } .turn .num b { font-size: 34px; } .turn .num span { font-size: 22px; }
 }
+
+/* 直式（iPad）：上排價格＋漲跌＋倒數，主圖全寬，成交額與 4H 並排，清單在最下方 */
+@media (orientation: portrait) {
+  .grid { height: 100%; grid-template-rows: clamp(150px, 19vh, 230px) minmax(0, 1fr) clamp(130px, 16vh, 200px) auto; }
+  .price { grid-column: 1 / 3; grid-row: 1; } .chg { grid-column: 3; grid-row: 1; } .cd { grid-column: 4; grid-row: 1; }
+  .main { grid-column: 1 / -1; grid-row: 2; }
+  .turn { grid-column: 1 / 3; grid-row: 3; } .bars { grid-column: 3 / 5; grid-row: 3; }
+  .stocks { grid-column: 1 / -1; grid-row: 4; grid-template-rows: auto repeat(2, auto); }
+  .chg .num b { font-size: 38px; } .cd .digits b { font-size: 30px; } .cd .digits { gap: 10px; }
+  .turn .num { bottom: 34px; }
+}
+/* 手機直放：兩欄 */
+@media (orientation: portrait) and (max-width: 640px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 110px 112px minmax(0, 1fr) 100px auto; gap: 10px; padding: 12px; }
+  .c { border-radius: 22px; }
+  .price { grid-column: 1 / -1; padding: 14px 18px 12px; }
+  .price .top .pill { height: 26px; padding: 0 10px; font-size: 11px; }
+  .price .top #clk { display: none; }
+  .price .arrow { width: 30px; height: 30px; font-size: 15px; }
+  .chg { grid-column: 1; grid-row: 2; } .cd { grid-column: 2; grid-row: 2; padding: 12px 12px; }
+  .chg .lab { left: 14px; top: 12px; font-size: 10.5px; } .chg .pill { display: none; }
+  .chg .num { bottom: 12px; } .chg .num b { font-size: 26px; } .chg .num small { font-size: 10px; } .chg .num span { display: none; }
+  .cd .k { font-size: 10.5px; } .cd .box { margin-top: 6px; border-radius: 14px; } .cd .box small, .cd .box .o { font-size: 10px; }
+  .cd .digits { gap: 6px; } .cd .digits b { font-size: 22px; } .cd .digits span { font-size: 9px; }
+  .main { grid-row: 3; } .stocks { grid-row: 5; }
+  .main .hd { left: 14px; right: 12px; top: 12px; gap: 6px; } .main .hd h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; } .main .hd h3 { font-size: 14px; }
+  .seg button { height: 22px; line-height: 22px; padding: 0 8px; font-size: 11px; }
+  .main .val { left: 14px; top: 42px; font-size: 18px; }
+  .turn { grid-column: 1; grid-row: 4; } .bars { grid-column: 2; grid-row: 4; }
+  .turn .pills { left: 10px; right: 10px; top: 10px; } .turn .pills .pill:last-child { display: none; } .turn .pill { height: 24px; font-size: 10.5px; padding: 0 10px; }
+  .turn .num { bottom: 16px; } .turn .num b { font-size: 24px; } .turn .num span { font-size: 15px; }
+  .bars .hd { left: 12px; right: 12px; top: 12px; } .bars .hd .k { font-size: 10.5px; } .bars .hd b { font-size: 13px; }
+  .stocks { padding: 12px; gap: 8px; }
+  .stocks .hd { gap: 10px; } .stocks .hd h3 { font-size: 14px; white-space: nowrap; } .stocks .hd .k { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .tk { grid-template-columns: 1fr; gap: 2px; padding: 8px 10px; border-radius: 14px; }
+  .tk .ic { display: none; } .tk .rt { text-align: left; } .tk .nm span { display: none; }
+  .tk .nm b { font-size: 12.5px; } .tk .rt b { font-size: 14px; } .tk .rt span { font-size: 10.5px; padding: 1px 6px; }
+}
+/* 手機橫放：隱藏倒數與成交額，保留價格、主圖與清單 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .grid { grid-template-rows: 30vh minmax(0, 1fr) 28vh; gap: 8px; padding: 8px; }
+  .c { border-radius: 18px; }
+  .price { padding: 10px 16px; } .price .top .pill { height: 24px; font-size: 10.5px; } .price .top #clk { display: none; } .price .arrow { width: 26px; height: 26px; font-size: 13px; }
+  .cd { padding: 10px; } .cd .digits b { font-size: 20px; } .cd .box small, .cd .box .o { display: none; }
+  .chg .num { bottom: 8px; } .chg .num b { font-size: 24px; } .chg .num small, .chg .pill { display: none; }
+  .turn .num { bottom: 10px; } .turn .num b { font-size: 22px; } .turn .num span { font-size: 13px; } .turn .pills { display: none; }
+  .stocks .hd { display: none; } .stocks { padding: 8px; grid-template-rows: repeat(2, minmax(0, 1fr)); }
+}
 </style>
 </head>
 <body>
@@ -160,7 +208,7 @@ bindSeg('segRange', () => RANGE, (v) => { RANGE = +v; store.set('range', v); });
 function mainChart(t) {
   const { ctx, w, h } = Draw.fit($('c1m'));
   const d = (S.bars['1m'] || []).slice(-RANGE); if (d.length < 5) return;
-  const L = 70, R = w - 30, T = 108, B = h - 42;
+  const sm = w < 500, L = sm ? 54 : 70, R = w - (sm ? 16 : 30), T = sm ? 76 : 108, B = h - (sm ? 34 : 42);   // 手機標題列較矮
   let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
   const pd = (hi - lo) * 0.08; hi += pd; lo -= pd;
   const X = (i) => L + (R - L) * i / (d.length - 1), Y = (p) => T + (hi - p) / (hi - lo) * (B - T);

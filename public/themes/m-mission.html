@@ -82,6 +82,52 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
   .tl { display: none; }
 }
 .xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
+
+/* 直式：價格獨占一列，兩個儀表盒並排，卡片 3×2 */
+@media (orientation: portrait) {
+  .wrap { height: 100%; grid-template-rows: auto auto clamp(74px, 9vh, 120px) minmax(0, 1fr) auto; padding: 0 22px 18px; }
+  .top { flex-wrap: wrap; row-gap: 4px; padding: 10px 0 8px; }
+  .hero { grid-template-columns: 1fr 1fr; }
+  .title { grid-column: 1 / -1; }
+  .price { font-size: min(11vh, 21vw, 146px); }
+  .box { min-height: clamp(110px, 13vh, 160px); }
+  .tl .note { display: none; }
+  .tl .blk { white-space: nowrap; overflow: hidden; }
+  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tile { min-height: clamp(92px, 10.5vh, 130px); }
+}
+@media (orientation: portrait) and (max-width: 640px) {
+  .wrap { gap: 10px; padding: 0 14px 14px; grid-template-rows: auto auto minmax(0, 1fr) auto; }
+  .tl { display: none; }   /* 手機太窄，交易時段甘特圖會擠成一團 */
+  .box .lab { font-size: 9px; gap: 6px; } .box .lab span:last-child { text-align: right; }
+  .top { font-size: 10px; gap: 4px 10px; }
+  .top .xtra { margin-left: 0; flex-basis: 100%; order: 9; }
+  .sub { font-size: 17px; } .sub span { font-size: 12px; margin-left: 8px; }
+  .box { padding: 10px 12px; }
+  .box .big { font-size: 30px; } .box .row { font-size: 14px; }
+  .tl .blk { font-size: 10.5px; padding: 0 6px; height: 28px; top: 22px; } .tl .blk.btc { top: 56px; height: 18px; font-size: 10px; }
+  .tl .ph { font-size: 12px; }
+  .band { top: 14px; height: 46px; grid-template-columns: auto repeat(3, auto); padding: 0 12px; }
+  .band b { font-size: 13px; } .band .cell { height: 34px; padding: 0 10px; } .band .cell strong { font-size: 18px; } .band .cell small { font-size: 8.5px; }
+  .band .cell:last-child { display: none; }
+  .win { border-width: 4px; border-radius: 16px; }
+  .win::before, .win::after { display: none; }
+  .win canvas { left: 6px; right: 6px; width: calc(100% - 12px); top: 66px; height: calc(100% - 78px); }
+  .tiles { gap: 8px; }
+  .tile { padding: 8px 10px; min-height: 0; grid-template-rows: auto 1fr auto; }
+  .tile .lab { display: none; }
+  .tile .nm { font-size: 13px; overflow: hidden; text-overflow: ellipsis; } .tile .pc { font-size: 20px; margin-top: 6px; }
+  .tile .px { font-size: 10px; white-space: nowrap; overflow: hidden; gap: 6px; } .tile .px > * { overflow: hidden; text-overflow: ellipsis; }
+  .tile canvas { display: none; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .wrap { grid-template-rows: 32px 92px minmax(0, 1fr) 82px; gap: 8px; padding: 0 18px 10px; }
+  .price { font-size: 64px; } .sub { font-size: 15px; margin-top: 4px; } .sub span { display: none; }
+  .box { padding: 8px 12px; } .box .big { font-size: 26px; } .box .row { font-size: 13px; margin-top: 4px; padding-top: 3px; }
+  .tile { padding: 8px 10px; } .tile .nm { font-size: 13px; } .tile .pc { font-size: 22px; }
+  .top { font-size: 10px; }
+  .tile .lab { display: none; } .tile .px { display: none; }
+}
 </style>
 </head>
 <body>

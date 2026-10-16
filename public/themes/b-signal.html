@@ -36,7 +36,8 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 .col { position: relative; border-right: 1px solid var(--line); padding: 12px clamp(8px, 1.2vw, 18px) 10px; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr) auto; min-width: 0; }
 .col:last-child { border-right: 0; }
 .col { overflow: hidden; } .col > * { min-width: 0; }
-.col .code { font-weight: 600; font-size: 13px; letter-spacing: .06em; display: flex; justify-content: space-between; }
+.col .code { font-weight: 600; font-size: 13px; letter-spacing: .06em; display: flex; justify-content: space-between; gap: 6px; white-space: nowrap; }
+.col .code i { flex: none; }
 .col .code i { font-style: normal; font-family: 'Geist Mono'; font-weight: 400; font-size: 10px; color: var(--mute); letter-spacing: .14em; }
 .col .code i.on { color: var(--up); }
 .col .nm { font-family: 'Noto Sans TC'; font-weight: 500; font-size: 12px; color: var(--mute); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -50,12 +51,40 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 @keyframes tk { from { color: var(--btc); } }
 .u { color: var(--up); } .d { color: var(--down); }
 .xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
+.stat { flex-wrap: wrap; row-gap: 4px; right: 20px; }
+
+/* 直式（手機、iPad 直放）：4H 獨立一列，六張卡片在下方 */
+@media (orientation: portrait) {
+  .wrap { height: 100%; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .top { flex-wrap: wrap; row-gap: 2px; padding: 9px 16px; }
+  .top .sp { margin-left: 0; }
+  .bottom { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .b4h { grid-column: 1 / -1; height: clamp(96px, 13vh, 150px); border-right: 0; border-bottom: 1px solid var(--line); }
+  .col { height: clamp(128px, 15vh, 180px); }
+}
+@media (orientation: portrait) and (max-width: 640px) {
+  .top { gap: 4px 14px; font-size: 10px; letter-spacing: .1em; }
+  .top .w1 { display: none; }
+  .top .xtra { margin-left: 0; flex-basis: 100%; order: 9; }
+  .stat { left: 16px; gap: 6px 16px; font-size: 13px; }
+  .stat .chg { font-size: 24px; flex-basis: 100%; }
+  .stat span b { font-size: 13px; margin-left: 5px; }
+  .bottom { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .col { border-bottom: 1px solid var(--line); height: 132px; }
+  .col:nth-of-type(3n + 1) { border-right: 0; }
+}
+/* 手機橫放：高度很矮，縮短上方列與卡片 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .wrap { grid-template-rows: 28px minmax(0, 1fr) 118px; }
+  .top { font-size: 10px; } .top .w1 { display: none; }
+  .col .nm { display: none; }
+}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><span><span class="dot"></span><b>Signal</b> — BTC / USDT — Binance spot</span><span>1 col = 1 min · disc = 24H pos</span><span id="xtra" class="xtra"></span>
-    <span class="sp">TPE <b id="tpe">--</b></span><span>NYC <b id="nyc">--</b></span><span>UTC <b id="utc">--</b></span></div>
+  <div class="top"><span><span class="dot"></span><b>Signal</b> — BTC / USDT<span class="w1"> — Binance spot</span></span><span class="w1">1 col = 1 min · disc = 24H pos</span><span id="xtra" class="xtra"></span>
+    <span class="sp">TPE <b id="tpe">--</b></span><span class="w1">NYC <b id="nyc">--</b></span><span class="w1">UTC <b id="utc">--</b></span></div>
   <section class="field" id="field">
     <canvas id="cv"></canvas>
     <div class="stat" id="stat"><div class="chg" id="pct">--</div><span>24H HIGH<b id="h">--</b></span><span>LOW<b id="l">--</b></span><span>AMP<b id="amp">--</b></span><span>VOL<b id="qv">--</b></span></div>
@@ -115,14 +144,14 @@ function layoutPrice(s, lit, now) {
 function draw(now) {
   const cv = $('cv');
   const { ctx, w, h } = Draw.fit(cv);
-  P = Math.max(7, Math.min(16, Math.floor(w / 94), Math.floor(h / 26)));
+  P = Math.max(4, Math.min(16, Math.floor(w / 92), Math.floor(h / (h < 300 ? 34 : 26))));   // 手機橫放時價格縮小，留空間給 K 線   // 手機直放約 4px，大螢幕最多 16px
   const cols = Math.floor(w / P), rows = Math.floor(h / P);
   const ox = (w - cols * P) / 2, oy = (h - rows * P) / 2;
 
   // 橘色圓盤：高度＝24H 區間位置（越接近 24H 高點越往上）
   const t = S.ticker;
   const pos = t && S.price ? Math.max(0, Math.min(1, (S.price - t.l) / (t.h - t.l || 1))) : 0.5;
-  const R = h * 0.62, cx = w * 0.8;
+  const R = Math.min(h * 0.62, w * 0.46), cx = w * 0.8;
   const target = h + R * 0.15 - pos * (h * 0.85);
   discY = discY == null ? target : discY + (target - discY) * 0.06;
   ctx.fillStyle = BTC;
