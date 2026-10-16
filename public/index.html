@@ -53,10 +53,7 @@ body.idle, body.idle * { cursor: none !important; }
 @media (hover: none) { .dock button i, .help { display: none; } }   /* 觸控裝置沒有鍵盤，不顯示按鍵提示 */
 @media (max-width: 600px) { .dock { bottom: calc(12px + env(safe-area-inset-bottom)); gap: 2px; padding: 5px; } .dock button { padding: 8px 10px; font-size: 12.5px; } .dock .sep { margin: 0 2px; } }
 .nofs .fsbtn, .nofs .dock .fs { display: none; }
-.ver { position: fixed; left: calc(16px + env(safe-area-inset-left)); top: calc(16px + env(safe-area-inset-top)); z-index: 10; height: 28px; padding: 0 12px; border-radius: 999px; display: flex; align-items: center;
-  font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: .04em; color: rgba(255,255,255,.8); background: rgba(18,18,20,.74); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); opacity: 0; pointer-events: none; transition: opacity .35s; }
-.ver.show { opacity: 1; }
+.dock .ver { padding: 0 10px 0 6px; font-family: 'Geist Mono', monospace; font-size: 10.5px; color: rgba(255,255,255,.38); white-space: nowrap; }   /* 版本只出現在底部選單裡，不擋畫面 */
 </style>
 </head>
 <body>
@@ -64,7 +61,6 @@ body.idle, body.idle * { cursor: none !important; }
 <nav class="dock" id="dock"></nav>
 <button class="fsbtn" id="fsbtn" title="全螢幕（F）"><svg viewBox="0 0 24 24"><path id="fsIcon" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 <div class="toast" id="toast"></div>
-<div class="ver" id="ver"></div>
 <div class="help" id="help">1–8 / ← → 切換主題<br>A 自動輪播 · F 全螢幕</div>
 
 <script>
@@ -110,6 +106,7 @@ fsBtn.className = 'fs';
 fsBtn.innerHTML = '<i>F</i><span id="fsTxt">全螢幕</span>';
 fsBtn.onclick = toggleFull;
 dock.appendChild(fsBtn);
+dock.insertAdjacentHTML('beforeend', '<span class="ver" id="ver"></span>');
 $('fsbtn').onclick = toggleFull;
 const ICON_IN = 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5', ICON_OUT = 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5';
 const onFs = () => {
@@ -210,9 +207,9 @@ addEventListener('keydown', onKey);
 // ---- 滑鼠一動就顯示選單，閒置 2.5 秒隱藏（含游標）
 let idleT;
 function wake() {
-  dock.classList.add('show'); $('help').classList.add('show'); $('fsbtn').classList.add('show'); $('ver').classList.add('show'); document.body.classList.remove('idle');
+  dock.classList.add('show'); $('help').classList.add('show'); $('fsbtn').classList.add('show'); document.body.classList.remove('idle');
   clearTimeout(idleT);
-  idleT = setTimeout(() => { if (!dock.matches(':hover') && !$('fsbtn').matches(':hover')) { dock.classList.remove('show'); $('help').classList.remove('show'); $('fsbtn').classList.remove('show'); $('ver').classList.remove('show'); document.body.classList.add('idle'); } else wake(); }, matchMedia('(hover: none)').matches ? 4000 : 2500);
+  idleT = setTimeout(() => { if (!dock.matches(':hover') && !$('fsbtn').matches(':hover')) { dock.classList.remove('show'); $('help').classList.remove('show'); $('fsbtn').classList.remove('show'); document.body.classList.add('idle'); } else wake(); }, matchMedia('(hover: none)').matches ? 4000 : 2500);
 }
 addEventListener('mousemove', wake);
 
