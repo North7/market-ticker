@@ -151,7 +151,8 @@ function wire(f) {
   try {
     const w = f.contentWindow;
     w.addEventListener('keydown', onKey);
-    w.addEventListener('mousemove', wake);
+    w.addEventListener('mousemove', onMove);
+    w.addEventListener('click', onClick);
 
 // ---- 觸控：左右滑切換主題，點一下叫出選單
 function touch(w) {
@@ -160,8 +161,9 @@ function touch(w) {
   w.addEventListener('touchend', (e) => {
     if (x0 == null) return;
     const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
-    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6 && Date.now() - t0 < 700) go(idx + (dx < 0 ? 1 : -1));
-    wake();
+    lastTouch = Date.now();
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6 && Date.now() - t0 < 700) { go(idx + (dx < 0 ? 1 : -1)); wake(); }
+    else if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && Date.now() - t0 < 500 && !interactive(e.target)) toggleUi();   // 點一下：選單顯示／隱藏切換
   }, { passive: true });
 }
 touch(window);
@@ -206,12 +208,25 @@ addEventListener('keydown', onKey);
 
 // ---- 滑鼠一動就顯示選單，閒置 2.5 秒隱藏（含游標）
 let idleT;
+// 點畫面切換選單；點到按鈕、選單本身時不切換
+let lastTouch = 0, quietUntil = 0;
+const interactive = (el) => !!(el && el.closest && el.closest('button, a, input, select, .seg, .dock, .fsbtn'));
+function hideUi() {
+  clearTimeout(idleT);
+  dock.classList.remove('show'); $('help').classList.remove('show'); $('fsbtn').classList.remove('show'); document.body.classList.add('idle');
+  quietUntil = Date.now() + 1200;   // 觸控點擊後瀏覽器會補送 mousemove，短時間內忽略，免得又被叫出來
+}
+function toggleUi() { dock.classList.contains('show') ? hideUi() : wake(); }
+function onMove() { if (Date.now() > quietUntil) wake(); }
+function onClick(e) { if (Date.now() - lastTouch < 800 || interactive(e.target)) return; toggleUi(); }
+
 function wake() {
   dock.classList.add('show'); $('help').classList.add('show'); $('fsbtn').classList.add('show'); document.body.classList.remove('idle');
   clearTimeout(idleT);
   idleT = setTimeout(() => { if (!dock.matches(':hover') && !$('fsbtn').matches(':hover')) { dock.classList.remove('show'); $('help').classList.remove('show'); $('fsbtn').classList.remove('show'); document.body.classList.add('idle'); } else wake(); }, matchMedia('(hover: none)').matches ? 4000 : 2500);
 }
-addEventListener('mousemove', wake);
+addEventListener('mousemove', onMove);
+addEventListener('click', onClick);
 
 // ---- 長時間顯示：防休眠、整體微移防烙印
 async function keepAwake() { try { if ('wakeLock' in navigator) await navigator.wakeLock.request('screen'); } catch { /* caffeinate 會處理 */ } }
