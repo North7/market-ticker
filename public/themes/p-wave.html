@@ -116,7 +116,14 @@ function sphere(ctx, w, h, t) {
   const r12 = tickReturns(5, K).r, mx = Math.max(0.00004, ...r12.map(Math.abs));
   for (let k = 0; k < K; k++) amp[k] += (r12[k] / mx - amp[k]) * 0.14;
   const port = h > w;   // 直式：球體置中，放在價格與清單之間
-  const cx = port ? w * (w < 640 ? 0.5 : 0.62) : w * 0.63, cy = port ? h * 0.43 : h * 0.335, R = port ? Math.min(w * 0.30, h * 0.13) : Math.min(h * 0.235, w * 0.18);
+  const R = port ? Math.min(w * 0.30, h * 0.12) : Math.min(h * 0.235, w * 0.18);
+  const cx = port ? w * (w < 640 ? 0.5 : 0.62) : w * 0.63;
+  let cy = h * 0.335;
+  if (port) {
+    const cb = document.querySelector('.chg').getBoundingClientRect().bottom;
+    cy = Math.max(h * 0.43, cb + R + 26);
+    const lt = Math.round(cy + R + 30) + 'px', ls = $('list').style; if (ls.top !== lt) ls.top = lt;
+  } else if ($('list').style.top) $('list').style.top = '';
   const ry = t * 0.12, rx = 0.35 + Math.sin(t * 0.07) * 0.12;
   const cy1 = Math.cos(ry), sy1 = Math.sin(ry), cx1 = Math.cos(rx), sx1 = Math.sin(rx);
   const pts = [];
@@ -157,7 +164,7 @@ function waves(ctx, w, h) {
   const mx = Math.max(0.00003, ...r.map(Math.abs));
   waveMx += (mx - waveMx) * 0.04;                      // 尺度平滑，不會忽大忽小
   const frac = (now - end) / (SEC * 1000);             // 0..1，讓波形連續往左流
-  const port = h > w, base = h * (port ? 0.8 : 0.76), A = h * (port ? 0.07 : 0.125), sp = w / (N - 1.5), sig = sp * 0.42;
+  const port = h > w, base = h * (port ? 0.82 : 0.76), A = h * (port ? 0.06 : 0.125), sp = w / (N - 1.5), sig = sp * 0.42;
   const xs = r.map((_, k) => sp * (k + 0.5 - frac));
   const yAt = (x, f) => {
     let v = 0;

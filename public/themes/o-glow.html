@@ -110,7 +110,8 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
 }
 /* 手機直放：兩欄 */
 @media (orientation: portrait) and (max-width: 640px) {
-  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 110px 112px minmax(0, 1fr) 100px auto; gap: 10px; padding: 12px; }
+  html, body { height: auto; } body { overflow-x: hidden; overflow-y: auto; }   /* 手機畫面不夠高時改為上下捲動，不硬擠 */
+  .grid { height: auto; min-height: 100vh; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 110px 124px minmax(270px, 1fr) 104px auto; gap: 10px; padding: 12px; }
   .c { border-radius: 22px; }
   .price { grid-column: 1 / -1; padding: 14px 18px 12px; }
   .price .top .pill { height: 26px; padding: 0 10px; font-size: 11px; }
@@ -129,7 +130,7 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
   .turn .pills { left: 10px; right: 10px; top: 10px; } .turn .pills .pill:last-child { display: none; } .turn .pill { height: 24px; font-size: 10.5px; padding: 0 10px; }
   .turn .num { bottom: 16px; } .turn .num b { font-size: 24px; } .turn .num span { font-size: 15px; }
   .bars .hd { left: 12px; right: 12px; top: 12px; } .bars .hd .k { font-size: 10.5px; } .bars .hd b { font-size: 13px; }
-  .stocks { padding: 12px; gap: 8px; }
+  .stocks { padding: 12px; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: auto auto auto; }
   .stocks .hd { gap: 10px; } .stocks .hd h3 { font-size: 14px; white-space: nowrap; } .stocks .hd .k { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .tk { grid-template-columns: 1fr; gap: 2px; padding: 8px 10px; border-radius: 14px; }
   .tk .ic { display: none; } .tk .rt { text-align: left; } .tk .nm span { display: none; }

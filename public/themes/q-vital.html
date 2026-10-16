@@ -62,7 +62,8 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 }
 /* 手機直放：價格 → 扁長儀表 → 1 分與週線 → 圓環 */
 @media (orientation: portrait) and (max-width: 640px) {
-  .wrap { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 120px minmax(0, 1fr) auto; gap: 10px; padding: 14px 14px 16px; }
+  html, body { height: auto; } body { overflow-x: hidden; overflow-y: auto; }   /* 手機畫面不夠高時改為上下捲動，不硬擠 */
+  .wrap { height: auto; min-height: 100vh; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 120px minmax(330px, 1fr) auto; gap: 10px; padding: 14px 14px 16px; }
   .head h1 { font-size: 15px; } .head .hi { font-size: 12px; }
   .head .hi .xtra { display: block; margin: 2px 0 0; white-space: normal; }
   .head .price em { display: block; margin: 4px 0 0; font-size: .3em; }
