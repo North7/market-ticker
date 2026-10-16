@@ -82,6 +82,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
   .tl { display: none; }
 }
 .xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
+.title { translate: calc(var(--fx-px, 0) * 8px) calc(var(--fx-py, 0) * 4px); } .box { translate: calc(var(--fx-px, 0) * -5px) calc(var(--fx-py, 0) * -3px); }   /* 視差：前後景反向 */
 
 /* 直式：價格獨占一列，兩個儀表盒並排，卡片 3×2 */
 @media (orientation: portrait) {
@@ -154,6 +155,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
+<script src="fx.js?v=__VERSION__"></script>
 <script>
 const { S, fmt, pct } = Feed;
 const $ = (id) => document.getElementById(id);
@@ -209,7 +211,7 @@ Feed.on('markets', () => {
     let c = tiles[s.id];
     if (!c) {
       const el = document.createElement('div');
-      el.className = 'tile';
+      el.className = 'tile'; el.dataset.fx = s.id;
       el.innerHTML = `<div class="lab"><span>${Feed.venue(s)} · ${s.code}</span><span class="st"></span></div><div class="nm">${s.name.replace(' ETF', '')}</div><div class="pc">—</div><div class="px"><span class="p">—</span><span class="a">—</span></div><canvas></canvas>`;
       $('tiles').appendChild(el);
       c = tiles[s.id] = { el, q: (x) => el.querySelector(x) };
@@ -224,8 +226,14 @@ Feed.on('markets', () => {
   });
 });
 
+// ---- 交互：1 分 K 視窗可查數據、點卡片看詳情、大單漣漪從價格發出；滑鼠帶動價格與儀表盒微移
+let geo1m = null;
+FX.theme({ bg: 'rgba(28,29,27,.95)', fg: '#e6eee8', mute: '#858c86', line: 'rgba(230,238,232,.55)', accent: '#f26a3d', up: '#f26a3d', down: '#b9d4c2', sheet: '#262725', border: 'rgba(185,212,194,.12)', radius: '6px', font: "'IBM Plex Mono', 'Noto Sans TC', monospace" });
+FX.inspect('#c1m', FX.candleHit(() => geo1m, () => S.bars['1m'], { tf: '1m' }));
+FX.events({ anchor: '#price', ax: 0.45, ay: 0.55, glow: '#price', shake: '.hero' });
+
 function charts() {
-  const r = Draw.candles($('c1m'), S.bars['1m'], { count: 80, headroom: 0.04, footroom: 0.04, pad: { t: 6, r: 70, b: 6, l: 6 }, up: '#f26a3d', down: '#b9d4c2', body: 0.62,
+  const r = geo1m = Draw.candles($('c1m'), S.bars['1m'], { count: 80, headroom: 0.04, footroom: 0.04, pad: { t: 6, r: 70, b: 6, l: 6 }, up: '#f26a3d', down: '#b9d4c2', body: 0.62,
     grid: { color: 'rgba(185,212,194,.07)', rows: 4, cols: 12 }, ema: [{ n: 20, color: 'rgba(230,238,232,.7)', width: 1.3 }],
     lastLine: { color: 'rgba(242,106,61,.7)', dash: [3, 4], full: true }, axis: { font: '11px "IBM Plex Mono"', color: '#858c86', ticks: 4, fmt: (v) => fmt(v, 0) } });
   if (r) {

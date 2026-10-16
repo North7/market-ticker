@@ -70,6 +70,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
 
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
+<script src="fx.js?v=__VERSION__"></script>
 <script>
 const { S, fmt, pct } = Feed;
 const $ = (id) => document.getElementById(id);
@@ -112,6 +113,25 @@ function tickReturns(sec, n, now = Date.now()) {
   return { r: out, end };
 }
 
+// ---- 交互：滑過波形查每 2 秒報酬、滑過球體看最近 60 秒的 5 秒報酬；點清單看詳情；大單漣漪從價格發出；球體轉向游標
+let sphereGeo = null, waveGeo = null;
+FX.theme({ bg: 'rgba(18,18,22,.94)', fg: '#ffffff', mute: '#8a8a90', line: 'rgba(255,255,255,.5)', accent: '#f5f35c', up: '#ff7a9a', down: '#7aa2ff', sheet: '#0d0d10', border: 'rgba(255,255,255,.08)', radius: '14px', font: "'Inter', 'Noto Sans TC', sans-serif" });
+FX.inspect('#cv', (x, y) => {
+  const w = waveGeo, g = sphereGeo;
+  if (w && Math.abs(y - w.base) < w.A * 1.5) {
+    let k = 0; for (let i = 1; i < w.xs.length; i++) if (Math.abs(w.xs[i] - x) < Math.abs(w.xs[k] - x)) k = i;
+    const back = (w.xs.length - 1 - k) * 2, v = w.r[k] * 100;
+    return { x: w.xs[k], y: w.yAt(w.xs[k], 1), title: back ? `${back} 秒前 · 2 秒報酬` : '最新 2 秒', rows: [['報酬', FX.pct(v), v >= 0 ? 'up' : 'down']] };
+  }
+  if (g && Math.hypot(x - g.cx, y - g.cy) < g.R * 1.05) {
+    const v = g.r12.map((r) => r * 100), up = v.filter((r) => r > 0).length;
+    return { x: g.cx, y: g.cy - g.R, vline: false, dot: false, title: '球體 · 最近 60 秒（12 段 5 秒報酬）',
+      rows: [['上漲段', `${up} / 12`], ['最大漲', FX.pct(Math.max(...v)), 'up'], ['最大跌', FX.pct(Math.min(...v)), 'down'], ['每秒成交', $('tps').textContent + ' 筆']] };
+  }
+  return null;
+});
+FX.events({ anchor: '#price', ax: 0.4, ay: 0.55, glow: '#price', shake: '.chg' });
+
 function sphere(ctx, w, h, t) {
   const r12 = tickReturns(5, K).r, mx = Math.max(0.00004, ...r12.map(Math.abs));
   for (let k = 0; k < K; k++) amp[k] += (r12[k] / mx - amp[k]) * 0.14;
@@ -124,7 +144,8 @@ function sphere(ctx, w, h, t) {
     cy = Math.max(h * 0.43, cb + R + 26);
     const lt = Math.round(cy + R + 30) + 'px', ls = $('list').style; if (ls.top !== lt) ls.top = lt;
   } else if ($('list').style.top) $('list').style.top = '';
-  const ry = t * 0.12, rx = 0.35 + Math.sin(t * 0.07) * 0.12;
+  const ry = t * 0.12 + FX.pointer.x * 0.6, rx = 0.35 + Math.sin(t * 0.07) * 0.12 + FX.pointer.y * 0.35;   // 視差：球體轉向游標
+  sphereGeo = { cx, cy, R, r12 };
   const cy1 = Math.cos(ry), sy1 = Math.sin(ry), cx1 = Math.cos(rx), sx1 = Math.sin(rx);
   const pts = [];
   for (let i = 0; i < N; i++) {
@@ -171,6 +192,7 @@ function waves(ctx, w, h) {
     for (let k = 0; k < N; k++) { const dx = x - xs[k]; if (dx > sig * 4 || dx < -sig * 4) continue; v += Math.max(-1.2, Math.min(1.2, r[k] / waveMx)) * Math.exp(-(dx * dx) / (2 * sig * sig)); }
     return base - v * A * f;
   };
+  waveGeo = { xs, r, base, A, yAt };
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   for (let l = LAYERS.length - 1; l >= 1; l--) {
     const f = l / (LAYERS.length - 1);
@@ -216,7 +238,7 @@ Feed.on('ticker', () => {
   $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
 });
 Feed.on('markets', () => {
-  $('list').innerHTML = S.markets.map((s) => `<div class="r"><span>${s.name.replace(' ETF', '')} · ${s.code}</span><b>${Feed.val(s)}</b><i class="${cls(s.pct || 0)}">${Feed.chgTxt(s)}</i></div>`).join('');
+  $('list').innerHTML = S.markets.map((s) => `<div class="r" data-fx="${s.id}"><span>${s.name.replace(' ETF', '')} · ${s.code}</span><b>${Feed.val(s)}</b><i class="${cls(s.pct || 0)}">${Feed.chgTxt(s)}</i></div>`).join('');
 });
 function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; }
 setInterval(clocks, 1000); clocks();

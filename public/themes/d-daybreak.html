@@ -80,6 +80,7 @@ body { background: var(--void); color: var(--ink); overflow: hidden; font-family
 .up { color: var(--red); } .dn { color: var(--orbit); }
 .tape .up { color: #FF6A50; } .tape .dn { color: #7A90FF; }
 .xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
+.mega .big { translate: calc(var(--fx-px, 0) * 10px) calc(var(--fx-py, 0) * 5px); }   /* 視差 */
 
 /* 直式：K 線與 24H 區塊、六張卡片改成上下排 */
 @media (orientation: portrait) {
@@ -157,6 +158,7 @@ body { background: var(--void); color: var(--ink); overflow: hidden; font-family
 
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
+<script src="fx.js?v=__VERSION__"></script>
 <script>
 const { S, fmt, fmtBig, pct } = Feed;
 const $ = (id) => document.getElementById(id);
@@ -212,7 +214,7 @@ Feed.on('markets', () => {
     let c = cols[s.id];
     if (!c) {
       const el = document.createElement('div');
-      el.className = 'st';
+      el.className = 'st'; el.dataset.fx = s.id;
       el.innerHTML = `<span class="k"><b>${s.name.replace(' ETF', '')}</b><i>${s.code}</i></span><span class="v">—</span><span class="px">—</span><div class="sp"><canvas></canvas></div>`;
       $('stocks').appendChild(el);
       c = cols[s.id] = { el, q: (x) => el.querySelector(x) };
@@ -236,16 +238,28 @@ function clocks() {
 }
 setInterval(clocks, 1000); clocks();
 
+// ---- 交互：紅線（1 分收盤）與 4H K 線可查數據、點卡片看詳情、大單漣漪從價格發出；滑鼠帶動價格微移
+let geoSpark = null, geo4h = null;
+FX.theme({ bg: '#F6F5F1', fg: '#0A0A0A', mute: '#7A766F', line: 'rgba(10,10,10,.55)', accent: '#FF3B1F', up: '#D12C10', down: '#2340E0', sheet: '#F6F5F1', border: 'rgba(10,10,10,.08)',
+  radius: '2px', shadow: '0 0 0 1.5px #0A0A0A, 0 12px 30px rgba(0,0,0,.12)', font: "'JetBrains Mono', 'Noto Sans TC', monospace" });
+FX.inspect('.mega', (x, y) => {
+  const cv = $('spark'), g = geoSpark; if (!g) return null;
+  const h = FX.candleHit(() => g, () => S.bars['1m'], { tf: '1m' })(x - cv.offsetLeft, y - cv.offsetTop);
+  return h && { ...h, x: h.x + cv.offsetLeft, y: h.y + cv.offsetTop, title: h.title + ' · 1 分' };
+});
+FX.inspect('#c4h', FX.candleHit(() => geo4h, () => S.bars['4h'], { tf: '4h' }));
+FX.events({ anchor: '#price', ax: 0.4, ay: 0.5, glow: '#price', shake: '.mega' });
+
 function charts() {
   const red = css('--red'), ink = css('--ink');
   // 巨型價格背後的紅色價格線（1 分 K 收盤，3 小時）
-  const r = Draw.candles($('spark'), S.bars['1m'], { mode: 'line', count: 180, pad: { t: 6, r: 8, b: 6, l: 0 }, rightGap: 0, line: red, lineWidth: 2.5 });
+  const r = geoSpark = Draw.candles($('spark'), S.bars['1m'], { mode: 'line', count: 180, pad: { t: 6, r: 8, b: 6, l: 0 }, rightGap: 0, line: red, lineWidth: 2.5 });
   if (r) {
     const ctx = $('spark').getContext('2d'), p = (Date.now() % 2200) / 2200;
     ctx.fillStyle = red; ctx.beginPath(); ctx.arc(r.last.x, r.last.y, 5, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = red; ctx.globalAlpha = 1 - p; ctx.beginPath(); ctx.arc(r.last.x, r.last.y, 5 + p * 16, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
   }
-  Draw.candles($('c4h'), S.bars['4h'], { count: 120, pad: { t: 6, r: 58, b: 6, l: 0 }, up: red, down: ink, hollowDown: true, hollowFill: css('--void'), body: 0.6,
+  geo4h = Draw.candles($('c4h'), S.bars['4h'], { count: 120, pad: { t: 6, r: 58, b: 6, l: 0 }, up: red, down: ink, hollowDown: true, hollowFill: css('--void'), body: 0.6,
     grid: { color: css('--line'), rows: 3 }, ema: [{ n: 20, color: css('--orbit'), width: 1.2 }],
     lastLine: { color: red, dash: [2, 3], full: true }, axis: { font: '11px "JetBrains Mono"', color: css('--ink-3'), ticks: 3, fmt: (v) => fmt(v, 0) } });
 }

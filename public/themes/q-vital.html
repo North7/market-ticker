@@ -51,6 +51,7 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
   .gauge .stats b { font-size: 15px; } .gauge .stats div { padding: 8px 0; }
 }
 .xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
+.card::before, .rc::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: inherit; background: radial-gradient(280px circle at var(--mx, -999px) var(--my, -999px), rgba(242,107,33,.07), transparent 65%); }   /* 游標聚光 */
 
 /* 直式（iPad）：儀表與兩張圖並排，指標圓環 3×2 在下方 */
 @media (orientation: portrait) {
@@ -113,6 +114,7 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
+<script src="fx.js?v=__VERSION__"></script>
 <script>
 const { S, fmt, fmtBig, pct } = Feed;
 const $ = (id) => document.getElementById(id);
@@ -139,11 +141,30 @@ function gauge(t) {
   ctx.fillStyle = '#c9c3bc'; ctx.beginPath(); ctx.arc(cx + Math.cos(aO) * (R - lw - 2), cy + Math.sin(aO) * (R - lw - 2), 4, 0, 7); ctx.fill();
   ctx.font = '500 11px Poppins'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#b5aea6'; if (!wide) ctx.fillText('open', cx + Math.cos(aO) * (R - 46), cy + Math.sin(aO) * (R - 46));
   // 端點心跳
-  const ex = cx + Math.cos(ap) * R, ey = cy + Math.sin(ap) * R, beat = 1 + 0.12 * Math.max(0, Math.sin(t * 6)) ** 8;
+  const ex = cx + Math.cos(ap) * R, ey = cy + Math.sin(ap) * R; geoG = { ex, ey, p };
+  const beat = 1 + 0.12 * Math.max(0, Math.sin(t * 6)) ** 8;
   ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, lw * 0.64 * beat, 0, 7); ctx.fill();
   ctx.fillStyle = OR; ctx.beginPath(); ctx.arc(ex, ey, lw * 0.32 * beat, 0, 7); ctx.fill();
   $('pos').textContent = Math.round(p * 100);
 }
+
+// ---- 交互：心電圖（1 分）、週線（4H）、24H 儀表都可查數據；點圓環看詳情；大單漣漪從價格發出；卡片跟著游標聚光
+let geoEcg = null, geoWk = null, geoG = null;
+FX.theme({ bg: '#ffffff', fg: '#1d1d1f', mute: '#9b9ba1', line: 'rgba(242,107,33,.55)', accent: '#f26b21', up: '#f26b21', down: '#2d9d78', sheet: '#ffffff', border: 'rgba(120,90,60,.1)',
+  radius: '16px', shadow: '0 14px 40px rgba(120,90,60,.18)', font: "'Poppins', 'Noto Sans TC', sans-serif" });
+const lineHit = (geo, tf, label) => (x) => {
+  const g = geo(); if (!g || g.d.length < 2) return null;
+  const i = Math.max(0, Math.min(g.d.length - 1, Math.round((x - g.X(0)) / (g.X(1) - g.X(0))))), b = g.d[i];
+  return { x: g.X(i), y: g.Y(b.c), title: `${FX.time(b.t, tf)} · ${label}`, rows: FX.rows(b) };
+};
+FX.inspect('#ecg', lineHit(() => geoEcg, '1m', '1 分'));
+FX.inspect('#wk', lineHit(() => geoWk, '4h', '4H'));
+FX.inspect('#g', () => {
+  const g = geoG, t = S.ticker; if (!g || !t) return null;
+  return { x: g.ex, y: g.ey, vline: false, title: '24H 區間位置', rows: [['現價', fmt(S.price)], ['位置', Math.round(g.p * 100) + '%'], ['最高', fmt(t.h, 0)], ['開盤', fmt(t.o, 0)], ['最低', fmt(t.l, 0)]] };
+});
+FX.events({ anchor: '#price', ax: 0.3, ay: 0.55, glow: '#price', shake: '#price' });
+FX.spotlight('.card, .rc');
 
 function ecg(t) {
   const { ctx, w, h } = Draw.fit($('ecg'));
@@ -154,6 +175,7 @@ function ecg(t) {
   for (let y = T; y <= B; y += 14) { ctx.fillStyle = (y - T) % 70 ? '#f7f2ec' : '#efe6dc'; ctx.fillRect(L, y, R - L, 1); }
   let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
   const X = (i) => L + (R - L) * i / (d.length - 1), Y = (p) => T + 8 + (hi - p) / (hi - lo || 1) * (B - T - 16);
+  geoEcg = { X, Y, d };
   // 每根 K 走「開→高→低→收」的鋸齒，看起來像心電圖，也保留了 K 線的高低
   ctx.beginPath();
   d.forEach((b, i) => {
@@ -177,6 +199,7 @@ function weekly() {
   const sm = h < 220, L = sm ? 18 : 30, R = w - (sm ? 22 : 30), T = sm ? 58 : 74, B = h - (sm ? 30 : 44);
   let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.c); lo = Math.min(lo, b.c); }
   const X = (i) => L + (R - L) * i / (d.length - 1), Y = (p) => T + (hi - p) / (hi - lo || 1) * (B - T);
+  geoWk = { X, Y, d };
   // 今天那一段的淺橘柱
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
   const idx = d.map((b, i) => [i, new Date(b.t * 1000).toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })]).filter(([, s]) => s === today).map(([i]) => i);
@@ -205,7 +228,7 @@ Feed.on('markets', () => {
     let r = rings[s.id];
     if (!r) {
       const el = document.createElement('div');
-      el.className = 'rc';
+      el.className = 'rc'; el.dataset.fx = s.id;
       el.innerHTML = `<div class="nm">${s.name.replace(' ETF', '')}<span>${s.code}</span></div><canvas></canvas><div class="px"><b class="p">—</b><span class="a">—</span></div>`;
       $('rings').appendChild(el);
       r = rings[s.id] = { el, q: (x) => el.querySelector(x) };

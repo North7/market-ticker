@@ -19,6 +19,8 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
 .c canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .pill { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 14px; border-radius: 999px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); font-size: 12.5px; color: #cfd0d4; }
 .k { font-size: 13px; color: var(--mute); }
+.c::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: inherit; background: radial-gradient(320px circle at var(--mx, -999px) var(--my, -999px), rgba(198,244,58,.09), transparent 65%); }   /* 游標聚光 */
+.price::before { background: radial-gradient(320px circle at var(--mx, -999px) var(--my, -999px), rgba(255,255,255,.28), transparent 65%); }
 
 /* 萊姆價格卡 */
 .price { grid-column: 1 / 3; background: var(--lime); color: #0b0c0a; padding: 20px 26px 16px; display: flex; flex-direction: column; container-type: size; box-shadow: 0 20px 60px rgba(198,244,58,.18); }
@@ -169,6 +171,7 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
 
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
+<script src="fx.js?v=__VERSION__"></script>
 <script>
 const { S, fmt, fmtBig, pct } = Feed;
 const $ = (id) => document.getElementById(id);
@@ -206,6 +209,30 @@ function bindSeg(id, get, set) {
 bindSeg('segMode', () => MODE, (v) => { MODE = v; store.set('mode', v); });
 bindSeg('segRange', () => RANGE, (v) => { RANGE = +v; store.set('range', v); });
 
+// ---- 交互：主圖、60 分走勢、4H 成交量、4H 收盤都可查數據；點清單看詳情；大單漣漪從價格卡發出；卡片跟著游標聚光
+let geoMain = null, geoChg = null, geoTurn = null, geo4h = null;
+FX.theme({ bg: 'rgba(20,21,24,.94)', fg: '#f3f4f6', mute: '#8b8d94', line: 'rgba(198,244,58,.6)', accent: '#c6f43a', up: '#c6f43a', down: '#ff6b6b', sheet: '#141518', border: 'rgba(255,255,255,.07)', radius: '16px', font: "'Inter', 'Noto Sans TC', sans-serif" });
+const lineHit = (geo, tf, label) => (x) => {
+  const g = geo(); if (!g || g.d.length < 2) return null;
+  const i = Math.max(0, Math.min(g.d.length - 1, Math.round((x - g.X(0)) / (g.X(1) - g.X(0))))), b = g.d[i];
+  return { x: g.X(i), y: g.Y(b.c), title: `${FX.time(b.t, tf)} · ${label}`, rows: FX.rows(b) };
+};
+FX.inspect('#c1m', lineHit(() => geoMain, '1m', '1 分'));
+FX.inspect('#cchg', lineHit(() => geoChg, '1m', '1 分'));
+FX.inspect('#cturn', (x) => {
+  const g = geoTurn; if (!g || g.d.length < 2) return null;
+  const i = Math.max(0, Math.min(g.d.length - 1, Math.round((x - g.X(0)) / (g.X(1) - g.X(0))))), b = g.d[i];
+  return { x: g.X(i), y: g.Y(b.v), title: FX.time(b.t, '4h') + ' · 4H', rows: [['成交量', fmt(b.v, 0) + ' BTC'], ['約', '$' + Feed.fmtBig(b.v * b.c)]] };
+});
+FX.inspect('#c4h', (x) => {
+  const g = geo4h; if (!g) return null;
+  const i = Math.floor((x - g.L) / g.bw); if (i < 0 || i >= g.d.length) return null;
+  const b = g.d[i];
+  return { x: g.L + i * g.bw + g.bw * 0.5, y: g.y(b), title: FX.time(b.t, '4h') + ' · 4H', rows: FX.rows(b) };
+});
+FX.events({ anchor: '#price', ax: 0.4, ay: 0.55, glow: '#price', shake: '.price' });
+FX.spotlight('.c');
+
 function mainChart(t) {
   const { ctx, w, h } = Draw.fit($('c1m'));
   const d = (S.bars['1m'] || []).slice(-RANGE); if (d.length < 5) return;
@@ -213,6 +240,7 @@ function mainChart(t) {
   let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
   const pd = (hi - lo) * 0.08; hi += pd; lo -= pd;
   const X = (i) => L + (R - L) * i / (d.length - 1), Y = (p) => T + (hi - p) / (hi - lo) * (B - T);
+  geoMain = { X, Y, L, R, d };
   ctx.font = '12px Inter'; ctx.textBaseline = 'middle';
   for (let k = 0; k <= 4; k++) {
     const p = hi - (hi - lo) * k / 4, y = Y(p);
@@ -259,6 +287,7 @@ function chgCard() {
   const d = (S.bars['1m'] || []).slice(-60); if (d.length < 5) return;
   let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.c); lo = Math.min(lo, b.c); }
   const X = (i) => -10 + (w + 20) * i / (d.length - 1), Y = (p) => 46 + (hi - p) / (hi - lo || 1) * (h * 0.26);
+  geoChg = { X, Y, L: -10, R: w + 10, d };
   const pts = d.filter((_, i) => i % 3 === 0 || i === d.length - 1).map((b) => [X(d.indexOf(b)), Y(b.c)]);
   const col = S.ticker && S.ticker.P < 0 ? '#ff6b6b' : LIME;
   glowLine(ctx, pts, col, 2.4);
@@ -273,6 +302,7 @@ function turnCard() {
   const d = (S.bars['4h'] || []).slice(-24); if (d.length < 5) return;
   const mx = Math.max(...d.map((b) => b.v));
   const X = (i) => (w + 20) * i / (d.length - 1) - 10, Y = (v) => 60 + (1 - v / mx) * h * 0.32;
+  geoTurn = { X, Y, d };
   const pts = d.map((b, i) => [X(i), Y(b.v)]);
   const g = ctx.createLinearGradient(0, 0, w, 0); g.addColorStop(0, 'rgba(198,244,58,.45)'); g.addColorStop(1, '#c6f43a');
   ctx.save(); ctx.lineJoin = 'round';
@@ -290,6 +320,7 @@ function bars4h() {
   const d = (S.bars['4h'] || []).slice(-24); if (!d.length) return;
   let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.c); lo = Math.min(lo, b.c); }
   const L = 22, R = w - 22, T = 52, B = h - 30, bw = (R - L) / d.length;
+  geo4h = { L, bw, d, y: (b) => T + (hi - b.c) / (hi - lo || 1) * (B - T) * 0.8 };
   d.forEach((b, i) => {
     const x = L + i * bw + bw * 0.2, y = T + (hi - b.c) / (hi - lo || 1) * (B - T) * 0.8, hh = B - y;
     const g = ctx.createLinearGradient(0, y, 0, B); g.addColorStop(0, b.c >= b.o ? '#c6f43a' : '#7c9a2c'); g.addColorStop(1, 'rgba(198,244,58,.08)');
@@ -334,7 +365,7 @@ Feed.on('markets', () => {
     let c = tks[s.id];
     if (!c) {
       const el = document.createElement('div');
-      el.className = 'tk';
+      el.className = 'tk'; el.dataset.fx = s.id;
       el.innerHTML = `<div class="ic">${s.icon ?? s.code.slice(0, 4)}</div><div class="nm"><b>${s.name.replace(' ETF', '')}</b><span>${s.code}</span></div><div class="rt"><b>—</b><span>—</span></div>`;
       $('stocks').appendChild(el);
       c = tks[s.id] = { el, q: (x) => el.querySelector(x) };

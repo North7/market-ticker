@@ -37,6 +37,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 .foot b { font-family: 'Inter Tight'; font-weight: 700; font-size: 13px; color: var(--fg); letter-spacing: 0; }
 .u { color: var(--lime); } .d { color: #9a9aa0; }
 .xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
+.banner::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(460px circle at var(--mx, -999px) var(--my, -999px), rgba(210,255,31,.12), transparent 60%); }   /* 游標聚光 */
 
 /* 直式：符號矩陣在中間，4H 與指標清單（兩欄）移到下方 */
 @media (orientation: portrait) {
@@ -87,6 +88,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
+<script src="fx.js?v=__VERSION__"></script>
 <script>
 const { S, fmt, pct } = Feed;
 const $ = (id) => document.getElementById(id);
@@ -112,6 +114,24 @@ function glyph(ctx, kind, x, y, s, col, a = 1) {
   ctx.globalAlpha = 1;
 }
 
+// ---- 交互：符號矩陣與 4H 長條可查數據、點清單列看詳情、大單漣漪從價格發出；滑鼠在橫幅上帶出聚光
+let glyphGeo = null, geo4h = null;
+FX.theme({ bg: 'rgba(12,12,14,.95)', fg: '#f5f5f5', mute: '#8a8a90', line: 'rgba(210,255,31,.6)', accent: '#d2ff1f', up: '#d2ff1f', down: '#9a9aa0', sheet: '#0f0f11', border: 'rgba(210,255,31,.14)', radius: '14px', font: "'JetBrains Mono', 'Noto Sans TC', monospace" });
+FX.inspect('#cv', (x) => {
+  const g = glyphGeo; if (!g) return null;
+  const c = Math.floor(x / g.G); if (c < 0 || c >= g.d.length) return null;
+  const b = g.d[c];
+  return { x: c * g.G + g.G / 2, y: g.R(b.c) * g.G + g.G / 2, title: FX.time(b.t, '1m') + ' · 1 分', rows: FX.rows(b) };
+});
+FX.inspect('#c4h', (x) => {
+  const g = geo4h; if (!g) return null;
+  const i = Math.floor((x - g.L) / g.bw); if (i < 0 || i >= g.d.length) return null;
+  const b = g.d[i];
+  return { x: g.L + i * g.bw + g.bw / 2, y: g.mid, title: FX.time(b.t, '4h') + ' · 4H', rows: FX.rows(b) };
+});
+FX.events({ anchor: '#price', ax: 0.45, ay: 0.55, glow: '#price', shake: '.banner' });
+FX.spotlight('.banner');
+
 function matrix(t) {
   const { ctx, w, h } = Draw.fit($('cv'));
   const bars = S.bars['1m']; if (!bars || bars.length < 20) return;
@@ -120,6 +140,7 @@ function matrix(t) {
   const d = bars.slice(-cols);
   let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
   const R = (p) => Math.round((hi - p) / (hi - lo || 1) * (rows - 1));
+  glyphGeo = { G, d, R };
   const vs = d.map((b) => b.v).slice().sort((a, b) => a - b), vHot = vs[Math.floor(vs.length * 0.9)];
   const cell = new Map();
   d.forEach((b, c) => {
@@ -165,6 +186,7 @@ function strip4h() {
   const L = 110, Rr = w - 80, n = Math.min(b4.length, Math.floor((Rr - L) / 8)), d = b4.slice(-n);
   const ret = d.map((b) => (b.c - b.o) / b.o), mx = Math.max(...ret.map(Math.abs)) || 1;
   const mid = h / 2, hh = h / 2 - 4, bw = (Rr - L) / n;
+  geo4h = { L, bw, d, mid };
   ctx.font = '10px "JetBrains Mono"'; ctx.fillStyle = '#6c6c70'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
   ctx.fillText('4H · ' + Math.round(n / 6) + ' DAYS', 0, mid);
   ctx.fillStyle = 'rgba(210,255,31,.25)'; ctx.fillRect(L, mid, Rr - L, 1);
@@ -203,7 +225,7 @@ function renderList() {
     let r = rows[m.id];
     if (!r) {
       const el = document.createElement('div');
-      el.className = 'row' + (m.id === 'BTC' ? ' btc' : '');
+      el.className = 'row' + (m.id === 'BTC' ? ' btc' : ''); if (m.id !== 'BTC') el.dataset.fx = m.id;
       el.innerHTML = `<div class="tk">${m.code}<small>${m.name}</small></div><div class="rt"><b>—</b><span>—</span></div>`;
       $('list').appendChild(el);
       r = rows[m.id] = { el, q: (x) => el.querySelector(x) };

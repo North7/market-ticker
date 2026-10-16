@@ -24,6 +24,8 @@
     else if (bar.t === last.t) Object.assign(last, bar);
   }
 
+  const BIG_USD = 200000;
+  let lastHi = 0, lastLo = 0;
   function onTrade(d) {
     const p = +d.p;
     S.prev = S.price; S.price = p;
@@ -38,6 +40,12 @@
     // 最近 3 分鐘逐筆（示波器、買賣力道用）
     S.ticks.push({ T: d.T, p, q: +d.q, m: d.m });
     if (S.ticks[0].T < d.T - 180000) { let k = 0; while (k < S.ticks.length && S.ticks[k].T < d.T - 180000) k++; S.ticks.splice(0, k); }
+    // 即時事件（給 fx.js 的動效）：現貨大單、創 24H 新高／新低（30 秒內不重複）
+    const usd = p * +d.q;
+    if (usd >= BIG_USD) emit('fx', { type: 'big', usd, side: d.m ? 'sell' : 'buy', T: d.T });
+    const tk = S.ticker;
+    if (tk && tk.h && p > tk.h) { tk.h = p; if (d.T - lastHi > 30000) { lastHi = d.T; emit('fx', { type: 'high', price: p }); } }
+    if (tk && tk.l && p < tk.l) { tk.l = p; if (d.T - lastLo > 30000) { lastLo = d.T; emit('fx', { type: 'low', price: p }); } }
     S.trades.unshift({ p, q: +d.q, T: d.T, m: d.m });
     if (S.trades.length > 40) S.trades.length = 40;
     emit('trade', S.trades[0]);
@@ -195,6 +203,9 @@
     emit('markets');
   }
 
+  // 爆倉進來：累計，≥ 10 萬美元另外發動效事件
+  function liq(x) { CR.liqs.push(x); if (x.usd >= 100000) emit('fx', { type: 'liq', usd: x.usd, side: x.side }); }
+
   function startCrypto() {
     // 鯨魚：現貨逐筆（主連線已在收）＋期貨逐筆；爆倉：Binance forceOrder＋Bybit allLiquidation
     (L.trade || (L.trade = [])).push((t) => { const usd = t.p * t.q; if (usd >= WHALE_USD) CR.whales.push({ T: t.T, usd, side: t.m ? 'sell' : 'buy' }); });
@@ -205,7 +216,7 @@
         last = Date.now();
         const { stream, data } = JSON.parse(ev.data);
         if (stream.endsWith('@aggTrade')) { const usd = +data.p * +data.q; if (usd >= WHALE_USD) CR.whales.push({ T: data.T, usd, side: data.m ? 'sell' : 'buy' }); }
-        else if (data.o) { const o = data.o; CR.liqs.push({ T: o.T, usd: +o.ap * +o.z || +o.p * +o.q, side: o.S === 'SELL' ? 'long' : 'short', src: 'binance' }); }
+        else if (data.o) { const o = data.o; liq({ T: o.T, usd: +o.ap * +o.z || +o.p * +o.q, side: o.S === 'SELL' ? 'long' : 'short', src: 'binance' }); }
       };
       w.onclose = () => setTimeout(fut, 3000); w.onerror = () => w.close();
       const wd = setInterval(() => { if (Date.now() - last > 30000) { clearInterval(wd); w.close(); } }, 10000);
@@ -214,7 +225,7 @@
       const w = new WebSocket('wss://stream.bybit.com/v5/public/linear');
       let ping;
       w.onopen = () => { w.send(JSON.stringify({ op: 'subscribe', args: ['allLiquidation.BTCUSDT'] })); ping = setInterval(() => w.send('{"op":"ping"}'), 20000); };
-      w.onmessage = (ev) => { const m = JSON.parse(ev.data); if (m.topic && m.topic.startsWith('allLiquidation') && Array.isArray(m.data)) for (const x of m.data) CR.liqs.push({ T: +x.T, usd: +x.v * +x.p, side: x.S === 'Buy' ? 'long' : 'short', src: 'bybit' }); };
+      w.onmessage = (ev) => { const m = JSON.parse(ev.data); if (m.topic && m.topic.startsWith('allLiquidation') && Array.isArray(m.data)) for (const x of m.data) liq({ T: +x.T, usd: +x.v * +x.p, side: x.S === 'Buy' ? 'long' : 'short', src: 'bybit' }); };
       w.onclose = () => { clearInterval(ping); setTimeout(bybit, 3000); }; w.onerror = () => w.close();
     };
     fut(); bybit();
@@ -264,6 +275,7 @@
 
   window.Feed = {
     S, fmt, fmtBig, sgn, pct, tzNow, val, chgTxt, sub, slots, venue, extrasText,
+    emit,   // 測試動效用：Feed.emit('fx', { type: 'big', usd: 2e6, side: 'buy' })
     get mode() { return S.mode; },
     on(e, f) { (L[e] || (L[e] = [])).push(f); if (e === 'mode' && S.mode) f(); },   // 模式已定就立刻跑一次
     // 把 ETH／穩定幣小字掛到某個元素上（只在加密模式顯示）

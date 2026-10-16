@@ -155,9 +155,10 @@ function wire(f) {
     w.addEventListener('click', onClick);
 
 // ---- 觸控：左右滑切換主題，點一下叫出選單
+// 圖表（.fx-zone）上拖動是查數據、詳情面板（.fx-back）裡的操作也不算換主題
 function touch(w) {
   let x0, y0, t0;
-  w.addEventListener('touchstart', (e) => { if (e.target.closest && e.target.closest('.dock')) { x0 = null; return; } const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); }, { passive: true });
+  w.addEventListener('touchstart', (e) => { if (e.target.closest && e.target.closest('.dock, .fx-zone, .fx-back')) { x0 = null; return; } const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); }, { passive: true });
   w.addEventListener('touchend', (e) => {
     if (x0 == null) return;
     const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
@@ -210,7 +211,7 @@ addEventListener('keydown', onKey);
 let idleT;
 // 點畫面切換選單；點到按鈕、選單本身時不切換
 let lastTouch = 0, quietUntil = 0;
-const interactive = (el) => !!(el && el.closest && el.closest('button, a, input, select, .seg, .dock, .fsbtn'));
+const interactive = (el) => !!(el && el.closest && el.closest('button, a, input, select, .seg, .dock, .fsbtn, [data-fx], .fx-zone, .fx-back'));
 function hideUi() {
   clearTimeout(idleT);
   dock.classList.remove('show'); $('help').classList.remove('show'); $('fsbtn').classList.remove('show'); document.body.classList.add('idle');

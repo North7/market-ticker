@@ -98,6 +98,7 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
+<script src="fx.js?v=__VERSION__"></script>
 <script>
 const { S, fmt, fmtBig, pct } = Feed;
 const $ = (id) => document.getElementById(id);
@@ -151,8 +152,8 @@ function draw(now) {
   // 橘色圓盤：高度＝24H 區間位置（越接近 24H 高點越往上）
   const t = S.ticker;
   const pos = t && S.price ? Math.max(0, Math.min(1, (S.price - t.l) / (t.h - t.l || 1))) : 0.5;
-  const R = Math.min(h * 0.62, w * 0.46), cx = w * 0.8;
-  const target = h + R * 0.15 - pos * (h * 0.85);
+  const R = Math.min(h * 0.62, w * 0.46), cx = w * 0.8 + FX.pointer.x * 22;
+  const target = h + R * 0.15 - pos * (h * 0.85) + FX.pointer.y * 14;   // 視差：圓盤跟著滑鼠微動
   discY = discY == null ? target : discY + (target - discY) * 0.06;
   ctx.fillStyle = BTC;
   ctx.beginPath(); ctx.arc(cx, discY, R, 0, Math.PI * 2); ctx.fill();
@@ -174,6 +175,7 @@ function draw(now) {
     let hi = -Infinity, lo = Infinity;
     for (const b of data) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
     const rowOf = (p) => chartTop + Math.round((hi - p) / (hi - lo || 1) * (chartRows - 1));
+    fieldGeo = { ox, oy, P, data, rowOf, chartTop };
     data.forEach((b, k) => {
       const c = 2 + k;
       const up = b.c >= b.o;
@@ -236,7 +238,7 @@ Feed.on('markets', () => {
     let c = cols[s.id];
     if (!c) {
       const el = document.createElement('div');
-      el.className = 'col';
+      el.className = 'col'; el.dataset.fx = s.id;
       el.innerHTML = `<div class="code">${s.code}<i></i></div><div class="nm">${s.name}</div><div class="px">--</div><div class="sp"><canvas></canvas></div><div class="ch"><span class="p">--</span><em class="a">--</em></div>`;
       $('bottom').appendChild(el);
       c = cols[s.id] = { el, last: null, q: (x) => el.querySelector(x) };
@@ -271,13 +273,27 @@ Feed.on('markets', () => {
 function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; $('utc').textContent = Feed.tzNow('UTC').str; }
 setInterval(clocks, 1000); clocks();
 
+// ---- 交互：點陣 1 分 K 與 4H 線可查數據、點卡片看詳情、大單漣漪從價格發出、滑鼠帶動橘色圓盤
+let geo4h = null, fieldGeo = null;
+FX.theme({ bg: 'rgba(23,23,23,.94)', fg: '#f2f1ec', mute: '#a8a79f', line: 'rgba(23,23,23,.55)', accent: '#f7931a', up: '#f7931a', down: '#c9c8c0', sheet: '#1c1c1b', border: 'rgba(255,255,255,.09)', radius: '6px', font: "'Geist Mono', 'Noto Sans TC', monospace" });
+FX.inspect('#c4h', FX.candleHit(() => geo4h, () => S.bars['4h'], { tf: '4h' }));
+FX.inspect('#cv', (x, y) => {
+  const g = fieldGeo; if (!g) return null;
+  const k = Math.floor((x - g.ox) / g.P) - 2;
+  if (k < 0 || k >= g.data.length || y < (g.chartTop - 1) * g.P) return null;
+  const b = g.data[k];
+  return { x: g.ox + (k + 2) * g.P + g.P / 2, y: g.oy + g.rowOf(b.c) * g.P + g.P / 2, title: FX.time(b.t, '1m') + ' · 1 分', rows: FX.rows(b) };
+});
+FX.events({ anchor: '#stat', at: () => { const g = fieldGeo, r = $('field').getBoundingClientRect(); return g ? [r.left + g.ox + g.P * 44, r.top + g.oy + g.P * 9] : null; },
+  pillY: () => $('stat').getBoundingClientRect().bottom + 10, glow: '#stat', shake: '#stat' });
+
 let last = 0;
 function frame(t) {
   trackChanges();
   if (t - last > 120) {
     last = t;
     draw(t);
-    const r = Draw.candles($('c4h'), S.bars['4h'], { mode: 'line', count: 90, pad: { t: 6, r: 8, b: 6, l: 2 }, rightGap: 0, line: INK, lineWidth: 1.2,
+    const r = geo4h = Draw.candles($('c4h'), S.bars['4h'], { mode: 'line', count: 90, pad: { t: 6, r: 8, b: 6, l: 2 }, rightGap: 0, line: INK, lineWidth: 1.2,
       grid: { color: 'rgba(0,0,0,.08)', rows: 3 } });
     if (r) {
       const ctx = $('c4h').getContext('2d');
