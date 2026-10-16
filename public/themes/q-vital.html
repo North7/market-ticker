@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #f6f3ef; --card: #ffffff; --ink: #1d1d1f; --grey: #9b9ba1; --soft: #f1ede8; --orange: #f26b21; --up: #f26b21; --down: #2d9d78; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 'Poppins', 'Noto Sans TC', sans-serif; }
+.wrap { height: 100vh; display: grid; grid-template-columns: clamp(300px, 32vw, 460px) minmax(0, 1fr) clamp(280px, 28vw, 400px); grid-template-rows: clamp(120px, 19.5vh, 176px) minmax(0, 1fr); gap: 18px; padding: 24px 30px 28px; }
+.head { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.head .hi { font-size: 15px; color: var(--grey); }
+.head h1 { margin: 4px 0 0; font-weight: 500; font-size: 22px; letter-spacing: -.01em; }
+.head .price { font-weight: 600; font-size: min(12vh, 108px); letter-spacing: -.045em; line-height: 1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.head .price small { font-size: .38em; color: var(--grey); font-weight: 500; letter-spacing: -.02em; }
+.head .price em { font-style: normal; font-size: .28em; color: var(--orange); font-weight: 500; letter-spacing: -.01em; margin-left: 14px; }
+.head .rt { display: flex; align-items: center; gap: 14px; padding-bottom: 10px; }
+.head .chip { height: 40px; padding: 0 18px; border-radius: 999px; background: var(--card); display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--grey); box-shadow: 0 10px 30px rgba(120,90,60,.06); }
+.head .chip b { color: var(--ink); font-weight: 500; }
+.head .av { width: 52px; height: 52px; border-radius: 50%; background: var(--orange); color: #fff; display: grid; place-items: center; font-size: 24px; font-weight: 600; box-shadow: 0 10px 24px rgba(242,107,33,.35); }
+.card { position: relative; background: var(--card); border-radius: 32px; box-shadow: 0 24px 60px rgba(120,90,60,.08); overflow: hidden; min-height: 0; }
+.card canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ttl { position: absolute; left: 26px; top: 22px; right: 26px; display: flex; align-items: center; justify-content: space-between; z-index: 2; font-weight: 500; font-size: 16px; }
+.ttl span { font-size: 12.5px; color: var(--grey); font-weight: 400; }
+.ttl .live { color: var(--orange); font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
+.ttl .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); animation: bl 1.2s infinite; }
+@keyframes bl { 50% { opacity: .25; } }
+.gauge .ctr { position: absolute; left: 0; right: 0; top: 34%; text-align: center; z-index: 2; }
+.gauge .ctr b { display: block; font-weight: 600; font-size: clamp(48px, 10vh, 92px); letter-spacing: -.05em; line-height: 1; }
+.gauge .ctr span { font-size: 13px; color: var(--grey); }
+.gauge .stats { position: absolute; left: 26px; right: 26px; bottom: 24px; display: grid; grid-template-columns: repeat(3, 1fr); z-index: 2; text-align: center; }
+.gauge .stats div { padding: 12px 0; border-radius: 20px; background: var(--soft); margin: 0 5px; }
+.gauge .stats span { display: block; font-size: 11.5px; color: var(--grey); }
+.gauge .stats b { font-weight: 600; font-size: 19px; letter-spacing: -.02em; }
+.mid { display: grid; grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; min-height: 0; }
+.rings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 14px; min-height: 0; }
+.rc { position: relative; background: var(--card); border-radius: 28px; box-shadow: 0 18px 44px rgba(120,90,60,.07); padding: 14px 16px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; }
+.rc .nm { font-weight: 500; font-size: 14px; display: flex; justify-content: space-between; white-space: nowrap; }
+.rc .nm span { font-size: 11px; color: var(--grey); font-weight: 400; }
+.rc .nm span.on { color: var(--orange); }
+.rc canvas { width: 100%; height: 100%; min-height: 0; }
+.rc .px { font-size: 13px; color: var(--grey); display: flex; justify-content: space-between; }
+.rc .px b { color: var(--ink); font-weight: 500; }
+@media (max-height: 720px), (max-width: 1100px) {
+  .rc { padding: 10px 12px; } .rc .px span { display: none; } .rc .nm { font-size: 12.5px; }
+  .gauge .stats b { font-size: 15px; } .gauge .stats div { padding: 8px 0; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div><div class="hi">Hello, Bitcoin 👋</div><h1>How's the market today?</h1><div class="price" id="price">—</div></div>
+    <div class="rt"><div class="chip">台北 <b id="tpe">—</b></div><div class="chip">紐約 <b id="nyc">—</b></div><div class="chip" id="date">—</div><div class="av">₿</div></div>
+  </div>
+  <div class="card gauge"><canvas id="g"></canvas>
+    <div class="ttl">24H Range<span>where BTC sits today</span></div>
+    <div class="ctr"><b id="pos">—</b><span>% of 24-hour range</span></div>
+    <div class="stats"><div><span>low</span><b id="l">—</b></div><div><span>open</span><b id="o">—</b></div><div><span>high</span><b id="h">—</b></div></div>
+  </div>
+  <div class="mid">
+    <div class="card"><canvas id="ecg"></canvas><div class="ttl">BTC · 1 minute<span class="live"><i></i>Live · <span id="rate" style="color:inherit">—</span></span></div></div>
+    <div class="card"><canvas id="wk"></canvas><div class="ttl">Weekly review<span>4H closes · 7 days</span></div></div>
+  </div>
+  <div class="rings" id="rings"></div>
+</div>
+
+<script src="feed.js"></script>
+<script src="draw.js"></script>
+<script>
+const { S, fmt, fmtBig, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const OR = '#f26b21';
+Feed.start({ '1m': 120, '4h': 60 });
+
+function gauge(t) {
+  const { ctx, w, h } = Draw.fit($('g'));
+  const tk = S.ticker; if (!tk || S.price == null) return;
+  const p = Math.max(0, Math.min(1, (S.price - tk.l) / (tk.h - tk.l || 1)));
+  const cx = w / 2, cy = h * 0.46, R = Math.min(w * 0.36, h * 0.3);
+  const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25, ap = a0 + (a1 - a0) * p;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#f1ede8'; ctx.lineWidth = 22; ctx.beginPath(); ctx.arc(cx, cy, R, a0, a1); ctx.stroke();
+  const g = ctx.createLinearGradient(cx - R, cy, cx + R, cy); g.addColorStop(0, '#ff9a4d'); g.addColorStop(1, OR);
+  ctx.strokeStyle = g; ctx.lineWidth = 22; ctx.beginPath(); ctx.arc(cx, cy, R, a0, ap); ctx.stroke();
+  // 細刻度
+  ctx.strokeStyle = '#e4ded7'; ctx.lineWidth = 2;
+  for (let k = 0; k <= 40; k++) { const a = a0 + (a1 - a0) * k / 40, r1 = R + 26, r2 = R + (k % 10 ? 31 : 36); ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2); ctx.stroke(); }
+  // 開盤位置
+  const po = Math.max(0, Math.min(1, (tk.o - tk.l) / (tk.h - tk.l || 1))), aO = a0 + (a1 - a0) * po;
+  ctx.fillStyle = '#c9c3bc'; ctx.beginPath(); ctx.arc(cx + Math.cos(aO) * (R - 24), cy + Math.sin(aO) * (R - 24), 4, 0, 7); ctx.fill();
+  ctx.font = '500 11px Poppins'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#b5aea6'; ctx.fillText('open', cx + Math.cos(aO) * (R - 46), cy + Math.sin(aO) * (R - 46));
+  // 端點心跳
+  const ex = cx + Math.cos(ap) * R, ey = cy + Math.sin(ap) * R, beat = 1 + 0.12 * Math.max(0, Math.sin(t * 6)) ** 8;
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, 14 * beat, 0, 7); ctx.fill();
+  ctx.fillStyle = OR; ctx.beginPath(); ctx.arc(ex, ey, 7 * beat, 0, 7); ctx.fill();
+  $('pos').textContent = Math.round(p * 100);
+}
+
+function ecg(t) {
+  const { ctx, w, h } = Draw.fit($('ecg'));
+  const d = (S.bars['1m'] || []).slice(-120); if (d.length < 5) return;
+  const L = 26, R = w - 80, T = 66, B = h - 40;
+  // 心電圖格紙
+  for (let x = L; x <= R; x += 14) { ctx.fillStyle = (x - L) % 70 ? '#f7f2ec' : '#efe6dc'; ctx.fillRect(x, T, 1, B - T); }
+  for (let y = T; y <= B; y += 14) { ctx.fillStyle = (y - T) % 70 ? '#f7f2ec' : '#efe6dc'; ctx.fillRect(L, y, R - L, 1); }
+  let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
+  const X = (i) => L + (R - L) * i / (d.length - 1), Y = (p) => T + 8 + (hi - p) / (hi - lo || 1) * (B - T - 16);
+  // 每根 K 走「開→高→低→收」的鋸齒，看起來像心電圖，也保留了 K 線的高低
+  ctx.beginPath();
+  d.forEach((b, i) => {
+    const x = X(i), dx = (R - L) / d.length * 0.3;
+    const seq = b.c >= b.o ? [b.o, b.l, b.h, b.c] : [b.o, b.h, b.l, b.c];
+    seq.forEach((v, k) => { const xx = x - dx + k * dx * 0.66; (i || k) ? ctx.lineTo(xx, Y(v)) : ctx.moveTo(xx, Y(v)); });
+  });
+  ctx.strokeStyle = OR; ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.stroke();
+  const lx = X(d.length - 1), ly = Y(d[d.length - 1].c), pp = (t % 1.6) / 1.6;
+  ctx.fillStyle = `rgba(242,107,33,${0.25 * (1 - pp)})`; ctx.beginPath(); ctx.arc(lx, ly, 6 + pp * 16, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(lx, ly, 7, 0, 7); ctx.fill(); ctx.strokeStyle = OR; ctx.lineWidth = 3; ctx.stroke();
+  ctx.font = '500 12px Poppins'; ctx.fillStyle = '#9b9ba1'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  [hi, (hi + lo) / 2, lo].forEach((v) => ctx.fillText(fmt(v, 0), R + 12, Y(v)));
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  d.forEach((b, i) => { const tt = new Date(b.t * 1000); if (tt.getMinutes() % 30 === 0) ctx.fillText(tt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), X(i), B + 12); });
+}
+
+function weekly() {
+  const { ctx, w, h } = Draw.fit($('wk'));
+  const d = (S.bars['4h'] || []).slice(-42); if (d.length < 5) return;
+  const L = 30, R = w - 30, T = 74, B = h - 44;
+  let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.c); lo = Math.min(lo, b.c); }
+  const X = (i) => L + (R - L) * i / (d.length - 1), Y = (p) => T + (hi - p) / (hi - lo || 1) * (B - T);
+  // 今天那一段的淺橘柱
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+  const idx = d.map((b, i) => [i, new Date(b.t * 1000).toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })]).filter(([, s]) => s === today).map(([i]) => i);
+  if (idx.length) { ctx.fillStyle = '#fdeee4'; ctx.beginPath(); ctx.roundRect(X(idx[0]) - 10, T - 16, X(idx[idx.length - 1]) - X(idx[0]) + 20, B - T + 26, 16); ctx.fill(); }
+  const pts = d.map((b, i) => [X(i), Y(b.c)]);
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length - 1; i++) ctx.quadraticCurveTo(pts[i][0], pts[i][1], (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2);
+  ctx.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+  ctx.strokeStyle = OR; ctx.lineWidth = 2.4; ctx.stroke();
+  const [lx, ly] = pts[pts.length - 1];
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(lx, ly, 8, 0, 7); ctx.fill(); ctx.strokeStyle = OR; ctx.lineWidth = 3.5; ctx.stroke();
+  ctx.font = '600 15px Poppins'; ctx.fillStyle = '#1d1d1f'; ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic'; ctx.fillText(fmt(d[d.length - 1].c, 0), lx - 14, ly - 14);
+  ctx.font = '400 11px Poppins'; ctx.fillStyle = '#9b9ba1'; ctx.fillText('now', lx - 14, ly - 33);
+  // 星期
+  ctx.font = '400 12px Poppins'; ctx.textAlign = 'center';
+  let lastDay = '';
+  d.forEach((b, i) => {
+    const s = new Date(b.t * 1000).toLocaleDateString('en-US', { timeZone: 'Asia/Taipei', weekday: 'short' });
+    if (s !== lastDay) { lastDay = s; const iso = new Date(b.t * 1000).toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' }); ctx.fillStyle = iso === today ? OR : '#9b9ba1'; ctx.fillText(s, X(i) + (X(Math.min(d.length - 1, i + 3)) - X(i)) / 2, B + 24); }
+  });
+}
+
+const rings = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s) => {
+    let r = rings[s.id];
+    if (!r) {
+      const el = document.createElement('div');
+      el.className = 'rc';
+      el.innerHTML = `<div class="nm">${s.name.replace(' ETF', '')}<span>${s.code}</span></div><canvas></canvas><div class="px"><b class="p">—</b><span class="a">—</span></div>`;
+      $('rings').appendChild(el);
+      r = rings[s.id] = { el, q: (x) => el.querySelector(x) };
+    }
+    if (s.price == null) return;
+    const tag = r.q('.nm span'); tag.textContent = (s.isOpen ? '● ' : '') + s.code; tag.className = s.isOpen ? 'on' : '';
+    r.q('.p').textContent = fmt(s.price, s.dec); r.q('.a').textContent = 'amp ' + s.amp.toFixed(2) + '%';
+    const { ctx, w, h } = Draw.fit(r.q('canvas'));
+    const cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - 8, a0 = -Math.PI / 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#f1ede8'; ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+    ctx.strokeStyle = s.chg >= 0 ? OR : '#2d9d78'; ctx.beginPath(); ctx.arc(cx, cy, R, a0, a0 + Math.PI * 2 * Math.max(0.02, s.pos)); ctx.stroke();
+    ctx.fillStyle = s.chg >= 0 ? OR : '#2d9d78'; ctx.font = `600 ${Math.round(R * 0.42)}px Poppins`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(pct(s.pct), cx, cy - 4);
+    ctx.fillStyle = '#9b9ba1'; ctx.font = `400 ${Math.round(R * 0.22)}px Poppins`; ctx.fillText(`range ${Math.round(s.pos * 100)}%`, cx, cy + R * 0.36);
+  });
+});
+
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s;
+  const [i, d] = s.split('.');
+  const t = S.ticker;
+  $('price').innerHTML = `${i}<small>.${d}</small>${t ? `<em>${pct(t.P)} today</em>` : ''}`;
+  document.title = s + ' · BTC';
+}
+Feed.on('ticker', () => { const t = S.ticker; $('l').textContent = fmt(t.l, 0); $('o').textContent = fmt(t.o, 0); $('h').textContent = fmt(t.h, 0); shown = ''; });
+function clocks() {
+  $('tpe').textContent = Feed.tzNow('Asia/Taipei').str.slice(0, 5); $('nyc').textContent = Feed.tzNow('America/New_York').str.slice(0, 5);
+  $('date').textContent = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Taipei', weekday: 'short', month: 'short', day: 'numeric' });
+  const n = S.ticks.filter((x) => x.T > Date.now() - 60000).length; $('rate').textContent = (n / 60).toFixed(1) + ' trades/s';
+}
+setInterval(clocks, 1000); clocks();
+
+let l1 = 0, l2 = 0;
+function frame(now) {
+  const t = now / 1000;
+  drawPrice();
+  if (now - l1 > 40) { l1 = now; gauge(t); }
+  if (now - l2 > 200) { l2 = now; ecg(t); weekly(); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

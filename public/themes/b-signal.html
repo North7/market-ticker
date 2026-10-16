@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #d7d6d2; --ink: #171717; --mute: #77766f; --line: #bdbcb6; --btc: #f7931a; --up: #e2700c; --down: #171717; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 'Geist', 'Noto Sans TC', sans-serif; }
+.wrap { height: 100vh; display: grid; grid-template-rows: 38px minmax(0, 1fr) clamp(140px, 22vh, 196px); }
+.top { display: flex; align-items: center; gap: 28px; padding: 0 28px; font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); border-bottom: 1px solid var(--line); }
+.top b { color: var(--ink); font-weight: 500; }
+.top .sp { margin-left: auto; }
+.top .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--btc); display: inline-block; margin-right: 8px; animation: blink 1.2s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .2; } }
+
+.field { position: relative; min-height: 0; overflow: hidden; }
+.field canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.stat { position: absolute; left: 28px; font-family: 'Geist Mono'; font-size: 15px; display: flex; gap: 30px; align-items: baseline; z-index: 2; }
+.stat .chg { font-family: 'Geist'; font-weight: 500; font-size: 30px; letter-spacing: -.02em; }
+.stat span { color: var(--mute); font-size: 11px; letter-spacing: .16em; }
+.stat span b { color: var(--ink); font-size: 15px; letter-spacing: 0; font-weight: 500; margin-left: 8px; }
+.lbl { position: absolute; font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .16em; color: var(--mute); text-transform: uppercase; z-index: 2; }
+.disc-lbl { color: rgba(23, 23, 23, .75); }
+
+.bottom { display: grid; grid-template-columns: clamp(170px, 21vw, 300px) repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--ink); }
+.b4h { position: relative; border-right: 1px solid var(--line); padding: 14px 20px; }
+.b4h canvas { position: absolute; left: 20px; right: 20px; top: 40px; bottom: 16px; width: calc(100% - 40px); height: calc(100% - 56px); }
+.k { font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .16em; color: var(--mute); text-transform: uppercase; display: flex; justify-content: space-between; }
+.k b { color: var(--ink); font-weight: 500; }
+.col { position: relative; border-right: 1px solid var(--line); padding: 12px clamp(8px, 1.2vw, 18px) 10px; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr) auto; min-width: 0; }
+.col:last-child { border-right: 0; }
+.col .code { font-weight: 600; font-size: 13px; letter-spacing: .06em; display: flex; justify-content: space-between; }
+.col .code i { font-style: normal; font-family: 'Geist Mono'; font-weight: 400; font-size: 10px; color: var(--mute); letter-spacing: .14em; }
+.col .code i.on { color: var(--up); }
+.col .nm { font-family: 'Noto Sans TC'; font-weight: 500; font-size: 12px; color: var(--mute); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.col .px { font-weight: 300; font-size: clamp(18px, 2.5vw, 36px); letter-spacing: -.04em; margin-top: 6px; line-height: 1; }
+.col .sp { position: relative; min-height: 0; margin: 8px 0 6px; }
+.col .sp canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.col .ch { font-family: 'Geist Mono'; font-size: clamp(10px, .85vw, 12px); display: flex; justify-content: space-between; gap: 6px; white-space: nowrap; }
+.col .ch em { font-style: normal; color: var(--mute); }
+.col.tick .px { animation: tk .8s ease-out; }
+@keyframes tk { from { color: var(--btc); } }
+.u { color: var(--up); } .d { color: var(--down); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><span><span class="dot"></span><b>Signal</b> — BTC / USDT — Binance spot</span><span>1 column = 1 minute · disc height = 24H range position</span>
+    <span class="sp">TPE <b id="tpe">--</b></span><span>NYC <b id="nyc">--</b></span><span>UTC <b id="utc">--</b></span></div>
+  <section class="field" id="field">
+    <canvas id="cv"></canvas>
+    <div class="stat" id="stat"><div class="chg" id="pct">--</div><span>24H HIGH<b id="h">--</b></span><span>LOW<b id="l">--</b></span><span>AMP<b id="amp">--</b></span><span>VOL<b id="qv">--</b></span></div>
+    <div class="lbl" id="lbl1m">1M · field</div>
+    <div class="lbl disc-lbl" id="lblDisc">24H position</div>
+  </section>
+  <section class="bottom" id="bottom">
+    <div class="b4h"><div class="k">BTC · 4H <b id="k4h">--</b></div><canvas id="c4h"></canvas></div>
+  </section>
+</div>
+
+<script src="feed.js"></script>
+<script src="draw.js"></script>
+<script>
+const { S, fmt, fmtBig, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const BTC = '#f7931a', INK = '#171717', UPC = '#e2700c';
+const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
+Feed.start({ '1m': 120, '4h': 90 });
+
+// 5×7 點陣字形
+const G = {
+  0: ['01110', '10001', '10011', '10101', '11001', '10001', '01110'], 1: ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
+  2: ['01110', '10001', '00001', '00010', '00100', '01000', '11111'], 3: ['11110', '00001', '00001', '01110', '00001', '00001', '11110'],
+  4: ['00010', '00110', '01010', '10010', '11111', '00010', '00010'], 5: ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
+  6: ['00110', '01000', '10000', '11110', '10001', '10001', '01110'], 7: ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
+  8: ['01110', '10001', '10001', '01110', '10001', '10001', '01110'], 9: ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
+  ',': ['00', '00', '00', '00', '00', '01', '10'], '.': ['00', '00', '00', '00', '00', '11', '11'],
+};
+let P = 16;                // 點距（依視窗寬度調整，窄螢幕也放得下整個價格）
+const changed = [];        // 每個字元最後變動時間
+let shown = '', discY = null;
+
+function layoutPrice(s, lit, now) {
+  const [i, d] = s.split('.');
+  let col = 2;
+  const top = 2;
+  const put = (str, scale, rowOff, base) => {
+    [...str].forEach((ch, k) => {
+      const g = G[ch]; if (!g) return;
+      const idx = base + k;
+      const flash = now - (changed[idx] || 0) < 450;
+      g.forEach((row, r) => [...row].forEach((on, c) => {
+        if (on !== '1') return;
+        for (let a = 0; a < scale; a++) for (let b = 0; b < scale; b++) lit.set(`${top + rowOff + r * scale + a},${col + c * scale + b}`, flash ? 'flash' : 'ink');
+      }));
+      col += (g[0].length + 1) * scale;
+    });
+  };
+  put(i, 2, 0, 0);
+  col += 1;
+  put('.' + d, 1, 7, i.length);
+  return top + 14;
+}
+
+function draw(now) {
+  const cv = $('cv');
+  const { ctx, w, h } = Draw.fit(cv);
+  P = Math.max(7, Math.min(16, Math.floor(w / 94), Math.floor(h / 26)));
+  const cols = Math.floor(w / P), rows = Math.floor(h / P);
+  const ox = (w - cols * P) / 2, oy = (h - rows * P) / 2;
+
+  // 橘色圓盤：高度＝24H 區間位置（越接近 24H 高點越往上）
+  const t = S.ticker;
+  const pos = t && S.price ? Math.max(0, Math.min(1, (S.price - t.l) / (t.h - t.l || 1))) : 0.5;
+  const R = h * 0.62, cx = w * 0.8;
+  const target = h + R * 0.15 - pos * (h * 0.85);
+  discY = discY == null ? target : discY + (target - discY) * 0.06;
+  ctx.fillStyle = BTC;
+  ctx.beginPath(); ctx.arc(cx, discY, R, 0, Math.PI * 2); ctx.fill();
+  const lbl = $('lblDisc');
+  lbl.style.left = (cx - 60) + 'px'; lbl.style.top = Math.max(8, discY - R + 20) + 'px';
+  lbl.textContent = `24H position ${(pos * 100).toFixed(1)}%`;
+
+  const lit = new Map();
+  let chartTop = 18;
+  if (S.price != null) chartTop = layoutPrice(fmt(S.price), lit, now) + 4;
+  $('stat').style.top = (oy + (chartTop - 3) * P - 4) + 'px';
+
+  // 1 分 K 點陣：每一欄是一分鐘
+  const bars = S.bars['1m'];
+  const chartRows = rows - chartTop - 1;
+  if (bars && bars.length && chartRows > 4) {
+    const n = Math.min(cols - 4, bars.length);
+    const data = bars.slice(-n);
+    let hi = -Infinity, lo = Infinity;
+    for (const b of data) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
+    const rowOf = (p) => chartTop + Math.round((hi - p) / (hi - lo || 1) * (chartRows - 1));
+    data.forEach((b, k) => {
+      const c = 2 + k;
+      const up = b.c >= b.o;
+      const r1 = rowOf(Math.max(b.o, b.c)), r2 = rowOf(Math.min(b.o, b.c));
+      for (let r = rowOf(b.h); r <= rowOf(b.l); r++) lit.set(`${r},${c}`, r >= r1 && r <= r2 ? (up ? 'up' : 'down') : 'wick');
+      if (k === n - 1 && Math.floor(now / 500) % 2) lit.set(`${rowOf(b.c)},${c + 1}`, 'flash');
+    });
+    $('lbl1m').style.left = (ox + 2 * P) + 'px';
+    $('lbl1m').style.top = (oy + (rows - 1) * P - 2) + 'px';
+    $('lbl1m').textContent = `1M · last ${n} minutes · ${fmt(hi, 0)} — ${fmt(lo, 0)}`;
+  }
+
+  const rr = P * 0.34;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = ox + c * P + P / 2, y = oy + r * P + P / 2;
+      const inDisc = (x - cx) ** 2 + (y - discY) ** 2 < R * R;
+      const k = lit.get(`${r},${c}`);
+      let col;
+      if (!k) col = r < chartTop - 3 ? (inDisc ? 'rgba(255,255,255,.14)' : 'rgba(0,0,0,.05)') : (inDisc ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.075)');
+      else if (k === 'ink' || k === 'down') col = INK;
+      else if (k === 'up') col = inDisc ? '#fff' : UPC;
+      else if (k === 'flash') col = inDisc ? '#6b2f00' : BTC;
+      else col = inDisc ? 'rgba(23,23,23,.45)' : 'rgba(23,23,23,.35)';
+      ctx.fillStyle = col;
+      if (k === 'ink' || k === 'flash') {
+        // 價格字形：幾乎相連的圓角方塊，像素字更好讀
+        const s = P * 0.92;
+        ctx.beginPath(); ctx.roundRect(x - s / 2, y - s / 2, s, s, P * 0.18); ctx.fill();
+      } else {
+        ctx.beginPath(); ctx.arc(x, y, k ? rr * 1.12 : rr * 0.8, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+}
+
+function trackChanges() {
+  if (S.price == null) return;
+  const full = fmt(S.price);
+  if (full === shown) return;
+  if (!shown) { shown = full; document.title = full + ' · BTC'; return; }   // 開頁第一次不閃
+  // 字形索引就是字串位置（含逗號、小數點）
+  const now = performance.now();
+  [...full].forEach((ch, k) => { if (ch !== shown[k]) changed[k] = now; });
+  shown = full;
+  document.title = full + ' · BTC';
+}
+
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('pct').textContent = (t.P >= 0 ? '↑ ' : '↓ ') + pct(t.P); $('pct').className = 'chg ' + cls(t.P);
+  $('h').textContent = fmt(t.h, 0); $('l').textContent = fmt(t.l, 0);
+  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+  $('qv').textContent = '$' + fmtBig(t.q);
+});
+
+const cols = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s) => {
+    let c = cols[s.id];
+    if (!c) {
+      const el = document.createElement('div');
+      el.className = 'col';
+      el.innerHTML = `<div class="code">${s.code}<i></i></div><div class="nm">${s.name}</div><div class="px">--</div><div class="sp"><canvas></canvas></div><div class="ch"><span class="p">--</span><em class="a">--</em></div>`;
+      $('bottom').appendChild(el);
+      c = cols[s.id] = { el, last: null, q: (x) => el.querySelector(x) };
+    }
+    if (s.price == null) return;
+    if (c.last != null && c.last !== s.price) { c.el.classList.remove('tick'); void c.el.offsetWidth; c.el.classList.add('tick'); }
+    c.last = s.price;
+    c.q('.code i').textContent = s.isOpen ? '● LIVE' : 'CLOSED'; c.q('.code i').className = s.isOpen ? 'on' : '';
+    c.q('.px').textContent = fmt(s.price, s.dec);
+    c.q('.p').textContent = pct(s.pct); c.q('.p').className = 'p ' + cls(s.chg);
+    c.q('.a').textContent = 'AMP ' + s.amp.toFixed(2) + '%';
+    // 點陣迷你圖
+    const cv = c.q('canvas');
+    const { ctx, w, h } = Draw.fit(cv);
+    const slots = s.market === 'TW' ? 54 : 78, bars = s.bars || [];
+    if (!bars.length) return;
+    let hi = Math.max(s.prevClose || -Infinity, ...bars.map((b) => b.h)), lo = Math.min(s.prevClose || Infinity, ...bars.map((b) => b.l));
+    const step = 4, rowsN = Math.floor(h / step), colsN = Math.floor(w / step);
+    const Y = (p) => Math.round((hi - p) / (hi - lo || 1) * (rowsN - 1));
+    for (let x = 0; x < colsN; x++) for (let y = 0; y < rowsN; y++) { ctx.fillStyle = 'rgba(0,0,0,.06)'; ctx.fillRect(x * step, y * step, 2, 2); }
+    const by = s.prevClose ? Y(s.prevClose) : null;
+    bars.forEach((b, k) => {
+      const x = Math.floor(k / slots * colsN);
+      const y = Y(b.c);
+      ctx.fillStyle = b.c >= (s.prevClose || b.o) ? UPC : INK;
+      if (by != null) { const [a, z] = y < by ? [y, by] : [by, y]; for (let r = a; r <= z; r++) { ctx.globalAlpha = r === y ? 1 : 0.28; ctx.fillRect(x * step, r * step, 3, 3); } ctx.globalAlpha = 1; }
+      else ctx.fillRect(x * step, y * step, 3, 3);
+    });
+  });
+});
+
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; $('utc').textContent = Feed.tzNow('UTC').str; }
+setInterval(clocks, 1000); clocks();
+
+let last = 0;
+function frame(t) {
+  trackChanges();
+  if (t - last > 120) {
+    last = t;
+    draw(t);
+    const r = Draw.candles($('c4h'), S.bars['4h'], { mode: 'line', count: 90, pad: { t: 6, r: 8, b: 6, l: 2 }, rightGap: 0, line: INK, lineWidth: 1.2,
+      grid: { color: 'rgba(0,0,0,.08)', rows: 3 } });
+    if (r) {
+      const ctx = $('c4h').getContext('2d');
+      ctx.fillStyle = BTC; ctx.beginPath(); ctx.arc(r.last.x, r.last.y, 5, 0, Math.PI * 2); ctx.fill();
+      const b = S.bars['4h'];
+      $('k4h').textContent = pct((b[b.length - 1].c - b[b.length - 1].o) / b[b.length - 1].o * 100);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hi-Fi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira:wght@200;300;400;500;600&family=Noto+Sans+TC:wght@500&display=swap" rel="stylesheet">
+<style>
+:root { --glass: #030405; --blue: #2b9bff; --vfd: #c6f2ff; --mute: #5d6b78; --up: #ff6a5c; --down: #4fdcae; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: #0a0a0b; color: #e9eef2; overflow: hidden; font-family: 'Saira', 'Noto Sans TC', sans-serif; }
+#cv { position: fixed; inset: 0; width: 100%; height: 100%; }
+.price { position: fixed; left: 0; right: 0; top: 64px; text-align: center; z-index: 2; font-weight: 200; font-size: min(20vh, 176px); line-height: 1; letter-spacing: -.02em; color: var(--vfd);
+  text-shadow: 0 0 18px rgba(120, 210, 255, .55), 0 0 2px rgba(255, 255, 255, .8); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.price small { font-size: .38em; opacity: .7; }
+.brand { position: fixed; left: 0; right: 0; top: 30px; text-align: center; z-index: 2; font-size: 12px; letter-spacing: .5em; color: #6fd86f; text-shadow: 0 0 10px rgba(111, 216, 111, .6); font-weight: 500; }
+.brand span { color: var(--mute); text-shadow: none; letter-spacing: .3em; }
+.sub { position: fixed; left: 0; right: 0; top: calc(64px + min(20vh, 176px) + 6px); z-index: 2; display: flex; justify-content: center; gap: 34px; font-size: 14px; letter-spacing: .14em; color: var(--mute); }
+.sub b { color: var(--vfd); font-weight: 400; margin-left: 8px; text-shadow: 0 0 8px rgba(120, 210, 255, .5); }
+.sub .p { font-size: 20px; letter-spacing: .04em; }
+.u { color: var(--up) !important; text-shadow: 0 0 8px rgba(255, 106, 92, .5) !important; } .d { color: var(--down) !important; text-shadow: 0 0 8px rgba(79, 220, 174, .5) !important; }
+.lbl { position: fixed; z-index: 2; font-size: 11px; letter-spacing: .3em; color: var(--mute); text-transform: uppercase; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="brand">MARKET <span>·</span> STEREO PRE-AMPLIFIER <span>·</span> BTC / USDT</div>
+<div class="price" id="price">—</div>
+<div class="sub"><span>24H<b class="p" id="pct">—</b></span><span>HIGH<b id="h">—</b></span><span>LOW<b id="l">—</b></span><span>AMP<b id="amp">—</b></span><span>TPE<b id="tpe">—</b></span><span>NYC<b id="nyc">—</b></span></div>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
+Feed.start({ '1m': 150, '4h': 120 });
+
+// 指針：彈簧阻尼
+const needles = {};
+function needle(id, target, dt) {
+  const n = needles[id] || (needles[id] = { v: 0, x: target });
+  n.v += ((target - n.x) * 30 - n.v * 7) * dt; n.x += n.v * dt;
+  return n.x;
+}
+
+function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+
+function meter(ctx, x, y, w, h, val, title, lo, hi, marks) {
+  // 外框
+  rr(ctx, x - 10, y - 10, w + 20, h + 20, 14); ctx.fillStyle = '#050607'; ctx.fill();
+  ctx.strokeStyle = 'rgba(200,210,220,.25)'; ctx.lineWidth = 1; ctx.stroke();
+  // 藍色錶面
+  const g = ctx.createRadialGradient(x + w / 2, y + h * 1.05, h * 0.1, x + w / 2, y + h * 0.9, h * 1.2);
+  g.addColorStop(0, '#2ea2ff'); g.addColorStop(0.55, '#0b5fc0'); g.addColorStop(1, '#03214a');
+  rr(ctx, x, y, w, h, 8); ctx.fillStyle = g; ctx.fill();
+  ctx.save(); rr(ctx, x, y, w, h, 8); ctx.clip();
+  const cx = x + w / 2, cy = y + h * 1.18, R = h * 0.98;
+  const A0 = -Math.PI / 2 - 0.82, A1 = -Math.PI / 2 + 0.82;
+  const ang = (v) => A0 + (A1 - A0) * v;
+  // 刻度弧
+  ctx.strokeStyle = 'rgba(255,255,255,.92)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, R * 0.86, A0, A1); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,90,80,.95)'; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.arc(cx, cy, R * 0.86 + 4, ang(0.8), A1); ctx.stroke();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = '#fff'; ctx.fillStyle = '#fff';
+  ctx.font = '500 13px Saira'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 50; i++) {
+    const a = ang(i / 50), big = i % 10 === 0, mid = i % 5 === 0;
+    const r1 = R * 0.86, r2 = r1 + (big ? 16 : mid ? 11 : 6);
+    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2); ctx.stroke();
+    if (big) ctx.fillText(marks[i / 10], cx + Math.cos(a) * (r1 + 30), cy + Math.sin(a) * (r1 + 30));
+  }
+  ctx.font = '600 15px Saira'; ctx.fillText(title, cx, y + h * 0.62);
+  ctx.font = '400 12px Saira'; ctx.fillStyle = 'rgba(255,255,255,.75)';
+  ctx.textAlign = 'left'; ctx.fillText(lo, x + 16, y + h - 18);
+  ctx.textAlign = 'right'; ctx.fillText(hi, x + w - 16, y + h - 18);
+  // 指針
+  const a = ang(Math.max(-0.03, Math.min(1.03, val)));
+  ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = 2.4; ctx.shadowBlur = 6; ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowOffsetX = 3; ctx.shadowOffsetY = 3;
+  ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * R * 0.25, cy + Math.sin(a) * R * 0.25); ctx.lineTo(cx + Math.cos(a) * R * 0.97, cy + Math.sin(a) * R * 0.97); ctx.stroke();
+  ctx.restore();
+  // 玻璃反光
+  const gl = ctx.createLinearGradient(x, y, x, y + h * 0.5);
+  gl.addColorStop(0, 'rgba(255,255,255,.14)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+  rr(ctx, x, y, w, h * 0.5, 8); ctx.fillStyle = gl; ctx.fill();
+}
+
+function scene(t, dt) {
+  const { ctx, w, h } = Draw.fit($('cv'));
+  // 鋁把手
+  const handle = (hx) => {
+    const g = ctx.createLinearGradient(hx, 0, hx + 34, 0);
+    g.addColorStop(0, '#6d7177'); g.addColorStop(0.3, '#d9dde2'); g.addColorStop(0.55, '#a6abb1'); g.addColorStop(1, '#4b4f54');
+    rr(ctx, hx, 34, 34, h - 68, 17); ctx.fillStyle = g; ctx.fill();
+  };
+  handle(14); handle(w - 48);
+  // 黑玻璃面板
+  const panel = ctx.createLinearGradient(0, 0, w, h);
+  panel.addColorStop(0, '#0b0d10'); panel.addColorStop(0.5, '#030405'); panel.addColorStop(1, '#07080a');
+  rr(ctx, 62, 16, w - 124, h - 32, 12); ctx.fillStyle = panel; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.stroke();
+  // 斜向反光
+  ctx.save(); rr(ctx, 62, 16, w - 124, h - 32, 12); ctx.clip();
+  const sh = ctx.createLinearGradient(0, 0, w * 0.6, h);
+  sh.addColorStop(0, 'rgba(255,255,255,.05)'); sh.addColorStop(0.35, 'rgba(255,255,255,0)'); ctx.fillStyle = sh; ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+
+  // 兩顆主錶
+  const tk = S.ticker;
+  const pos = tk && S.price ? (S.price - tk.l) / (tk.h - tk.l || 1) : 0.5;
+  const now = Date.now(); let buy = 0, sell = 0;
+  for (const x of S.ticks) { if (x.T < now - 60000) continue; if (x.m) sell += x.q; else buy += x.q; }
+  const share = buy + sell ? buy / (buy + sell) : 0.5;
+  const mw = Math.min(470, (w - 300) / 2), mh = mw * 0.5, my = 300;
+  meter(ctx, w / 2 - mw - 26, my, mw, mh, needle('pos', pos, dt), '24H RANGE POSITION', 'L ' + (tk ? fmt(tk.l, 0) : '—'), 'H ' + (tk ? fmt(tk.h, 0) : '—'), ['0', '20', '40', '60', '80', '100']);
+  meter(ctx, w / 2 + 26, my, mw, mh, needle('flow', share, dt), 'BUY PRESSURE · 60 S', `SELL ${sell.toFixed(2)}`, `BUY ${buy.toFixed(2)}`, ['0', '20', '40', '60', '80', '100']);
+  // 錶間指示燈
+  ctx.fillStyle = '#6fd86f'; ctx.shadowBlur = 12; ctx.shadowColor = '#6fd86f';
+  ctx.beginPath(); ctx.arc(w / 2, my + mh / 2, 4, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+
+  // 顯示窗：1 分 K ＋ 4H
+  const cy0 = my + mh + 34, ch = h - cy0 - 186;
+  const winL = 92, winR = w - 92, split = winL + (winR - winL) * 0.68;
+  rr(ctx, winL, cy0, winR - winL, ch, 8); ctx.fillStyle = '#010203'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.stroke();
+  ctx.fillStyle = '#5d6b78'; ctx.font = '500 11px Saira'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('CH-A · BTC 1 MIN', winL + 14, cy0 + 20); ctx.fillText('CH-B · BTC 4 HOUR', split + 14, cy0 + 20);
+  return { winL, winR, split, cy0, ch, sy: h - 166 };
+}
+
+// 圖表用離屏 canvas 再貼上，避免每幀重算
+const off1 = document.createElement('canvas'), off4 = document.createElement('canvas');
+let geo = null;
+function charts() {
+  if (!geo) return;
+  const W1 = geo.split - geo.winL - 20, W4 = geo.winR - geo.split - 20, H = geo.ch - 34;
+  off1.style.width = W1 + 'px'; off1.style.height = H + 'px';
+  Object.defineProperty(off1, 'clientWidth', { value: W1, configurable: true }); Object.defineProperty(off1, 'clientHeight', { value: H, configurable: true });
+  Object.defineProperty(off4, 'clientWidth', { value: W4, configurable: true }); Object.defineProperty(off4, 'clientHeight', { value: H, configurable: true });
+  const r = Draw.candles(off1, S.bars['1m'], { count: 150, pad: { t: 6, r: 58, b: 4, l: 4 }, up: '#ff6a5c', down: '#4fdcae', body: 0.6, glow: 6,
+    grid: { color: 'rgba(43,155,255,.12)', rows: 4, cols: 10 }, ema: [{ n: 20, color: 'rgba(198,242,255,.7)' }],
+    lastLine: { color: 'rgba(198,242,255,.6)', dash: [3, 3], full: true }, axis: { font: '500 11px Saira', color: '#5d6b78', ticks: 4, fmt: (v) => fmt(v, 0) } });
+  Draw.candles(off4, S.bars['4h'], { mode: 'area', count: 120, pad: { t: 6, r: 4, b: 4, l: 4 }, rightGap: 0, line: '#c6f2ff', lineWidth: 1.3, glow: 8,
+    areaTop: 'rgba(43,155,255,.3)', areaBottom: 'rgba(43,155,255,0)', grid: { color: 'rgba(43,155,255,.12)', rows: 4 } });
+}
+
+// 個股小錶
+function stockMeters(ctx, w, sy) {
+  const n = S.markets.length; if (!n) return;
+  const gap = 14, cw = (w - 184 - gap * (n - 1)) / n;
+  S.markets.forEach((s, i) => {
+    const x = 92 + i * (cw + gap), y = sy, hgt = 140;
+    rr(ctx, x, y, cw, hgt, 8); ctx.fillStyle = '#050607'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.stroke();
+    const cx = x + cw / 2, cyy = y + 96, R = 54;
+    const g = ctx.createRadialGradient(cx, cyy, 4, cx, cyy, R + 8);
+    g.addColorStop(0, 'rgba(43,155,255,.55)'); g.addColorStop(1, 'rgba(43,155,255,.05)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(cx, cyy); ctx.arc(cx, cyy, R + 6, Math.PI * 1.15, Math.PI * 1.85); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1;
+    for (let k = 0; k <= 10; k++) { const a = Math.PI * 1.15 + Math.PI * 0.7 * k / 10, r1 = R - (k % 5 ? 4 : 8); ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r1, cyy + Math.sin(a) * r1); ctx.lineTo(cx + Math.cos(a) * R, cyy + Math.sin(a) * R); ctx.stroke(); }
+    const v = needle('s' + s.id, Math.max(0, Math.min(1, 0.5 + (s.pct || 0) / 8)), 1 / 30);
+    const a = Math.PI * 1.15 + Math.PI * 0.7 * v;
+    ctx.strokeStyle = s.chg >= 0 ? '#ff6a5c' : '#4fdcae'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, cyy); ctx.lineTo(cx + Math.cos(a) * (R + 2), cyy + Math.sin(a) * (R + 2)); ctx.stroke();
+    ctx.fillStyle = '#aab4bd'; ctx.font = '500 12px "Noto Sans TC"'; ctx.textAlign = 'left'; ctx.fillText(s.name.replace(' ETF', ''), x + 12, y + 20);
+    ctx.textAlign = 'right'; ctx.font = '500 11px Saira'; ctx.fillStyle = s.isOpen ? '#6fd86f' : '#5d6b78'; ctx.fillText((s.isOpen ? '● ' : '') + s.code, x + cw - 12, y + 20);
+    ctx.textAlign = 'center'; ctx.fillStyle = '#c6f2ff'; ctx.font = '300 24px Saira'; ctx.fillText(s.price == null ? '—' : fmt(s.price, s.dec), cx, y + 118);
+    ctx.font = '500 12px Saira'; ctx.fillStyle = s.chg >= 0 ? '#ff6a5c' : '#4fdcae'; ctx.fillText(pct(s.pct || 0), cx, y + 134);
+  });
+}
+
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s;
+  const [i, d] = s.split('.');
+  $('price').innerHTML = `${i}<small>.${d}</small>`;
+  document.title = s + ' · BTC';
+}
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('pct').textContent = pct(t.P); $('pct').className = 'p ' + cls(t.P);
+  $('h').textContent = fmt(t.h, 0); $('l').textContent = fmt(t.l, 0);
+  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+});
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; }
+setInterval(clocks, 1000); clocks();
+
+let prev = performance.now(), lastC = 0;
+function frame(t) {
+  const dt = Math.min(0.05, (t - prev) / 1000); prev = t;
+  drawPrice();
+  geo = scene(t, dt);
+  if (t - lastC > 250) { lastC = t; charts(); }
+  const ctx = $('cv').getContext('2d');
+  if (off1.width) ctx.drawImage(off1, geo.winL + 10, geo.cy0 + 28, geo.split - geo.winL - 20, geo.ch - 34);
+  if (off4.width) ctx.drawImage(off4, geo.split + 10, geo.cy0 + 28, geo.winR - geo.split - 20, geo.ch - 34);
+  stockMeters(ctx, $('cv').clientWidth, geo.sy);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

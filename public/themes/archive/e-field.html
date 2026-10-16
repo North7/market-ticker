@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Field</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@100;200;300;500&family=DM+Mono:wght@300;400&family=Noto+Sans+TC:wght@300;500&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #0c0b0a; --fg: #f4efe8; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: 'DM Mono', monospace; }
+#cv { position: fixed; inset: 0; width: 100%; height: 100%; }
+.grain { position: fixed; inset: -50%; pointer-events: none; opacity: .09; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: g 1s steps(5) infinite; }
+@keyframes g { 20% { transform: translate(-3%, 2%); } 40% { transform: translate(2%, -3%); } 60% { transform: translate(-2%, -1%); } 80% { transform: translate(3%, 3%); } }
+.layer { position: fixed; inset: 0; pointer-events: none; }
+.btc { position: absolute; left: 44px; top: 34px; }
+.btc .cap { font-size: 11px; letter-spacing: .32em; text-transform: uppercase; opacity: .7; }
+.btc .big { font-family: 'Big Shoulders Display'; font-weight: 200; font-size: min(44vh, 400px); line-height: .82; letter-spacing: -.01em; margin-top: 10px; white-space: nowrap; }
+.btc .big small { font-weight: 100; font-size: .42em; opacity: .75; }
+.mood { position: absolute; right: 48px; top: 40px; text-align: right; }
+.mood .p { font-family: 'Big Shoulders Display'; font-weight: 300; font-size: 120px; line-height: .85; }
+.mood .s { font-size: 12px; letter-spacing: .12em; opacity: .75; margin-top: 12px; line-height: 1.9; }
+.lbl { position: absolute; left: 44px; font-size: 10.5px; letter-spacing: .28em; text-transform: uppercase; opacity: .7; }
+.band { position: absolute; left: 44px; display: flex; align-items: baseline; gap: 18px; white-space: nowrap; }
+.band .nm { font-family: 'Noto Sans TC'; font-weight: 500; font-size: 14px; width: 118px; }
+.band .nm small { font-family: 'DM Mono'; font-size: 10px; opacity: .65; margin-left: 6px; letter-spacing: .1em; }
+.band .px { font-family: 'Big Shoulders Display'; font-weight: 300; font-size: 38px; width: 160px; }
+.band .pc { font-size: 13px; width: 80px; }
+.band .am { font-size: 10.5px; opacity: .6; letter-spacing: .14em; }
+.clock { position: absolute; right: 48px; bottom: 18px; font-size: 10.5px; letter-spacing: .24em; opacity: .55; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="grain"></div>
+<div class="layer" id="layer">
+  <div class="btc"><div class="cap">Field · Bitcoin / USDT · minute line</div><div class="big" id="price">—</div></div>
+  <div class="mood"><div class="p" id="pct">—</div><div class="s" id="stats">—</div></div>
+  <div class="lbl" id="lbl4h">BTC · 4H · 30 days</div>
+  <div class="clock" id="clock">—</div>
+</div>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, fmtBig, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+Feed.start({ '1m': 180, '4h': 180 });
+
+// 漲跌決定色相（漲＝朱紅、跌＝深青），幅度決定濃度；0% 是溫暖的灰
+function mood(p) {
+  const m = Math.min(1, Math.abs(p) / 3);
+  const base = [62, 54, 49], up = [200, 46, 26], down = [14, 118, 104];
+  const t = p >= 0 ? up : down, k = 0.22 + 0.78 * m;
+  return base.map((b, i) => b + (t[i] - b) * k);
+}
+const cur = {};   // 目前顯示的顏色，慢慢漸變過去
+function ease(id, target) {
+  const c = cur[id] || (cur[id] = target.slice());
+  for (let i = 0; i < 3; i++) c[i] += (target[i] - c[i]) * 0.04;
+  return c;
+}
+const rgb = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+
+function bandsLayout(h) {
+  const top = 0, btcH = h * 0.5, h4 = h * 0.13, rest = h - btcH - h4;
+  const out = [{ id: 'btc', y: top, h: btcH }, { id: '4h', y: btcH, h: h4 }];
+  const n = Math.max(1, S.markets.length || 6);
+  S.markets.forEach((s, i) => out.push({ id: s.id, y: btcH + h4 + rest / n * i, h: rest / n, s }));
+  return out;
+}
+
+function paint(t) {
+  const { ctx, w, h } = Draw.fit($('cv'));
+  ctx.fillStyle = '#0c0b0a'; ctx.fillRect(0, 0, w, h);
+  const bands = bandsLayout(h);
+  const b4 = S.bars['4h'];
+  const p4 = b4 && b4.length ? (b4[b4.length - 1].c - b4[b4.length - 180 > 0 ? b4.length - 180 : 0].o) / b4[0].o * 100 : 0;
+  bands.forEach((b, i) => {
+    let p = 0;
+    if (b.id === 'btc') p = S.ticker ? S.ticker.P : 0;
+    else if (b.id === '4h') p = p4 / 4;
+    else p = b.s.pct || 0;
+    const c = ease(b.id, mood(p));
+    // 邊緣柔化 + 緩慢呼吸
+    const breathe = Math.sin(t / 2600 + i * 1.7) * 3;
+    const inset = 10 + breathe;
+    ctx.save();
+    ctx.filter = `blur(${b.id === 'btc' ? 26 : 12}px)`;
+    const g = ctx.createLinearGradient(0, b.y, w, b.y + b.h);
+    g.addColorStop(0, rgb(c.map((v) => v * 0.82)));
+    g.addColorStop(0.55, rgb(c));
+    g.addColorStop(1, rgb(c.map((v) => v * 1.12)));
+    ctx.fillStyle = g;
+    ctx.fillRect(inset + 4, b.y + inset * 0.6, w - (inset + 4) * 2, b.h - inset * 1.2);
+    ctx.restore();
+  });
+
+  // 走勢細線：嵌在各自的色帶裡
+  const line = (bars, x0, x1, y0, y1, slots, width, alpha, glow) => {
+    if (!bars || !bars.length) return null;
+    let hi = -Infinity, lo = Infinity; for (const b of bars) { hi = Math.max(hi, b.c); lo = Math.min(lo, b.c); }
+    const n = Math.max(slots || bars.length, bars.length);
+    const X = (i) => x0 + (x1 - x0) * i / (n - 1), Y = (v) => y1 - (v - lo) / (hi - lo || 1) * (y1 - y0);
+    ctx.save(); ctx.beginPath();
+    bars.forEach((b, i) => (i ? ctx.lineTo(X(i), Y(b.c)) : ctx.moveTo(X(i), Y(b.c))));
+    ctx.strokeStyle = `rgba(244,239,232,${alpha})`; ctx.lineWidth = width; ctx.lineJoin = 'round';
+    if (glow) { ctx.shadowBlur = glow; ctx.shadowColor = 'rgba(255,255,255,.6)'; }
+    ctx.stroke(); ctx.restore();
+    return { x: X(bars.length - 1), y: Y(bars[bars.length - 1].c) };
+  };
+  const B = bands[0];
+  const end = line(S.bars['1m'], 40, w - 40, B.y + B.h * 0.62, B.y + B.h - 30, 0, 1.6, 0.9, 10);
+  if (end) {
+    const pulse = (Date.now() % 1600) / 1600;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(end.x, end.y, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = `rgba(255,255,255,${1 - pulse})`; ctx.beginPath(); ctx.arc(end.x, end.y, 4 + pulse * 20, 0, Math.PI * 2); ctx.stroke();
+  }
+  const H4 = bands[1];
+  line(S.bars['4h'], 300, w - 40, H4.y + 18, H4.y + H4.h - 18, 0, 1.2, 0.8);
+  $('lbl4h').style.top = (H4.y + H4.h / 2 - 7) + 'px';
+  bands.slice(2).forEach((b) => {
+    const s = b.s;
+    if (s.bars && s.bars.length) line(s.bars, 660, w - 40, b.y + 12, b.y + b.h - 12, s.market === 'TW' ? 54 : 78, 1.1, 0.85);
+    const el = rowEl(s);
+    el.style.top = (b.y + b.h / 2 - 22) + 'px';
+  });
+}
+
+const rows = {};
+function rowEl(s) {
+  let r = rows[s.id];
+  if (!r) {
+    r = document.createElement('div');
+    r.className = 'band';
+    r.innerHTML = `<div class="nm">${s.name.replace(' ETF', '')}<small>${s.code}</small></div><div class="px"></div><div class="pc"></div><div class="am"></div>`;
+    $('layer').appendChild(r);
+    rows[s.id] = r;
+  }
+  return r;
+}
+Feed.on('markets', () => {
+  S.markets.forEach((s) => {
+    const r = rowEl(s);
+    if (s.price == null) return;
+    r.querySelector('.px').textContent = fmt(s.price, s.dec);
+    r.querySelector('.pc').textContent = pct(s.pct);
+    r.querySelector('.am').textContent = `AMP ${s.amp.toFixed(2)}%${s.isOpen ? ' · LIVE' : ''}`;
+  });
+});
+
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s;
+  const [i, d] = s.split('.');
+  $('price').innerHTML = `${i}<small>.${d}</small>`;
+  document.title = s + ' · BTC';
+}
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('pct').textContent = pct(t.P);
+  $('stats').innerHTML = `24H HIGH ${fmt(t.h, 0)}<br>24H LOW ${fmt(t.l, 0)}<br>AMPLITUDE ${((t.h - t.l) / t.o * 100).toFixed(2)}%<br>TURNOVER $${fmtBig(t.q)}`;
+});
+setInterval(() => { $('clock').textContent = `TPE ${Feed.tzNow('Asia/Taipei').str} · NYC ${Feed.tzNow('America/New_York').str}`; }, 1000);
+
+let last = 0;
+function frame(t) {
+  drawPrice();
+  if (t - last > 80) { last = t; paint(t); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

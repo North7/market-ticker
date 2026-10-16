@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apple</title>
+<style>
+:root {
+  --bg: #000; --card: #1c1c1e; --card2: #2c2c2e; --sep: rgba(84, 84, 88, .55);
+  --label: #fff; --label2: rgba(235, 235, 245, .6); --label3: rgba(235, 235, 245, .3);
+  --red: #ff453a; --green: #30d158; --blue: #0a84ff; --orange: #ff9f0a;
+  --up: var(--red); --down: var(--green);
+  --sf: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang TC", "Helvetica Neue", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: #090b12; color: var(--label); overflow: hidden; font-family: var(--sf); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+.wrap { height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) 430px; gap: 22px; padding: 26px 30px 28px; }
+.left { display: grid; grid-template-rows: auto auto minmax(0, 1fr) 176px; gap: 16px; min-width: 0; min-height: 0; }
+
+.title { display: flex; align-items: baseline; gap: 12px; }
+.title h1 { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: .01em; }
+.title span { color: var(--label2); font-size: 17px; }
+.title .time { margin-left: auto; color: var(--label2); font-size: 15px; display: flex; gap: 16px; }
+.title .time b { color: var(--label); font-weight: 600; }
+
+.hero { display: flex; align-items: flex-end; gap: 22px; }
+.price { font-size: min(21vh, 186px); font-weight: 600; letter-spacing: -.035em; line-height: .9; display: flex; white-space: nowrap; }
+.price .d { color: var(--label2); font-size: .42em; letter-spacing: -.02em; align-self: flex-end; margin-bottom: .06em; }
+.price i { font-style: normal; display: inline-block; position: relative; overflow: hidden; }
+.price i.r { animation: num .5s cubic-bezier(.2, .9, .25, 1); }
+.price i.r.dn { animation-name: numd; }
+@keyframes num { from { transform: translateY(.45em); opacity: 0; filter: blur(6px); } }
+@keyframes numd { from { transform: translateY(-.45em); opacity: 0; filter: blur(6px); } }
+.hero .meta { padding-bottom: 14px; display: grid; gap: 8px; }
+.pill { display: inline-flex; align-items: center; justify-content: center; min-width: 96px; height: 34px; padding: 0 14px; border-radius: 999px; font-size: 19px; font-weight: 600; color: #fff; background: rgba(255,255,255,.12); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(0,0,0,.15), 0 6px 18px rgba(0,0,0,.25); backdrop-filter: blur(12px) saturate(1.6); -webkit-backdrop-filter: blur(12px) saturate(1.6); }
+.pill.up { background: var(--up); } .pill.dn { background: var(--down); }
+.hero .meta small { color: var(--label2); font-size: 15px; }
+
+/* 液態玻璃：背景是流動的彩色桌布，卡片透出並折射顏色，邊緣有鏡面高光 */
+.wall { position: fixed; inset: -10%; z-index: -1; overflow: hidden; }
+.wall i { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .7; will-change: transform; }
+.wall i:nth-child(1) { width: 60vw; height: 60vw; left: -10vw; top: -20vw; background: #27406e; animation: f1 38s ease-in-out infinite alternate; }
+.wall i:nth-child(2) { width: 50vw; height: 50vw; right: -12vw; top: 10vh; background: #3d4672; animation: f2 44s ease-in-out infinite alternate; }
+.wall i:nth-child(3) { width: 46vw; height: 46vw; left: 25vw; bottom: -24vw; background: #2c5763; animation: f3 50s ease-in-out infinite alternate; }
+.wall i:nth-child(4) { width: 26vw; height: 26vw; left: 52vw; top: 18vh; background: #7f8db0; animation: f1 36s ease-in-out infinite alternate-reverse; opacity: .55; }
+.wall::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 80% 70% at 35% 25%, rgba(8,10,18,.05), rgba(8,10,18,.6)), linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.25)); }
+@keyframes f1 { to { transform: translate(18vw, 14vh) scale(1.15); } }
+@keyframes f2 { to { transform: translate(-22vw, 20vh) scale(.9); } }
+@keyframes f3 { to { transform: translate(-14vw, -26vh) scale(1.2); } }
+.card { position: relative; overflow: hidden; min-height: 0; border-radius: 26px;
+  background: linear-gradient(160deg, rgba(255,255,255,.14), rgba(255,255,255,.04) 45%, rgba(255,255,255,.08));
+  backdrop-filter: blur(26px) saturate(1.25) brightness(1.06); -webkit-backdrop-filter: blur(26px) saturate(1.25) brightness(1.06);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(255,255,255,.1), inset 1px 0 0 rgba(255,255,255,.14), inset -1px 0 0 rgba(255,255,255,.14), 0 24px 60px rgba(0,0,0,.35); }
+.card::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.2px; pointer-events: none; z-index: 3;
+  background: linear-gradient(var(--la, 135deg), rgba(255,255,255,.75), rgba(255,255,255,.08) 32%, rgba(255,255,255,0) 55%, rgba(255,255,255,.08) 75%, rgba(255,255,255,.55));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
+  background: radial-gradient(120% 60% at var(--lx, 20%) -10%, rgba(255,255,255,.18), rgba(255,255,255,0) 60%); }
+.card .hd { position: absolute; top: 16px; left: 20px; right: 20px; display: flex; align-items: center; gap: 12px; z-index: 2; }
+.card .hd h2 { margin: 0; font-size: 13px; font-weight: 600; color: var(--label2); text-transform: uppercase; letter-spacing: .04em; }
+.seg { margin-left: auto; display: flex; background: rgba(255,255,255,.08); border-radius: 999px; padding: 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 0 0 1px rgba(255,255,255,.08); }
+.seg span { font-size: 13px; font-weight: 600; padding: 4px 14px; border-radius: 7px; color: var(--label2); }
+.seg span { border-radius: 999px !important; }
+.seg span.on { background: linear-gradient(180deg, rgba(255,255,255,.42), rgba(255,255,255,.16)); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 4px 14px rgba(0,0,0,.25); }
+.chart canvas { position: absolute; left: 14px; right: 14px; top: 52px; bottom: 14px; width: calc(100% - 28px); height: calc(100% - 66px); }
+
+.widgets { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 16px; }
+.w { padding: 16px 20px; display: flex; flex-direction: column; }
+.w h3 { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--label2); text-transform: uppercase; letter-spacing: .04em; display: flex; align-items: center; gap: 6px; }
+.w h3 svg { width: 14px; height: 14px; }
+.range { margin-top: auto; }
+.range .nums { display: flex; justify-content: space-between; font-size: 22px; font-weight: 600; }
+.range .nums span { color: var(--label2); }
+.range .bar { position: relative; height: 6px; border-radius: 3px; background: rgba(118, 118, 128, .3); margin: 14px 0 10px; }
+.range .bar em { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, var(--green), #ffd60a, var(--orange), var(--red)); }
+.range .bar i { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px var(--card); transition: left .6s cubic-bezier(.2, .9, .25, 1); }
+.range small { color: var(--label2); font-size: 14px; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin-top: auto; }
+.stats div span { display: block; font-size: 13px; color: var(--label2); }
+.stats div b { font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.w4 canvas { flex: 1; width: 100%; min-height: 0; }
+.w4 .big { font-size: 22px; font-weight: 600; }
+
+.list { display: flex; flex-direction: column; padding: 18px 0 8px; }
+.list .hd2 { padding: 0 22px 10px; display: flex; align-items: baseline; justify-content: space-between; }
+.list .hd2 h2 { margin: 0; font-size: 28px; font-weight: 700; }
+.list .hd2 span { font-size: 14px; color: var(--label2); }
+.rows { flex: 1; display: grid; grid-auto-rows: minmax(0, 1fr); }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) 96px 104px; align-items: center; gap: 14px; padding: 0 22px; position: relative; }
+.row::after { content: ''; position: absolute; left: 22px; right: 0; bottom: 0; height: .5px; background: var(--sep); }
+.row:last-child::after { display: none; }
+.row .sym b { display: block; font-size: 19px; font-weight: 700; }
+.row .sym span { display: block; font-size: 14px; color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .sym span i { font-style: normal; color: var(--green); margin-left: 6px; font-size: 12px; }
+.row canvas { width: 96px; height: 40px; }
+.row .rt { text-align: right; display: grid; gap: 4px; justify-items: end; }
+.row .rt b { font-size: 17px; font-weight: 600; }
+.row .rt .pill { min-width: 88px; height: 28px; font-size: 15px; border-radius: 7px; transition: background .3s; }
+.row.flash { animation: fl .9s ease-out; }
+@keyframes fl { from { background: rgba(255, 255, 255, .08); } }
+.up { color: var(--up); } .dn { color: var(--down); }
+.pill.up, .pill.dn { color: #fff; }
+.pill.up { background: linear-gradient(180deg, rgba(255,105,95,.95), rgba(235,52,44,.85)); } .pill.dn { background: linear-gradient(180deg, rgba(80,225,120,.95), rgba(36,180,80,.85)); }
+.card > * { position: relative; z-index: 2; }
+.chart canvas, .card .hd { position: absolute !important; }
+.row::after { background: rgba(255,255,255,.14) !important; }
+.stats small { font-size: 13px; color: var(--label2); font-weight: 500; margin-left: 3px; }
+</style>
+</head>
+<body>
+<div class="wall"><i></i><i></i><i></i><i></i></div>
+<div class="wrap">
+  <div class="left">
+    <div class="title"><h1>比特幣</h1><span>BTC-USDT · Binance</span>
+      <div class="time"><span>台北 <b id="tpe">—</b></span><span>紐約 <b id="nyc">—</b></span></div></div>
+    <div class="hero">
+      <div class="price" id="price">—</div>
+      <div class="meta"><span class="pill" id="pill">—</span><small id="abs">—</small></div>
+    </div>
+    <div class="card chart">
+      <div class="hd"><h2>即時走勢</h2><span id="ohlc" style="color:var(--label2);font-size:13px"></span>
+        <div class="seg"><span>1秒</span><span class="on">1分</span><span>5分</span><span>4時</span><span>1日</span></div></div>
+      <canvas id="c1m"></canvas>
+    </div>
+    <div class="widgets">
+      <div class="card w"><h3><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12h12M4 9l3-3 2 2 3-4"/></svg>24 小時區間</h3>
+        <div class="range"><div class="nums"><span id="lo">—</span><b id="cur">—</b><span id="hi">—</span></div>
+          <div class="bar"><em id="rem"></em><i id="rdot"></i></div><small id="rtxt">—</small></div></div>
+      <div class="card w"><h3><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="7" width="3" height="7"/><rect x="6.5" y="4" width="3" height="10"/><rect x="11" y="2" width="3" height="12"/></svg>統計</h3>
+        <div class="stats"><div><span>開盤</span><b id="o">—</b></div><div><span>振幅</span><b id="amp">—</b></div><div><span>成交量</span><b id="vol">—</b></div><div><span>成交額</span><b id="qv">—</b></div></div></div>
+      <div class="card w w4"><h3><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg>四小時 · 30 天<span style="margin-left:auto" class="big" id="k4h">—</span></h3><canvas id="c4h"></canvas></div>
+    </div>
+  </div>
+  <div class="card list">
+    <div class="hd2"><h2>自選</h2><span id="date">—</span></div>
+    <div class="rows" id="rows"></div>
+  </div>
+</div>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, fmtBig, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const UP = '#ff453a', DOWN = '#30d158';
+const cls = (v) => (v > 0 ? 'up' : v < 0 ? 'dn' : '');
+Feed.start({ '1m': 180, '4h': 180 });
+
+// iOS 式數字滾動
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  const [i, d] = s.split('.');
+  const el = $('price');
+  const dir = shown && S.price < parseFloat(shown.replace(/,/g, '')) ? ' dn' : '';
+  if (s.length !== shown.length) el.innerHTML = [...i].map((c) => `<i>${c}</i>`).join('') + `<span class="d">.${d}</span>`;
+  else {
+    const is = el.querySelectorAll('i');
+    [...i].forEach((c, k) => { if (is[k].textContent !== c) { const n = document.createElement('i'); n.textContent = c; n.className = 'r' + dir; is[k].replaceWith(n); } });
+    el.querySelector('.d').textContent = '.' + d;
+  }
+  shown = s;
+  document.title = s + ' · BTC';
+  range();
+}
+
+function range() {
+  const t = S.ticker; if (!t || S.price == null) return;
+  const p = Math.max(0, Math.min(1, (S.price - t.l) / (t.h - t.l || 1)));
+  $('rdot').style.left = p * 100 + '%';
+  $('rem').style.left = '0'; $('rem').style.right = '0';
+  $('cur').textContent = fmt(S.price, 0);
+  $('rtxt').textContent = `目前位於 24 小時區間的 ${(p * 100).toFixed(0)}%`;
+}
+
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  const pill = $('pill'); pill.textContent = pct(t.P); pill.className = 'pill ' + cls(t.P);
+  $('abs').textContent = `${t.p > 0 ? '+' : ''}${fmt(t.p)} 今日`;
+  $('lo').textContent = fmt(t.l, 0); $('hi').textContent = fmt(t.h, 0);
+  $('o').textContent = fmt(t.o, 0);
+  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+  $('vol').innerHTML = fmtBig(t.v) + '<small>BTC</small>'; $('qv').textContent = '$' + fmtBig(t.q);
+  range();
+});
+
+const rows = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s) => {
+    let r = rows[s.id];
+    if (!r) {
+      const el = document.createElement('div');
+      el.className = 'row';
+      el.innerHTML = `<div class="sym"><b>${s.code}</b><span>${s.name}</span></div><canvas></canvas><div class="rt"><b>—</b><span class="pill">—</span></div>`;
+      $('rows').appendChild(el);
+      r = rows[s.id] = { el, last: null, q: (x) => el.querySelector(x) };
+    }
+    if (s.price == null) return;
+    if (r.last != null && r.last !== s.price) { r.el.classList.remove('flash'); void r.el.offsetWidth; r.el.classList.add('flash'); }
+    r.last = s.price;
+    r.q('.sym span').innerHTML = `${s.name}${s.isOpen ? '<i>● 交易中</i>' : ''}`;
+    r.q('.rt b').textContent = fmt(s.price, s.dec);
+    const p = r.q('.pill'); p.textContent = pct(s.pct); p.className = 'pill ' + cls(s.chg);
+    Draw.spark(r.q('canvas'), s.bars, { mode: 'line', slots: s.market === 'TW' ? 54 : 78, base: s.prevClose, line: s.chg >= 0 ? UP : DOWN, lineWidth: 1.6,
+      baseColor: 'rgba(235,235,245,.3)', baseDash: [1, 3] });
+  });
+});
+
+function clocks() {
+  $('tpe').textContent = Feed.tzNow('Asia/Taipei').str.slice(0, 5); $('nyc').textContent = Feed.tzNow('America/New_York').str.slice(0, 5);
+  $('date').textContent = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei', month: 'long', day: 'numeric', weekday: 'short' });
+}
+setInterval(clocks, 1000); clocks();
+
+function charts() {
+  const b = S.bars['1m'];
+  if (b && b.length) {
+    const first = b[Math.max(0, b.length - 180)].o, lastC = b[b.length - 1].c;
+    const col = lastC >= first ? UP : DOWN;
+    const rgba = (a) => (lastC >= first ? `rgba(255,69,58,${a})` : `rgba(48,209,88,${a})`);
+    const r = Draw.candles($('c1m'), b, { mode: 'area', count: 180, pad: { t: 10, r: 70, b: 22, l: 6 }, rightGap: 3, line: col, lineWidth: 2.2, areaTop: rgba(0.32), areaBottom: rgba(0),
+      grid: { color: 'rgba(84,84,88,.35)', rows: 4 }, axis: { font: '500 12px -apple-system, "SF Pro Text"', color: 'rgba(235,235,245,.45)', ticks: 4, fmt: (v) => fmt(v, 0) } });
+    if (r) {
+      const ctx = $('c1m').getContext('2d');
+      // 起點虛線（Apple 股市 App 的前收線）
+      ctx.strokeStyle = 'rgba(235,235,245,.35)'; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(6, r.Y(first)); ctx.lineTo(r.w - 70, r.Y(first)); ctx.stroke(); ctx.setLineDash([]);
+      // 時間刻度
+      ctx.fillStyle = 'rgba(235,235,245,.45)'; ctx.font = '500 12px -apple-system'; ctx.textAlign = 'center';
+      const d = b.slice(-180);
+      d.forEach((x, k) => { const t = new Date(x.t * 1000); if (t.getMinutes() % 30 === 0) ctx.fillText(t.toLocaleTimeString('zh-TW', { hour: 'numeric', minute: '2-digit', hour12: false }), r.X(k), r.h - 4); });
+      const p = (Date.now() % 1800) / 1800;
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(r.last.x, r.last.y, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = rgba(0.35 * (1 - p)); ctx.beginPath(); ctx.arc(r.last.x, r.last.y, 6 + p * 16, 0, Math.PI * 2); ctx.fill();
+      const lb = b[b.length - 1];
+      $('ohlc').textContent = `開 ${fmt(lb.o)}　高 ${fmt(lb.h)}　低 ${fmt(lb.l)}`;
+    }
+  }
+  const b4 = S.bars['4h'];
+  if (b4 && b4.length) {
+    const up = b4[b4.length - 1].c >= b4[0].o;
+    Draw.candles($('c4h'), b4, { mode: 'area', count: 180, pad: { t: 4, r: 2, b: 2, l: 2 }, rightGap: 0, line: up ? UP : DOWN, lineWidth: 1.6,
+      areaTop: up ? 'rgba(255,69,58,.28)' : 'rgba(48,209,88,.28)', areaBottom: 'rgba(0,0,0,0)' });
+    const v = (b4[b4.length - 1].c - b4[0].o) / b4[0].o * 100;
+    $('k4h').textContent = pct(v); $('k4h').className = 'big ' + cls(v);
+  }
+}
+
+let last = 0;
+function frame(t) {
+  const a = 120 + Math.sin(t / 9000) * 40;
+  document.documentElement.style.setProperty('--la', a + 'deg'); document.documentElement.style.setProperty('--lx', (50 + Math.sin(t / 7000) * 40) + '%');
+  drawPrice(); if (t - last > 150) { last = t; charts(); } requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

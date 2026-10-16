@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daybreak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@900&display=swap" rel="stylesheet">
+<style>
+/* 破曉 Daybreak 設計語言：紙白、墨黑、單一號外紅；超大收盤價是唯一的視覺重量 */
+:root {
+  --void: #EEECE6; --deck: #F6F5F1; --line: #D2CEC4; --ink: #0A0A0A; --ink-2: #3D3C39; --ink-3: #7A766F;
+  --red: #FF3B1F; --red-ink: #D12C10; --orbit: #2340E0;
+  --tape-bg: #0A0A0A; --tape-ink: #F2F0EA; --tape-ink-2: #8E8A82;
+  --f-sys-cjk: system-ui, -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --f-cond: "Archivo", var(--f-sys-cjk);
+  --f-cjk: "Noto Sans TC", "Archivo", var(--f-sys-cjk);
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --ease: cubic-bezier(.2, .7, .1, 1); --snap: cubic-bezier(.7, 0, .2, 1);
+}
+:root[data-theme="dark"] {
+  --void: #0C0C0D; --deck: #131315; --line: #2A2A2F; --ink: #F2F0EA; --ink-2: #B6B2AA; --ink-3: #7C7870;
+  --red: #FF4A2E; --red-ink: #FF6A50; --orbit: #7A90FF;
+  --tape-bg: #F2F0EA; --tape-ink: #0A0A0A; --tape-ink-2: #6B675F;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--void); color: var(--ink); overflow: hidden; font-family: var(--f-cond); -webkit-font-smoothing: antialiased; transition: background .6s, color .6s; }
+.wrap { height: 100vh; display: grid; grid-template-rows: 66px minmax(0, 1fr) minmax(150px, 22vh) minmax(120px, 15.5vh) 38px; padding: 0 36px; }
+
+.mast { display: flex; align-items: center; gap: 16px; border-top: 6px solid var(--ink); margin-top: 18px; padding-top: 10px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand svg { width: 34px; height: 34px; overflow: visible; }
+.brand svg path:first-child { stroke-dasharray: 50; stroke-dashoffset: 50; animation: rise 1.4s var(--snap) .2s forwards; }
+@keyframes rise { to { stroke-dashoffset: 0; } }
+.wm { display: grid; line-height: 1; }
+.wm b { font-stretch: 112%; font-weight: 900; font-size: 18px; letter-spacing: .04em; }
+.wm span { font-size: 11px; color: var(--ink-3); letter-spacing: .5em; margin-top: 5px; }
+.dateline { flex: 1; display: flex; align-items: center; gap: 14px; font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); letter-spacing: .06em; }
+.dateline b { font-family: var(--f-cjk); font-weight: 900; font-size: 13px; color: #fff; background: var(--red); padding: 1px 8px; letter-spacing: .1em; }
+.dateline hr { flex: 1; border: 0; border-top: 1px solid var(--line); margin: 0; }
+.dateline .k { color: var(--ink); }
+
+.mega { position: relative; container-type: size; border-bottom: 1px solid var(--line); min-height: 0; }
+.mega .big { position: absolute; left: -4px; bottom: 0.16em; font-stretch: 62%; font-weight: 900; font-size: min(27cqw, 72cqh); line-height: .9; letter-spacing: -.035em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mega .big .dec { font-size: .4em; letter-spacing: -.02em; color: var(--ink-3); }
+.mega .big span { display: inline-block; }
+.mega .big span.dc { color: var(--red); }
+@keyframes split { 0% { text-shadow: -.04em 0 var(--red), .04em 0 var(--orbit); } 100% { text-shadow: none; } }
+.mega canvas { position: absolute; left: 0; right: 0; top: 40px; bottom: 30px; width: 100%; height: calc(100% - 70px); pointer-events: none; }
+@keyframes drawp { to { clip-path: inset(-10px -10px -10px -10px); } }
+.hud { position: absolute; z-index: 2; top: 12px; display: flex; gap: 12px; align-items: baseline; font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); }
+.hud b { color: var(--ink); font-weight: 500; font-size: 12px; }
+.hud.tl { left: 0; } .hud.tr { right: 0; }
+
+.mid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 40px; padding-top: 14px; min-height: 0; overflow: hidden; }
+.h4 { position: relative; min-height: 0; }
+.h4 h3, .watch-h { margin: 0; font-family: var(--f-cjk); font-weight: 900; font-size: 15px; letter-spacing: .02em; display: flex; align-items: baseline; gap: 10px; }
+.h4 h3 small, .watch-h small { font-family: var(--f-mono); font-weight: 400; font-size: 11px; color: var(--ink-3); }
+.h4 canvas { position: absolute; left: 0; right: 0; top: 28px; bottom: 6px; width: 100%; height: calc(100% - 34px); }
+.watch { min-height: 0; overflow: hidden; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto repeat(2, minmax(0, 1fr)); row-gap: 8px; }
+.watch-h { grid-column: 1 / -1; }
+.watch div.c { display: grid; gap: 2px; align-content: start; padding: 0 14px; border-left: 1px solid var(--line); }
+.watch .k { font-size: 12px; color: var(--ink-3); }
+.watch .v { font-stretch: 62%; font-weight: 900; font-size: clamp(22px, 4.6vh, 46px); line-height: .92; font-variant-numeric: tabular-nums; }
+
+.stocks { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--ink); padding: 12px 0 10px; min-height: 0; }
+.st { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); gap: 2px; padding: 0 14px; border-left: 1px solid var(--line); min-width: 0; }
+.st:first-child { border-left: 0; padding-left: 0; }
+.st .k { font-size: 12px; color: var(--ink-3); white-space: nowrap; display: flex; justify-content: space-between; }
+.st .k b { font-family: var(--f-cjk); font-weight: 900; color: var(--ink); font-size: 13px; }
+.st .k i { font-style: normal; font-family: var(--f-mono); font-size: 10px; }
+.st .k i.on { color: var(--red); }
+.st .v { font-stretch: 62%; font-weight: 900; font-size: clamp(22px, 4.2vh, 40px); line-height: .95; font-variant-numeric: tabular-nums; }
+.st .px { font-family: var(--f-mono); font-size: clamp(10px, .9vw, 12px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st .sp { position: relative; min-height: 0; }
+.st .sp canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.tape { margin: 0 -36px; background: var(--tape-bg); color: var(--tape-ink); overflow: hidden; display: flex; align-items: center; font-family: var(--f-mono); font-size: 12.5px; }
+.tape .tr { display: flex; white-space: nowrap; animation: run 60s linear infinite; }
+.tape .tr span { padding: 0 28px; }
+.tape .tr span b { font-family: var(--f-cjk); font-weight: 900; margin-right: 10px; }
+.tape .tr span i { font-style: normal; color: var(--tape-ink-2); margin-left: 8px; }
+@keyframes run { to { transform: translateX(-50%); } }
+.up { color: var(--red); } .dn { color: var(--orbit); }
+.tape .up { color: #FF6A50; } .tape .dn { color: #7A90FF; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 40a14 14 0 0 1 28 0" fill="none" stroke="var(--red)" stroke-width="5"/><path d="M6 40h52" stroke="var(--ink)" stroke-width="5"/></svg>
+      <span class="wm"><b>DAYBREAK</b><span>破曉</span></span></div>
+    <div class="dateline"><b>即時</b><span id="date">—</span><hr><span>台北 <span class="k" id="tpe">—</span></span><span>紐約 <span class="k" id="nyc">—</span></span></div>
+  </header>
+
+  <section class="mega">
+    <div class="hud tl">BTC / USDT · Binance 現貨 · <b>最新成交</b> · 紅線＝近 3 小時 1 分走勢</div>
+    <div class="hud tr">24H <b id="hudp">—</b> · 振幅 <b id="huda">—</b></div>
+    <canvas id="spark"></canvas>
+    <div class="big" id="price">—</div>
+  </section>
+
+  <section class="mid">
+    <div class="h4"><h3>四小時 K 線 <small>BTC · 4H · 20 日 · 藍線 EMA20 · 虛線現價</small></h3><canvas id="c4h"></canvas></div>
+    <div class="watch">
+      <div class="watch-h">二十四小時 <small>24H</small></div>
+      <div class="c"><span class="k">漲跌幅</span><span class="v" id="pct">—</span></div>
+      <div class="c"><span class="k">成交額</span><span class="v" id="qv">—</span></div>
+      <div class="c"><span class="k">最高</span><span class="v" id="h">—</span></div>
+      <div class="c"><span class="k">最低</span><span class="v" id="l">—</span></div>
+    </div>
+  </section>
+
+  <section class="stocks" id="stocks"></section>
+  <div class="tape"><div class="tr" id="tape"></div></div>
+</div>
+
+<script src="feed.js"></script>
+<script src="draw.js"></script>
+<script>
+const { S, fmt, fmtBig, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const cls = (v) => (v > 0 ? 'up' : v < 0 ? 'dn' : '');
+Feed.start({ '1m': 180, '4h': 120 });
+
+// 固定日刊（白天）模式
+document.documentElement.dataset.theme = 'light';
+
+
+// 數字解碼：變動的位數先亂碼閃幾下再定格
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  const [i, d] = s.split('.');
+  const el = $('price');
+  const full = i + '.' + d;
+  if (full.length !== shown.length || !el.children.length) {
+    el.innerHTML = [...i].map((c) => `<span>${c}</span>`).join('') + `<span class="dec">.${d}</span>`;
+  } else {
+    const spans = el.querySelectorAll('span:not(.dec)');
+    [...i].forEach((c, k) => {
+      if (c === shown[k]) return;
+      const sp = spans[k]; let n = 0;
+      clearInterval(sp._t); sp.classList.add('dc');
+      sp._t = setInterval(() => {
+        if (++n > 5 || !/\d/.test(c)) { clearInterval(sp._t); sp.textContent = c; sp.classList.remove('dc'); return; }
+        sp.textContent = (Math.random() * 10) | 0;
+      }, 38);
+    });
+    el.querySelector('.dec').textContent = '.' + d;
+  }
+  shown = full;
+  document.title = s + ' · BTC';
+}
+
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  const p = $('pct'); p.textContent = pct(t.P); p.className = 'v ' + cls(t.P);
+  $('hudp').textContent = pct(t.P); $('hudp').className = cls(t.P);
+  $('huda').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+  $('qv').textContent = '$' + fmtBig(t.q);
+  $('h').textContent = fmt(t.h, 0); $('l').textContent = fmt(t.l, 0);
+});
+
+const cols = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s) => {
+    let c = cols[s.id];
+    if (!c) {
+      const el = document.createElement('div');
+      el.className = 'st';
+      el.innerHTML = `<span class="k"><b>${s.name.replace(' ETF', '')}</b><i>${s.code}</i></span><span class="v">—</span><span class="px">—</span><div class="sp"><canvas></canvas></div>`;
+      $('stocks').appendChild(el);
+      c = cols[s.id] = { el, q: (x) => el.querySelector(x) };
+    }
+    if (s.price == null) return;
+    c.q('.v').textContent = pct(s.pct); c.q('.v').className = 'v ' + cls(s.chg);
+    c.q('.px').textContent = `${fmt(s.price, s.dec)} · 振幅 ${s.amp.toFixed(2)}%`;
+    const tag = c.q('.k i'); tag.textContent = (s.isOpen ? '● ' : '') + s.code; tag.className = s.isOpen ? 'on' : '';
+    Draw.spark(c.q('canvas'), s.bars, { mode: 'line', slots: s.market === 'TW' ? 54 : 78, base: s.prevClose, line: css('--ink'), lineWidth: 1.4,
+      baseColor: css('--line'), baseDash: [2, 3], dot: css('--red'), dotR: 3 });
+  });
+  const items = [`<span><b>比特幣</b>${fmt(S.price)}<i class="${cls(S.ticker ? S.ticker.P : 0)}">${S.ticker ? pct(S.ticker.P) : ''}</i></span>`,
+    ...S.markets.map((s) => `<span><b>${s.name.replace(' ETF', '')}</b>${fmt(s.price, s.dec)}<i class="${cls(s.chg)}">${pct(s.pct)}</i></span>`)].join('');
+  $('tape').innerHTML = items + items + items + items;
+});
+
+function clocks() {
+  $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str;
+  $('date').textContent = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+}
+setInterval(clocks, 1000); clocks();
+
+function charts() {
+  const red = css('--red'), ink = css('--ink');
+  // 巨型價格背後的紅色價格線（1 分 K 收盤，3 小時）
+  const r = Draw.candles($('spark'), S.bars['1m'], { mode: 'line', count: 180, pad: { t: 6, r: 8, b: 6, l: 0 }, rightGap: 0, line: red, lineWidth: 2.5 });
+  if (r) {
+    const ctx = $('spark').getContext('2d'), p = (Date.now() % 2200) / 2200;
+    ctx.fillStyle = red; ctx.beginPath(); ctx.arc(r.last.x, r.last.y, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = red; ctx.globalAlpha = 1 - p; ctx.beginPath(); ctx.arc(r.last.x, r.last.y, 5 + p * 16, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  Draw.candles($('c4h'), S.bars['4h'], { count: 120, pad: { t: 6, r: 58, b: 6, l: 0 }, up: red, down: ink, hollowDown: true, hollowFill: css('--void'), body: 0.6,
+    grid: { color: css('--line'), rows: 3 }, ema: [{ n: 20, color: css('--orbit'), width: 1.2 }],
+    lastLine: { color: red, dash: [2, 3], full: true }, axis: { font: '11px "JetBrains Mono"', color: css('--ink-3'), ticks: 3, fmt: (v) => fmt(v, 0) } });
+}
+
+let last = 0;
+function frame(t) { drawPrice(); if (t - last > 120) { last = t; charts(); } requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

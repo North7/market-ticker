@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Starry Night</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,500&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: #0b1d4a; overflow: hidden; font-family: 'Fraunces', 'Noto Serif TC', serif; color: #f4ecd2; }
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+.top { position: fixed; left: 36px; right: 36px; top: 20px; display: flex; gap: 24px; align-items: baseline; z-index: 3; font-style: italic; font-size: 15px; color: rgba(244, 236, 210, .8); text-shadow: 0 1px 6px rgba(5, 12, 35, .9); }
+.top b { font-style: normal; font-weight: 700; color: #f6d469; letter-spacing: .04em; }
+.top .sp { margin-left: auto; }
+</style>
+</head>
+<body>
+<canvas id="paint"></canvas>
+<canvas id="fg"></canvas>
+<div class="top"><b>The Starry Market</b><span>BTC / USDT · after Vincent van Gogh, 1889</span><span class="sp">台北 <span id="tpe">—</span></span><span>紐約 <span id="nyc">—</span></span></div>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+Feed.start({ '1m': 120, '4h': 180 });
+
+const SKY = ['#0b2462', '#163f8f', '#2a64b0', '#4d8ac8', '#87b5de', '#cfe3ef'];
+const GOLD = ['#fff3b8', '#f7d76a', '#eeb43c', '#d98a22'];
+let W = 0, H = 0, vol = 0.5;
+
+// ---- 漩渦場：天空的筆觸沿著這個向量場走
+function swirls() {
+  const list = [
+    { x: 0.47 * W, y: 0.36 * H, r: 0.13 * W, k: 1.25 },
+    { x: 0.66 * W, y: 0.31 * H, r: 0.08 * W, k: -1.0 },
+    { x: 0.86 * W, y: 0.17 * H, r: 0.06 * W, k: 0.9 },     // 月亮
+  ];
+  for (const st of stars()) list.push({ x: st.x, y: st.y, r: 22 + st.r * 2.6, k: 0.7 });
+  return list;
+}
+let SW = [];
+function field(x, y, t) {
+  let vx = 1, vy = Math.sin(x * 0.0045 + t * 0.12) * 0.45 + Math.sin(y * 0.012 + t * 0.07) * 0.2;
+  for (const s of SW) {
+    const dx = x - s.x, dy = y - s.y, f = s.k * Math.exp(-(dx * dx + dy * dy) / (s.r * s.r));
+    vx += (-dy / s.r) * f * 3.2; vy += (dx / s.r) * f * 3.2;
+  }
+  const m = Math.hypot(vx, vy) || 1;
+  return [vx / m, vy / m];
+}
+
+// ---- 天空畫布：粒子沿場描筆、舊筆觸慢慢褪
+const paint = $('paint'), pc = paint.getContext('2d');
+let parts = [];
+function resize() {
+  const dpr = devicePixelRatio || 1;
+  W = innerWidth; H = innerHeight;
+  for (const c of [paint, $('fg')]) { c.width = W * dpr; c.height = H * dpr; c.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0); }
+  const g = pc.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0a1d52'); g.addColorStop(0.6, '#163d86'); g.addColorStop(1, '#0c2147');
+  pc.fillStyle = g; pc.fillRect(0, 0, W, H);
+  parts = Array.from({ length: Math.round(W * H / 700) }, () => spawn());
+}
+function spawn() { return { x: Math.random() * W, y: Math.random() * H * 0.66, life: 40 + Math.random() * 120 }; }
+function skyColor(x, y) {
+  let near = 0;
+  for (const s of SW) { const d = Math.hypot(x - s.x, y - s.y); near = Math.max(near, Math.exp(-(d * d) / (s.r * s.r * 1.4))); }
+  const n = (Math.sin(x * 0.013 + y * 0.021) + Math.sin(x * 0.007 - y * 0.017 + 2)) * 0.25 + 0.5;
+  let i = Math.min(SKY.length - 1, Math.floor(n * 3.2 + near * 3));
+  return i;
+}
+function paintSky(t, dt) {
+  pc.fillStyle = 'rgba(12, 32, 84, 0.035)'; pc.fillRect(0, 0, W, H * 0.7);
+  const spd = (1.1 + vol * 1.6) * dt * 60;
+  const buckets = SKY.map(() => []);
+  for (const p of parts) {
+    const [vx, vy] = field(p.x, p.y, t);
+    const nx = p.x + vx * spd, ny = p.y + vy * spd;
+    buckets[skyColor(p.x, p.y)].push(p.x, p.y, nx, ny);
+    p.x = nx; p.y = ny; p.life--;
+    if (p.life < 0 || p.x < -10 || p.x > W + 10 || p.y < -10 || p.y > H * 0.7) Object.assign(p, spawn());
+  }
+  pc.lineCap = 'round';
+  buckets.forEach((b, i) => {
+    if (!b.length) return;
+    pc.strokeStyle = SKY[i]; pc.lineWidth = i >= 4 ? 2.2 : 2.8; pc.globalAlpha = 0.75;
+    pc.beginPath(); for (let k = 0; k < b.length; k += 4) { pc.moveTo(b[k], b[k + 1]); pc.lineTo(b[k + 2], b[k + 3]); } pc.stroke();
+  });
+  pc.globalAlpha = 1;
+}
+
+// ---- 價格：字裡流動金黃筆觸
+const goldC = document.createElement('canvas'), gc = goldC.getContext('2d');
+let goldParts = [], priceBox = null;
+function priceLayer(t, dt) {
+  if (S.price == null) return null;
+  const fs = Math.min(H * 0.25, W * 0.15);
+  const box = { x: 30, y: 52, w: Math.min(W * 0.66, fs * 4.4), h: fs * 1.05, fs };
+  if (!priceBox || priceBox.w !== box.w) {
+    const dpr = devicePixelRatio || 1;
+    goldC.width = box.w * dpr; goldC.height = box.h * dpr; gc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gc.fillStyle = '#e9b347'; gc.fillRect(0, 0, box.w, box.h);
+    goldParts = Array.from({ length: 700 }, () => ({ x: Math.random() * box.w, y: Math.random() * box.h, life: Math.random() * 80 }));
+  }
+  priceBox = box;
+  gc.fillStyle = 'rgba(233,179,71,.05)'; gc.fillRect(0, 0, box.w, box.h);
+  const buckets = GOLD.map(() => []);
+  for (const p of goldParts) {
+    const a = Math.sin(p.x * 0.02 + t * 0.3) * 1.2 + Math.cos(p.y * 0.03 - t * 0.2) * 1.2;
+    const nx = p.x + Math.cos(a) * 1.6 * dt * 60, ny = p.y + Math.sin(a) * 1.6 * dt * 60;
+    buckets[(Math.floor(p.x / 37 + p.y / 23) % 4 + 4) % 4].push(p.x, p.y, nx, ny);
+    p.x = nx; p.y = ny;
+    if (--p.life < 0 || p.x < 0 || p.x > box.w || p.y < 0 || p.y > box.h) { p.x = Math.random() * box.w; p.y = Math.random() * box.h; p.life = 40 + Math.random() * 80; }
+  }
+  gc.lineCap = 'round'; gc.lineWidth = 3.2;
+  buckets.forEach((b, i) => { gc.strokeStyle = GOLD[i]; gc.beginPath(); for (let k = 0; k < b.length; k += 4) { gc.moveTo(b[k], b[k + 1]); gc.lineTo(b[k + 2], b[k + 3]); } gc.stroke(); });
+  return box;
+}
+
+// ---- 星星＝個股（大小＝漲跌幅，暖黃＝漲、冷白藍＝跌）；月亮＝BTC
+const STAR_POS = [[0.2, 0.52], [0.27, 0.42], [0.38, 0.54], [0.56, 0.47], [0.7, 0.55], [0.79, 0.4]];
+function stars() {
+  return S.markets.map((m, i) => {
+    const [px, py] = STAR_POS[i] || [0.5, 0.5];
+    return { m, x: px * W, y: py * H, r: 7 + Math.min(16, Math.abs(m.pct || 0) * 5), up: (m.pct || 0) >= 0 };
+  });
+}
+function halo(ctx, x, y, r, warm, t, n = 4) {
+  // 斷續的筆觸環，內暖外冷、交錯慢轉，像梵谷的星暈
+  const cols = warm ? ['#fff3b8', '#f7dd6e', '#e2dc7a', '#bcd88a', '#9cc9a8'] : ['#f2f8ff', '#d8eaf6', '#b9d6ee', '#9cc3e6', '#86afd6'];
+  ctx.save(); ctx.lineCap = 'round';
+  const glow = ctx.createRadialGradient(x, y, r * 0.5, x, y, r * (1.4 + n * 0.7));
+  glow.addColorStop(0, warm ? 'rgba(255,226,120,.45)' : 'rgba(220,238,255,.35)'); glow.addColorStop(1, 'rgba(255,226,120,0)');
+  ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, r * (1.4 + n * 0.7), 0, Math.PI * 2); ctx.fill();
+  for (let k = n; k >= 1; k--) {
+    const rr = r * (1 + k * 0.62);
+    ctx.strokeStyle = cols[Math.min(cols.length - 1, k - 1)];
+    ctx.globalAlpha = Math.max(0.3, 0.9 - k * 0.12);
+    ctx.lineWidth = Math.max(2, r * 0.2);
+    ctx.setLineDash([rr * 0.42, rr * 0.16, rr * 0.2, rr * 0.12]);
+    ctx.lineDashOffset = (k % 2 ? 1 : -1) * t * (14 + k * 4);
+    ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ---- 前景：月亮、星、山（4H）、村落的燈（1 分 K）、絲柏、價格
+const fg = $('fg'), fc = fg.getContext('2d');
+function front(t) {
+  fc.clearRect(0, 0, W, H);
+  // 月亮
+  const mx = 0.86 * W, my = 0.17 * H, mr = Math.min(48, H * 0.055);
+  halo(fc, mx, my, mr, true, t, 5);
+  fc.fillStyle = '#f7d76a'; fc.beginPath(); fc.arc(mx, my, mr, 0, Math.PI * 2); fc.fill();
+  fc.fillStyle = '#e39b2d'; fc.beginPath(); fc.arc(mx + mr * 0.42, my - mr * 0.18, mr * 0.86, 0, Math.PI * 2); fc.fill();
+  fc.fillStyle = '#fff3b8'; fc.beginPath(); fc.arc(mx - mr * 0.15, my + mr * 0.1, mr * 0.42, 0, Math.PI * 2); fc.globalAlpha = 0.5; fc.fill(); fc.globalAlpha = 1;
+  const tk = S.ticker;
+  fc.textAlign = 'center'; fc.shadowColor = 'rgba(5,12,35,.95)'; fc.shadowBlur = 8;
+  if (tk) {
+    fc.font = '700 22px Fraunces'; fc.fillStyle = tk.P >= 0 ? '#f7d76a' : '#bcd8f0'; fc.fillText(`BTC 24H ${pct(tk.P)}`, mx, my + mr * 2.6);
+    fc.font = 'italic 500 14px Fraunces'; fc.fillStyle = '#f4ecd2'; fc.fillText(`high ${fmt(tk.h, 0)} · low ${fmt(tk.l, 0)} · amp ${((tk.h - tk.l) / tk.o * 100).toFixed(2)}%`, mx, my + mr * 2.6 + 22);
+  }
+  // 星
+  for (const st of stars()) {
+    halo(fc, st.x, st.y, st.r, st.up, t);
+    fc.shadowBlur = 0;
+    fc.fillStyle = st.up ? '#fff1a8' : '#eaf5ff'; fc.beginPath(); fc.arc(st.x, st.y, st.r * (0.9 + 0.08 * Math.sin(t * 2 + st.x)), 0, Math.PI * 2); fc.fill();
+    const m = st.m; if (m.price == null) continue;
+    fc.shadowBlur = 8; fc.textAlign = 'center';
+    fc.font = '700 15px "Noto Serif TC"'; fc.fillStyle = '#f4ecd2'; fc.fillText(m.name.replace(' ETF', ''), st.x, st.y + st.r * 3.4 + 14);
+    fc.font = '700 19px Fraunces'; fc.fillStyle = '#fff'; fc.fillText(fmt(m.price, m.dec), st.x, st.y + st.r * 3.4 + 36);
+    fc.font = 'italic 500 14px Fraunces'; fc.fillStyle = st.up ? '#f7d76a' : '#bcd8f0';
+    fc.fillText(`${pct(m.pct || 0)}${m.isOpen ? '' : ' · closed'}`, st.x, st.y + st.r * 3.4 + 54);
+  }
+  fc.shadowBlur = 0;
+
+  // 遠山：4H 30 天稜線
+  const HT = 0.66 * H;
+  const b4 = S.bars['4h'];
+  if (b4 && b4.length > 10) {
+    let a = Infinity, z = -Infinity; for (const b of b4) { a = Math.min(a, b.c); z = Math.max(z, b.c); }
+    const Y = (p) => HT + 34 - (p - a) / (z - a || 1) * 70;
+    fc.beginPath(); fc.moveTo(0, H);
+    b4.forEach((b, i) => fc.lineTo(i / (b4.length - 1) * W, Y(b.c) + Math.sin(i * 0.7) * 2));
+    fc.lineTo(W, H); fc.closePath();
+    const g = fc.createLinearGradient(0, HT - 40, 0, H); g.addColorStop(0, '#1f4a6a'); g.addColorStop(0.3, '#143049'); g.addColorStop(1, '#0a1729');
+    fc.fillStyle = g; fc.fill();
+    // 山脊筆觸
+    fc.lineCap = 'round';
+    for (let i = 0; i < b4.length; i += 2) {
+      const x = i / (b4.length - 1) * W, y = Y(b4[i].c);
+      fc.strokeStyle = i % 4 ? '#3f7a8f' : '#5f9fb0'; fc.lineWidth = 3;
+      fc.beginPath(); fc.moveTo(x - 6, y + 4); fc.lineTo(x + 6, y - 1); fc.stroke();
+    }
+    const v = (b4[b4.length - 1].c - b4[0].o) / b4[0].o * 100;
+    fc.font = 'italic 500 13px Fraunces'; fc.fillStyle = 'rgba(244,236,210,.75)'; fc.textAlign = 'right';
+    fc.fillText(`the hills · 4H · 30 days · ${pct(v)}`, W - 36, HT - 24);
+  }
+
+  // 村落的燈：1 分 K（暖黃＝漲、藍＝跌，深藍描邊像油畫筆觸）
+  const b1 = S.bars['1m'];
+  const L = 0.17 * W, R = W - 110, T = HT + 60, B = H - 36;
+  if (b1 && b1.length > 10) {
+    const d = b1.slice(-100);
+    let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
+    const cw = (R - L) / d.length, X = (i) => L + cw * (i + 0.5), Y = (p) => T + (hi - p) / (hi - lo || 1) * (B - T);
+    fc.font = 'italic 500 12.5px Fraunces'; fc.textAlign = 'left'; fc.fillStyle = 'rgba(244,236,210,.7)';
+    for (let k = 0; k <= 3; k++) { const p = lo + (hi - lo) * k / 3; fc.fillText(fmt(p, 0), R + 16, Y(p) + 4); }
+    fc.lineCap = 'round';
+    d.forEach((b, i) => {
+      const x = X(i) + Math.sin(i * 1.7) * 0.6, up = b.c >= b.o, y1 = Y(Math.max(b.o, b.c)), y2 = Y(Math.min(b.o, b.c)) + 1.5;
+      fc.strokeStyle = 'rgba(244,236,210,.55)'; fc.lineWidth = 1.4; fc.beginPath(); fc.moveTo(x, Y(b.h)); fc.lineTo(x, Y(b.l)); fc.stroke();
+      fc.strokeStyle = '#0a1532'; fc.lineWidth = cw * 0.7 + 2.5; fc.beginPath(); fc.moveTo(x, y1); fc.lineTo(x, y2); fc.stroke();
+      fc.strokeStyle = up ? '#f2c14e' : '#6fa8dc'; fc.lineWidth = cw * 0.7; fc.beginPath(); fc.moveTo(x, y1); fc.lineTo(x, y2); fc.stroke();
+    });
+    // 均線
+    let e = null; fc.beginPath();
+    d.forEach((b, i) => { e = e == null ? b.c : b.c * (2 / 21) + e * (19 / 21); i ? fc.lineTo(X(i), Y(e)) : fc.moveTo(X(i), Y(e)); });
+    fc.strokeStyle = 'rgba(255,243,184,.75)'; fc.lineWidth = 2; fc.stroke();
+    const lx = X(d.length - 1), ly = Y(d[d.length - 1].c);
+    halo(fc, lx, ly, 5, true, t, 3);
+    fc.font = 'italic 500 13px Fraunces'; fc.fillStyle = 'rgba(244,236,210,.75)'; fc.textAlign = 'left';
+    fc.fillText('the village lights · 1-minute candles · EMA 20', L, T - 12);
+  }
+
+  // 絲柏：深色火焰形，隨風擺動
+  const cx = 0.075 * W, base = H + 10, top = 0.28 * H;
+  for (let k = 0; k < 46; k++) {
+    const u = k / 45, y = base - (base - top) * u, wid = Math.sin(Math.PI * Math.pow(u, 0.75)) * 0.05 * W * (1 - u * 0.35);
+    const sway = Math.sin(t * 0.8 + u * 3) * 8 * u;
+    fc.strokeStyle = k % 3 ? '#0e2016' : '#22402c'; fc.lineWidth = 9 - u * 5; fc.lineCap = 'round';
+    fc.beginPath(); fc.moveTo(cx - wid + sway, y + 12); fc.quadraticCurveTo(cx + sway * 1.2, y - 14, cx + wid * 0.9 + sway, y + 4); fc.stroke();
+    if (k % 2) { fc.strokeStyle = '#2f5a3a'; fc.lineWidth = 2.5; fc.beginPath(); fc.moveTo(cx - wid * 0.5 + sway, y); fc.quadraticCurveTo(cx + sway, y - 18, cx + wid * 0.3 + sway, y - 4); fc.stroke(); }
+  }
+}
+
+function drawPrice(box) {
+  if (!box) return;
+  const [i, d] = fmt(S.price).split('.');
+  const m = document.createElement('canvas'); const dpr = devicePixelRatio || 1;
+  m.width = box.w * dpr; m.height = box.h * dpr;
+  const mc = m.getContext('2d'); mc.setTransform(dpr, 0, 0, dpr, 0, 0);
+  mc.font = `900 ${box.fs}px Fraunces`; const wi = mc.measureText(i).width;
+  const base = box.h * 0.84;
+  mc.fillText(i, 6, base); mc.font = `900 ${box.fs * 0.4}px Fraunces`; mc.fillText('.' + d, 12 + wi, base);
+  mc.globalCompositeOperation = 'source-in'; mc.setTransform(1, 0, 0, 1, 0, 0); mc.drawImage(goldC, 0, 0);
+  fc.save();
+  fc.lineJoin = 'round'; fc.strokeStyle = '#0a1532'; fc.lineWidth = 7;
+  fc.font = `900 ${box.fs}px Fraunces`; fc.strokeText(i, box.x + 6, box.y + base);
+  fc.font = `900 ${box.fs * 0.4}px Fraunces`; fc.strokeText('.' + d, box.x + 12 + wi, box.y + base);
+  fc.drawImage(m, box.x, box.y, box.w, box.h);
+  fc.restore();
+}
+
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; }
+setInterval(clocks, 1000); clocks();
+addEventListener('resize', () => { resize(); priceBox = null; });
+resize();
+
+let prev = performance.now(), lastF = 0;
+function frame(now) {
+  if (now - lastF > 33) {
+    const dt = Math.min(0.06, (now - prev) / 1000); prev = now; lastF = now;
+    const t = now / 1000;
+    const n = S.ticks.filter((x) => x.T > Date.now() - 30000).length / 30;
+    vol += (Math.min(1.5, n / 8) - vol) * 0.02;
+    SW = swirls();
+    paintSky(t, dt);
+    const box = priceLayer(t, dt);
+    front(t);
+    drawPrice(box);
+    if (S.price) document.title = fmt(S.price) + ' · BTC';
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

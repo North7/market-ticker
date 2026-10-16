@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Market Ticker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body class="booting">
+<canvas id="bg"></canvas>
+<div class="floor"></div>
+<div class="scanlines"></div>
+
+<div id="boot"><div class="boot-box" id="boot-lines"></div></div>
+
+<div id="app">
+  <header class="topbar panel" style="--i:0">
+    <div class="brand"><span class="hex"></span>MARKET<em>//</em>TICKER</div>
+    <div class="clocks">
+      <div class="clock"><label>TPE</label><b id="clk-tpe">--:--:--</b></div>
+      <div class="clock"><label>NYC</label><b id="clk-nyc">--:--:--</b></div>
+      <div class="clock"><label>UTC</label><b id="clk-utc">--:--:--</b></div>
+    </div>
+    <div class="status">
+      <span class="st"><i class="led" id="led-ws"></i>BINANCE</span>
+      <span class="st"><i class="led" id="led-api"></i>TWSE/US</span>
+      <span class="st lat" id="latency">-- ms</span>
+      <span class="keys">F 全螢幕 · C 漲跌色 · B 背景</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="btc">
+      <div class="panel hero" style="--i:1">
+        <div class="price-block">
+          <div class="pair">BTC<span>/USDT</span><small>BINANCE SPOT · LIVE</small></div>
+          <div class="price-row">
+            <div class="bigprice" id="btc-price">--</div>
+            <div class="tick-arrow" id="btc-arrow"></div>
+          </div>
+        </div>
+        <div class="chg-block">
+          <label>24H 漲跌</label>
+          <div class="chgp" id="btc-chgp">--</div>
+          <div class="chg" id="btc-chg">--</div>
+        </div>
+        <div class="stats">
+          <div><label>24H 高</label><b id="btc-h">--</b></div>
+          <div><label>24H 低</label><b id="btc-l">--</b></div>
+          <div><label>24H 振幅</label><b id="btc-amp">--</b></div>
+          <div><label>24H 成交額</label><b id="btc-qv">--</b></div>
+        </div>
+        <div class="tape-wrap">
+          <label>成交流 <span>TRADES</span></label>
+          <div class="tape" id="tape"></div>
+        </div>
+      </div>
+
+      <div class="panel chart-panel" style="--i:2">
+        <div class="panel-head">
+          <span class="title">BTC <em id="main-tf-label">1M</em> 即時</span>
+          <div class="tabs" id="tabs-main"></div>
+          <div class="ohlc" id="main-ohlc"></div>
+        </div>
+        <div class="chart" id="chart-main"><i class="pulse" id="pulse-main"></i></div>
+      </div>
+
+      <div class="panel chart-panel" style="--i:3">
+        <div class="panel-head">
+          <span class="title">BTC <em id="hi-tf-label">4H</em> 趨勢</span>
+          <div class="tabs" id="tabs-hi"></div>
+          <div class="ohlc" id="hi-ohlc"></div>
+        </div>
+        <div class="chart" id="chart-hi"><i class="pulse" id="pulse-hi"></i></div>
+      </div>
+    </section>
+
+    <aside class="stocks">
+      <div class="group tw panel" style="--i:4">
+        <div class="group-head"><span class="gname">TWSE<em>台股</em></span><span class="badge" id="badge-TW">--</span></div>
+        <div class="cards" id="cards-TW"></div>
+      </div>
+      <div class="group us panel" style="--i:5">
+        <div class="group-head"><span class="gname">NYSE · NASDAQ<em>美股</em></span><span class="badge" id="badge-US">--</span></div>
+        <div class="cards" id="cards-US"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

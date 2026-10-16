@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tesla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #e6e7ea; --ink: #171a20; --ink2: #5c5e62; --ink3: #8e9095; --mute: #c4c6ca; --blue: #3e6ae1; --red: #e82127; --green: #12b76a; --up: #e82127; --down: #12a15e; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 'Montserrat', 'Noto Sans TC', sans-serif; -webkit-font-smoothing: antialiased; }
+.wrap { height: 100vh; display: grid; grid-template-columns: 600px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 84px; }
+
+/* ---------- 駕駛視圖 ---------- */
+.drive { position: relative; background: linear-gradient(180deg, #f5f6f8 0%, #eceef1 45%, #dfe2e6 100%); overflow: hidden; }
+.drive canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.gear { position: absolute; left: 32px; top: 24px; display: flex; gap: 14px; font-size: 17px; font-weight: 600; color: var(--mute); z-index: 2; letter-spacing: .02em; }
+.gear b { color: var(--ink); }
+.batt { position: absolute; right: 28px; top: 24px; display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 600; z-index: 2; }
+.batt .cell { position: relative; width: 38px; height: 17px; border: 1.5px solid var(--ink); border-radius: 5px; padding: 2px; }
+.batt .cell::after { content: ''; position: absolute; right: -5px; top: 4.5px; width: 2.5px; height: 6px; border-radius: 0 2px 2px 0; background: var(--ink); }
+.batt .cell i { display: block; height: 100%; border-radius: 2px; background: var(--green); transition: width 1s; }
+.speed { position: absolute; left: 0; right: 0; top: 62px; text-align: center; z-index: 2; }
+.speed .v { font-weight: 500; font-size: 108px; line-height: 1; letter-spacing: -.045em; font-variant-numeric: tabular-nums; }
+.speed .v small { font-size: .28em; color: var(--ink3); font-weight: 500; letter-spacing: -.01em; margin-left: 2px; }
+.speed .u { font-size: 12px; font-weight: 600; color: var(--ink3); letter-spacing: .28em; margin-top: 6px; }
+.under { position: absolute; left: 0; right: 0; top: 214px; display: flex; justify-content: center; gap: 22px; align-items: center; z-index: 2; }
+.limit { width: 58px; height: 58px; border-radius: 50%; background: #fff; border: 4.5px solid var(--red); display: grid; place-items: center; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.limit b { display: block; font-size: 15px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+.limit span { display: block; font-size: 6.5px; font-weight: 700; letter-spacing: .1em; color: var(--ink2); margin-top: 2px; }
+.ap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.ap svg { width: 30px; height: 30px; }
+.ap span { font-size: 9px; font-weight: 700; letter-spacing: .14em; color: var(--blue); }
+.mini { font-size: 12px; font-weight: 500; color: var(--ink2); text-align: left; line-height: 1.55; }
+.mini b { color: var(--ink); font-weight: 600; }
+
+/* ---------- 右側地圖區 ---------- */
+.map { position: relative; margin: 10px 10px 0 0; border-radius: 16px; overflow: hidden; background: #f7f7f6; box-shadow: inset 0 0 0 1px rgba(0,0,0,.04); }
+.map canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.status { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: 18px; font-size: 14px; font-weight: 600; color: var(--ink); }
+.status svg { width: 16px; height: 16px; }
+.status span { color: var(--ink3); font-weight: 500; font-size: 13px; }
+.nav { position: absolute; left: 16px; top: 52px; z-index: 3; background: #1c1d21; color: #fff; border-radius: 14px; padding: 13px 18px; display: flex; gap: 14px; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,.18); min-width: 270px; }
+.nav svg { width: 30px; height: 30px; flex: none; }
+.nav b { display: block; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.nav span { display: block; font-size: 12.5px; color: #a7a9ad; font-family: 'Noto Sans TC'; margin-top: 2px; }
+.nav .eta { margin-left: auto; text-align: right; padding-left: 16px; border-left: 1px solid #333; }
+.nav .eta b { font-size: 15px; }
+.card4 { position: absolute; right: 16px; top: 52px; width: 290px; height: 136px; z-index: 3; background: rgba(255,255,255,.94); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.08); padding: 12px 14px; }
+.card4 .t { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--ink2); }
+.card4 .t b { font-weight: 600; }
+.card4 canvas { position: absolute; left: 12px; right: 12px; top: 36px; bottom: 10px; width: calc(100% - 24px); height: calc(100% - 46px); }
+.legend { position: absolute; left: 20px; bottom: 14px; z-index: 3; font-size: 11.5px; font-weight: 600; color: var(--ink2); display: flex; gap: 18px; align-items: center; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+/* ---------- Dock ---------- */
+.dock { grid-column: 1 / -1; background: #0c0c0e; color: #fff; display: grid; grid-template-columns: 170px repeat(3, minmax(0, 1fr)) 220px repeat(3, minmax(0, 1fr)) 120px; align-items: center; padding: 0 20px; gap: 8px; }
+.dock .car { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; color: #9c9ea3; }
+.dock .car svg { width: 30px; height: 30px; }
+.dock .car b { color: #fff; font-size: 14px; }
+.it { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 12px; min-width: 0; }
+.it .ic { flex: none; width: 40px; height: 40px; border-radius: 11px; background: linear-gradient(180deg, #2a2b30, #1e1f23); display: grid; place-items: center; font-size: 10.5px; font-weight: 700; letter-spacing: .02em; color: #e6e7ea; box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+.it.on .ic { box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1.5px var(--blue); }
+.it .tx { min-width: 0; }
+.it .px { display: block; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+.it .pc { display: block; font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.it .pc i { font-style: normal; color: #8b8d92; font-weight: 500; margin-right: 6px; font-family: 'Noto Sans TC'; }
+.climate { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.climate .ar { color: #6f7176; font-size: 22px; font-weight: 300; }
+.climate .v { text-align: center; }
+.climate .v b { display: block; font-size: 24px; font-weight: 500; letter-spacing: -.02em; }
+.climate .v span { display: block; font-size: 10px; font-weight: 600; color: #8b8d92; letter-spacing: .2em; }
+.dock .clk { text-align: right; font-size: 11.5px; color: #8b8d92; font-weight: 500; line-height: 1.5; }
+.dock .clk b { color: #fff; font-size: 18px; font-weight: 600; }
+.u { color: var(--up); } .d { color: var(--down); }
+.dock .u { color: #ff5c61; } .dock .d { color: #34d08a; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="drive">
+    <canvas id="road"></canvas>
+    <div class="gear"><span>P</span><span>R</span><span>N</span><b>D</b></div>
+    <div class="batt"><span id="battTxt">—</span><div class="cell"><i id="batt"></i></div></div>
+    <div class="speed"><div class="v" id="price">—</div><div class="u">BTC · USDT</div></div>
+    <div class="under">
+      <div class="limit"><div><b id="lim">—</b><span>24H HIGH</span></div></div>
+      <div class="mini">24H 低 <b id="low">—</b><br>振幅 <b id="amp">—</b></div>
+      <div class="ap"><svg viewBox="0 0 30 30" fill="none" stroke="#3e6ae1" stroke-width="2"><circle cx="15" cy="15" r="12"/><path d="M4 16c3.5-1.6 7-2.4 11-2.4s7.5.8 11 2.4M15 13.6V27"/></svg><span>AUTOPILOT</span></div>
+    </div>
+  </section>
+  <section class="map">
+    <canvas id="c1m"></canvas>
+    <div class="status"><svg viewBox="0 0 16 16" fill="none" stroke="#171a20" stroke-width="1.6"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 0 1 6 0v2"/></svg><b id="time">—</b><span id="nycT">—</span><svg viewBox="0 0 16 16" fill="none" stroke="#171a20" stroke-width="1.6"><circle cx="8" cy="6" r="3"/><path d="M2.5 14c1-2.6 3-4 5.5-4s4.5 1.4 5.5 4"/></svg></div>
+    <div class="nav"><svg viewBox="0 0 30 30" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 25V13l9-6M13 7h5v5"/></svg>
+      <div><b id="navD">—</b><span id="navT">—</span></div><div class="eta"><b id="eta">—</b><span>距 24H 低</span></div></div>
+    <div class="card4"><div class="t"><span>4 小時 · 30 天</span><b id="k4h">—</b></div><canvas id="c4h"></canvas></div>
+    <div class="legend"><span><i style="background:#3e6ae1"></i>BTC 1 分鐘收盤</span><span><i style="background:rgba(62,106,225,.25);height:8px"></i>高低區間</span><span id="ohlc">—</span></div>
+  </section>
+  <footer class="dock" id="dock">
+    <div class="car"><svg viewBox="0 0 30 30" fill="#e6e7ea"><path d="M5 18l2.6-6c.8-1.8 2.5-2.8 4.4-2.8h6c1.9 0 3.6 1 4.4 2.8L25 18v5h-3.4v-2.4H8.4V23H5z"/></svg><div><b>BTC</b><br>Binance</div></div>
+    <div class="climate" style="grid-column:5"><span class="ar">‹</span><div class="v"><b id="pctD">—</b><span>24H</span></div><span class="ar">›</span></div>
+    <div class="clk" style="grid-column:9" id="clk">—</div>
+  </footer>
+</div>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const BLUE = '#3e6ae1', INK = '#171a20';
+const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
+Feed.start({ '1m': 180, '4h': 180 });
+
+// 車（後上方視角）；tone 0 = 自車白，1 = 他車灰
+function car(ctx, cx, cy, W, tone, brake = 0) {
+  ctx.save(); ctx.translate(cx, cy);
+  const sh = ctx.createRadialGradient(0, 0.27 * W, 0, 0, 0.27 * W, 0.62 * W);
+  sh.addColorStop(0, `rgba(0,0,0,${tone ? 0.12 : 0.22})`); sh.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = sh; ctx.beginPath(); ctx.ellipse(0, 0.27 * W, 0.62 * W, 0.1 * W, 0, 0, Math.PI * 2); ctx.fill();
+  // 輪胎
+  ctx.fillStyle = '#1b1c1f';
+  ctx.beginPath(); ctx.roundRect(-0.47 * W, 0.12 * W, 0.12 * W, 0.17 * W, 0.03 * W); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(0.35 * W, 0.12 * W, 0.12 * W, 0.17 * W, 0.03 * W); ctx.fill();
+  // 後視鏡
+  ctx.fillStyle = tone ? '#b9bdc3' : '#e9ebee';
+  ctx.beginPath(); ctx.ellipse(-0.53 * W, -0.05 * W, 0.045 * W, 0.022 * W, -0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0.53 * W, -0.05 * W, 0.045 * W, 0.022 * W, 0.2, 0, Math.PI * 2); ctx.fill();
+  // 車身
+  const g = ctx.createLinearGradient(0, -0.06 * W, 0, 0.27 * W);
+  if (tone) { g.addColorStop(0, '#dfe2e6'); g.addColorStop(1, '#aeb3ba'); } else { g.addColorStop(0, '#ffffff'); g.addColorStop(0.55, '#eef0f2'); g.addColorStop(1, '#c3c7cd'); }
+  ctx.fillStyle = g; ctx.beginPath();
+  ctx.moveTo(-0.5 * W, 0.2 * W); ctx.lineTo(-0.5 * W, 0.06 * W);
+  ctx.bezierCurveTo(-0.5 * W, -0.02 * W, -0.47 * W, -0.06 * W, -0.4 * W, -0.065 * W);
+  ctx.lineTo(0.4 * W, -0.065 * W);
+  ctx.bezierCurveTo(0.47 * W, -0.06 * W, 0.5 * W, -0.02 * W, 0.5 * W, 0.06 * W);
+  ctx.lineTo(0.5 * W, 0.2 * W);
+  ctx.bezierCurveTo(0.42 * W, 0.27 * W, -0.42 * W, 0.27 * W, -0.5 * W, 0.2 * W); ctx.fill();
+  // 車身高光帶
+  const hl = ctx.createLinearGradient(-0.5 * W, 0, 0.5 * W, 0);
+  hl.addColorStop(0, 'rgba(255,255,255,0)'); hl.addColorStop(0.35, `rgba(255,255,255,${tone ? 0.25 : 0.7})`); hl.addColorStop(0.5, 'rgba(255,255,255,0)');
+  ctx.fillStyle = hl; ctx.fillRect(-0.48 * W, 0.0, 0.96 * W, 0.035 * W);
+  // 後擋玻璃
+  const gl = ctx.createLinearGradient(0, -0.31 * W, 0, -0.06 * W);
+  if (tone) { gl.addColorStop(0, '#9aa0a8'); gl.addColorStop(1, '#6d737c'); } else { gl.addColorStop(0, '#5d646e'); gl.addColorStop(1, '#1d2026'); }
+  ctx.fillStyle = gl; ctx.beginPath();
+  ctx.moveTo(-0.37 * W, -0.065 * W); ctx.bezierCurveTo(-0.34 * W, -0.2 * W, -0.3 * W, -0.27 * W, -0.22 * W, -0.29 * W);
+  ctx.quadraticCurveTo(0, -0.32 * W, 0.22 * W, -0.29 * W); ctx.bezierCurveTo(0.3 * W, -0.27 * W, 0.34 * W, -0.2 * W, 0.37 * W, -0.065 * W);
+  ctx.quadraticCurveTo(0, -0.085 * W, -0.37 * W, -0.065 * W); ctx.fill();
+  if (!tone) {
+    ctx.fillStyle = 'rgba(255,255,255,.16)'; ctx.beginPath();
+    ctx.moveTo(-0.2 * W, -0.28 * W); ctx.lineTo(-0.05 * W, -0.29 * W); ctx.lineTo(-0.22 * W, -0.08 * W); ctx.lineTo(-0.33 * W, -0.075 * W); ctx.fill();
+  }
+  // 行李箱線、擾流
+  ctx.strokeStyle = `rgba(0,0,0,${tone ? 0.08 : 0.1})`; ctx.lineWidth = Math.max(1, W * 0.006);
+  ctx.beginPath(); ctx.moveTo(-0.42 * W, 0.045 * W); ctx.quadraticCurveTo(0, 0.07 * W, 0.42 * W, 0.045 * W); ctx.stroke();
+  // 尾燈（細長 C 形）
+  const lamp = (sx) => {
+    ctx.save(); ctx.scale(sx, 1);
+    ctx.shadowBlur = (tone ? 4 : 12) + brake * 22; ctx.shadowColor = 'rgba(255,40,40,.95)';
+    ctx.strokeStyle = brake > 0.05 ? '#ff2a2a' : tone ? '#b4262c' : '#e2141f'; ctx.lineWidth = Math.max(1.5, W * (0.02 + brake * 0.012)); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-0.47 * W, 0.075 * W); ctx.quadraticCurveTo(-0.4 * W, 0.03 * W, -0.29 * W, 0.04 * W); ctx.stroke();
+    ctx.restore();
+  };
+  lamp(1); lamp(-1);
+  // 下擾流
+  ctx.fillStyle = tone ? '#8d929a' : '#2b2d32';
+  ctx.beginPath(); ctx.roundRect(-0.3 * W, 0.2 * W, 0.6 * W, 0.035 * W, 0.015 * W); ctx.fill();
+  ctx.restore();
+}
+
+let curve = 0, phase = 0, prevT = performance.now();
+function road(t) {
+  const { ctx, w, h } = Draw.fit($('road'));
+  const dt = Math.min(0.05, (t - prevT) / 1000); prevT = t;
+  const vy = 312, vx = w / 2, by = h + 40;
+  const b1 = S.bars['1m'];
+  let mom = 0; if (b1 && b1.length > 10) { const a = b1[b1.length - 11].c, z = b1[b1.length - 1].c; mom = (z - a) / a * 100; }
+  curve += (Math.max(-1, Math.min(1, mom / 0.25)) - curve) * 0.02;
+  const rate = S.ticks.filter((x) => x.T > Date.now() - 10000).length / 10;
+  phase = (phase + dt * (0.35 + Math.min(3, rate) * 0.25)) % 1;
+  const bend = curve * 120;
+  const P = (s, off) => { const y = vy + (by - vy) * s, spread = 14 + w * 0.6 * s; return [vx + off * spread + bend * (1 - s) * (1 - s), y]; };
+  const SPREAD = (s) => 14 + w * 0.6 * s;
+  const strip = (o1, o2, s0, s1, fill) => {
+    ctx.beginPath(); for (let s = s0; s <= s1 + 1e-6; s += 0.02) { const [x, y] = P(s, o1); s === s0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    for (let s = s1; s >= s0 - 1e-6; s -= 0.02) { const [x, y] = P(s, o2); ctx.lineTo(x, y); }
+    ctx.fillStyle = fill; ctx.fill();
+  };
+  // 地平線柔光
+  const hz = ctx.createLinearGradient(0, vy - 40, 0, vy + 60); hz.addColorStop(0, 'rgba(255,255,255,0)'); hz.addColorStop(1, 'rgba(255,255,255,.6)');
+  ctx.fillStyle = hz; ctx.fillRect(0, vy - 40, w, 100);
+  // 路面
+  const rg = ctx.createLinearGradient(0, vy, 0, h); rg.addColorStop(0, 'rgba(196,199,204,0)'); rg.addColorStop(0.4, 'rgba(196,199,204,.35)'); rg.addColorStop(1, 'rgba(178,182,188,.55)');
+  strip(-1, 1, 0, 1, rg);
+  // 自動駕駛路徑
+  const bg = ctx.createLinearGradient(0, vy, 0, h); bg.addColorStop(0, 'rgba(62,106,225,0)'); bg.addColorStop(0.5, 'rgba(62,106,225,.18)'); bg.addColorStop(1, 'rgba(62,106,225,.42)');
+  strip(-0.24, 0.24, 0.06, 1, bg);
+  for (const off of [-0.24, 0.24]) {
+    ctx.beginPath(); for (let s = 0.06; s <= 1; s += 0.02) { const [x, y] = P(s, off); s === 0.06 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    const eg = ctx.createLinearGradient(0, vy, 0, h); eg.addColorStop(0, 'rgba(62,106,225,0)'); eg.addColorStop(1, 'rgba(62,106,225,.75)');
+    ctx.strokeStyle = eg; ctx.lineWidth = 2; ctx.stroke();
+  }
+  // 車道線
+  ctx.lineCap = 'round';
+  for (const off of [-1, 1]) {
+    ctx.beginPath(); for (let s = 0.02; s <= 1; s += 0.02) { const [x, y] = P(s, off); s === 0.02 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    const lg = ctx.createLinearGradient(0, vy, 0, h); lg.addColorStop(0, 'rgba(255,255,255,0)'); lg.addColorStop(1, 'rgba(255,255,255,.95)');
+    ctx.strokeStyle = lg; ctx.lineWidth = 3; ctx.stroke();
+  }
+  for (const off of [-0.34, 0.34]) {
+    for (let n = 0; n < 12; n++) {
+      const u = (n + phase) / 12, s0 = u * u, s1 = Math.min(1, (u + 0.035) * (u + 0.035));
+      if (s0 < 0.015) continue;
+      const a = P(s0, off), b = P(s1, off);
+      ctx.strokeStyle = `rgba(255,255,255,${Math.min(1, s0 * 2.5)})`; ctx.lineWidth = 1 + s1 * 5;
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+    }
+  }
+  // 績效賽道：自車＝BTC；車距＝今日漲跌與 BTC 的差（每格 1%），前方＝贏 BTC
+  const btcP = S.ticker ? S.ticker.P : 0, EGO = 0.54, K = 0.085, GAP = 0.1;
+  ctx.font = '600 10.5px Montserrat'; ctx.textBaseline = 'middle';
+  for (let k = -3; k <= 4; k++) {
+    if (!k) continue;
+    const s = EGO - k * K; if (s < 0.1 || s > 1.02) continue;
+    const [x1, y] = P(s, -1), [x2] = P(s, 1);
+    ctx.strokeStyle = `rgba(23,26,32,${0.05 + 0.05 * s})`; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+    ctx.fillStyle = '#8e9095'; ctx.textAlign = 'left'; ctx.fillText(`${k > 0 ? '+' : ''}${k}%`, x2 + 8, y);
+  }
+  // 車道標題
+  ctx.font = '700 10px Montserrat'; ctx.textAlign = 'center'; ctx.fillStyle = '#a2a4a8';
+  [[-0.67, '指數 · ETF'], [0, 'BTC · 個股'], [0.67, '美股']].forEach(([off, tx]) => { const [x, y] = P(0.2, off); ctx.fillText(tx, x, y - 4); });
+  // 車輛清單
+  const LANE = { TAIEX: -0.67, '0050': -0.67, '2330': 0, '2454': 0, SPY: 0.67, QQQ: 0.67 };
+  const cars = S.markets.filter((m) => m.price != null && LANE[m.id] != null).map((m) => {
+    const rel = (m.pct || 0) - btcP;
+    return { id: m.id, lane: LANE[m.id], s: EGO - rel * K, label: `${m.code} ${pct(m.pct || 0)}`, up: (m.pct || 0) >= 0, open: m.isOpen, rel };
+  });
+  // 同車道太近就錯開
+  for (const c of cars) if (c.lane === 0 && Math.abs(c.s - EGO) < GAP) c.s = EGO + (c.rel > 0 ? -GAP : GAP);
+  for (const lane of [-0.67, 0, 0.67]) {
+    const L = cars.filter((c) => c.lane === lane).sort((a, b) => a.s - b.s);
+    for (let i = 1; i < L.length; i++) if (L[i].s - L[i - 1].s < GAP) L[i].s = L[i - 1].s + GAP;
+  }
+  cars.push({ id: 'BTC', lane: 0, s: EGO, label: `BTC ${pct(btcP)}`, up: btcP >= 0, open: true, ego: true });
+  const now = performance.now();
+  cars.sort((a, b) => a.s - b.s).forEach((c) => {
+    const sc = Math.max(0.1, Math.min(0.98, c.s));
+    const [x, y] = P(sc, c.lane), W = SPREAD(sc) * (c.ego ? 0.5 : 0.42);
+    const brake = c.ego ? (S.dir < 0 ? 1 : 0) : Math.max(0, 1 - (now - (brakeAt[c.id] || 0)) / 2500);
+    ctx.save(); if (!c.open) ctx.globalAlpha = 0.45;
+    car(ctx, x, y - 0.27 * W, W, c.ego ? 0 : 1, brake);
+    ctx.restore();
+    // 標籤
+    const ly = y - 0.27 * W - 0.36 * W - 12;
+    ctx.font = `600 ${c.ego ? 12 : 10.5}px Montserrat`; const tw = ctx.measureText(c.label).width + 16;
+    ctx.fillStyle = c.ego ? '#171a20' : 'rgba(255,255,255,.92)';
+    ctx.beginPath(); ctx.roundRect(x - tw / 2, ly - 10, tw, 20, 10); ctx.fill();
+    ctx.fillStyle = c.ego ? '#fff' : c.up ? '#e82127' : '#12a15e'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(c.label + (c.open ? '' : ' · 休市'), x, ly + 0.5);
+    if (c.s < 0.1 || c.s > 0.98) { ctx.fillStyle = '#8e9095'; ctx.fillText(c.s < 0.1 ? '▲ 遠在前方' : '▼ 遠在後方', x, ly - 16); }
+  });
+  // 說明
+  ctx.font = '500 11.5px "Noto Sans TC"'; ctx.fillStyle = '#8e9095'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(`今日績效賽道：前方＝漲幅贏 BTC、後方＝輸 BTC，每格 1% · 煞車燈＝剛跳跌 · 車流 ${rate.toFixed(1)} 筆/秒`, w / 2, vy - 22);
+}
+
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s;
+  const [i, d] = s.split('.');
+  $('price').innerHTML = `${i}<small>.${d}</small>`;
+  document.title = s + ' · BTC';
+  const t = S.ticker; if (!t) return;
+  const p = Math.max(0, Math.min(1, (S.price - t.l) / (t.h - t.l || 1)));
+  $('batt').style.width = p * 100 + '%'; $('batt').style.background = p < 0.2 ? '#e82127' : '#12b76a';
+  $('battTxt').textContent = Math.round(p * 100) + '%';
+  const toH = t.h - S.price;
+  $('navD').textContent = toH > 0 ? fmt(toH, 0) + ' USDT' : '新高';
+  $('navT').textContent = toH > 0 ? '距 24H 高點 · 沿目前車道' : '已創 24H 新高';
+  $('eta').textContent = fmt(S.price - t.l, 0);
+}
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('lim').textContent = (t.h / 1000).toFixed(1) + 'k';
+  $('low').textContent = fmt(t.l, 0);
+  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+  $('pctD').textContent = pct(t.P); $('pctD').className = cls(t.P);
+});
+
+const items = {}, lastPx = {}, brakeAt = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s, k) => {
+    let it = items[s.id];
+    if (!it) {
+      const el = document.createElement('div');
+      el.className = 'it'; el.style.gridColumn = String(k < 3 ? k + 2 : k + 3); el.style.gridRow = '1';
+      el.innerHTML = `<div class="ic">${s.code.slice(0, 5)}</div><div class="tx"><span class="px">—</span><span class="pc">—</span></div>`;
+      $('dock').appendChild(el);
+      it = items[s.id] = { el, q: (x) => el.querySelector(x) };
+    }
+    if (s.price == null) return;
+    if (lastPx[s.id] != null && s.price < lastPx[s.id]) brakeAt[s.id] = performance.now();
+    lastPx[s.id] = s.price;
+    it.el.classList.toggle('on', s.isOpen);
+    it.q('.px').textContent = fmt(s.price, s.dec);
+    it.q('.pc').innerHTML = `<span class="${cls(s.chg)}">${pct(s.pct)}</span>`;
+  });
+});
+
+function clocks() {
+  const tp = Feed.tzNow('Asia/Taipei').str.slice(0, 5), ny = Feed.tzNow('America/New_York').str.slice(0, 5);
+  $('time').textContent = tp; $('nycT').textContent = '紐約 ' + ny;
+  $('clk').innerHTML = `<b>${tp}</b><br>台北`;
+}
+setInterval(clocks, 1000); clocks();
+
+function charts() {
+  const cv = $('c1m'), { ctx, w, h } = Draw.fit(cv);
+  const d = (S.bars['1m'] || []).slice(-180);
+  if (d.length > 2) {
+    const L = 24, R = w - 76, T = 206, B = h - 46;
+    let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
+    const pad = (hi - lo) * 0.08; hi += pad; lo -= pad;
+    const X = (i) => L + (R - L) * i / (d.length - 1), Y = (p) => T + (hi - p) / (hi - lo) * (B - T);
+    // 格線與刻度
+    ctx.font = '500 11.5px Montserrat'; ctx.textBaseline = 'middle';
+    for (let k = 0; k <= 4; k++) {
+      const p = hi - (hi - lo) * k / 4, y = Y(p);
+      ctx.strokeStyle = 'rgba(23,26,32,.06)'; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(R, y); ctx.stroke();
+      ctx.fillStyle = '#8e9095'; ctx.textAlign = 'left'; ctx.fillText(fmt(p, 0), R + 12, y);
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    d.forEach((b, i) => { const tt = new Date(b.t * 1000); if (tt.getMinutes() % 30 === 0) { ctx.fillStyle = '#8e9095'; ctx.fillText(tt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), X(i), B + 10); ctx.fillStyle = 'rgba(23,26,32,.06)'; ctx.fillRect(X(i), T, 1, B - T); } });
+    // 高低帶
+    ctx.beginPath(); d.forEach((b, i) => (i ? ctx.lineTo(X(i), Y(b.h)) : ctx.moveTo(X(i), Y(b.h)))); for (let i = d.length - 1; i >= 0; i--) ctx.lineTo(X(i), Y(d[i].l));
+    ctx.fillStyle = 'rgba(62,106,225,.13)'; ctx.fill();
+    // 收盤線 + 漸層
+    ctx.beginPath(); d.forEach((b, i) => (i ? ctx.lineTo(X(i), Y(b.c)) : ctx.moveTo(X(i), Y(b.c))));
+    ctx.save(); ctx.lineTo(R, B); ctx.lineTo(L, B); ctx.closePath();
+    const ag = ctx.createLinearGradient(0, T, 0, B); ag.addColorStop(0, 'rgba(62,106,225,.16)'); ag.addColorStop(1, 'rgba(62,106,225,0)');
+    ctx.fillStyle = ag; ctx.fill(); ctx.restore();
+    ctx.beginPath(); d.forEach((b, i) => (i ? ctx.lineTo(X(i), Y(b.c)) : ctx.moveTo(X(i), Y(b.c))));
+    ctx.strokeStyle = BLUE; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.stroke();
+    const lx = X(d.length - 1), ly = Y(d[d.length - 1].c), pp = (Date.now() % 1800) / 1800;
+    ctx.fillStyle = `rgba(62,106,225,${0.25 * (1 - pp)})`; ctx.beginPath(); ctx.arc(lx, ly, 6 + pp * 16, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(lx, ly, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = BLUE; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = BLUE; ctx.beginPath(); ctx.roundRect(R + 6, ly - 12, 68, 24, 12); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '600 12px Montserrat'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(fmt(d[d.length - 1].c, 0), R + 40, ly + 1);
+    const b = d[d.length - 1]; $('ohlc').textContent = `開 ${fmt(b.o)}　高 ${fmt(b.h)}　低 ${fmt(b.l)}`;
+  }
+  const r4 = Draw.candles($('c4h'), S.bars['4h'], { mode: 'area', count: 180, pad: { t: 4, r: 4, b: 2, l: 2 }, rightGap: 0, line: INK, lineWidth: 1.3, areaTop: 'rgba(62,106,225,.2)', areaBottom: 'rgba(62,106,225,0)' });
+  if (r4) {
+    const b = S.bars['4h'], v = (b[b.length - 1].c - b[0].o) / b[0].o * 100; $('k4h').textContent = pct(v); $('k4h').className = cls(v);
+    const c4 = $('c4h').getContext('2d'); c4.fillStyle = BLUE; c4.beginPath(); c4.arc(r4.last.x, r4.last.y, 3.5, 0, Math.PI * 2); c4.fill();
+  }
+}
+
+let last = 0;
+function frame(t) { drawPrice(); road(t); if (t - last > 120) { last = t; charts(); } requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

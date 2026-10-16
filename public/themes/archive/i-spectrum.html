@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spectrum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Geist+Mono:wght@400;500&family=Noto+Sans+TC:wght@500&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #0d0d0f; --fg: #f3f1ec; --mute: #6b6b72; --up: #f7931a; --down: #6d7dff; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: 'Archivo', 'Noto Sans TC', sans-serif; }
+.main { position: fixed; left: 0; right: 0; top: 34px; height: calc(62vh - 34px); }
+.main canvas, .b4 canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.price { position: absolute; left: 34px; bottom: 26px; z-index: 2; font-stretch: 62%; font-weight: 200; font-size: min(46vh, 410px); line-height: .8; letter-spacing: -.02em; white-space: nowrap; color: #fff; mix-blend-mode: difference; }
+.price small { font-size: .3em; font-weight: 300; letter-spacing: 0; }
+.tag { position: absolute; left: 36px; top: -22px; z-index: 2; font-family: 'Geist Mono'; font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase; color: rgba(255,255,255,.75); mix-blend-mode: difference; }
+.meta { position: absolute; right: 34px; bottom: 30px; z-index: 2; text-align: right; mix-blend-mode: difference; color: #fff; }
+.meta .pct { font-stretch: 75%; font-weight: 300; font-size: 76px; line-height: .9; }
+.meta .kv { font-family: 'Geist Mono'; font-size: 12px; margin-top: 10px; line-height: 1.8; opacity: .85; }
+.clock { position: absolute; right: 34px; top: -22px; z-index: 2; font-family: 'Geist Mono'; font-size: 10.5px; letter-spacing: .2em; color: #fff; mix-blend-mode: difference; }
+.b4 { position: fixed; left: 34px; right: 34px; top: calc(62vh + 18px); height: 64px; }
+.b4 .lb { position: absolute; left: 0; top: -2px; transform: translateY(-100%); font-family: 'Geist Mono'; font-size: 10px; letter-spacing: .2em; color: var(--mute); }
+.legend { position: fixed; right: 34px; top: calc(62vh + 4px); font-family: 'Geist Mono'; font-size: 10px; letter-spacing: .16em; color: var(--mute); display: flex; gap: 14px; align-items: center; }
+.legend i { display: inline-block; width: 90px; height: 6px; background: linear-gradient(90deg, #6d7dff, #1c1c1f 50%, #f7931a); }
+.stocks { position: fixed; left: 34px; right: 34px; bottom: 22px; top: calc(62vh + 104px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 12px 26px; }
+.st { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: center; gap: 14px; min-height: 0; }
+.st .nm { font-family: 'Noto Sans TC'; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st .nm small { font-family: 'Geist Mono'; font-size: 10px; color: var(--mute); margin-left: 6px; letter-spacing: .1em; }
+.st .px { font-stretch: 70%; font-weight: 300; font-size: 34px; line-height: 1.05; }
+.st .pc { font-family: 'Geist Mono'; font-size: 12px; }
+.st .sp { position: relative; height: 100%; min-height: 0; }
+.st canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.u { color: var(--up); } .d { color: var(--down); }
+</style>
+</head>
+<body>
+<section class="main">
+  <canvas id="cv"></canvas>
+  <div class="tag">Spectrum · BTC / USDT · last 4 hours of minutes</div>
+  <div class="clock">TPE <span id="tpe">--</span> · NYC <span id="nyc">--</span></div>
+  <div class="price" id="price">—</div>
+  <div class="meta"><div class="pct" id="pct">—</div><div class="kv" id="kv">—</div></div>
+</section>
+<div class="legend">stripe width = volume · colour = return<i></i></div>
+<div class="b4"><div class="lb">BTC · 4H · 30 days</div><canvas id="c4h"></canvas></div>
+<section class="stocks" id="stocks"></section>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, fmtBig, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
+Feed.start({ '1m': 240, '4h': 180 });
+
+// 發散色：跌＝靛藍、平＝石墨、漲＝BTC 橘
+function color(s) {
+  const neg = [109, 125, 255], mid = [28, 28, 31], pos = [247, 147, 26];
+  const t = Math.pow(Math.min(1, Math.abs(s)), 1.25), tg = s >= 0 ? pos : neg;
+  return mid.map((m, i) => Math.round(m + (tg[i] - m) * t));
+}
+const rgb = (c, k = 1) => `rgb(${Math.min(255, c[0] * k) | 0},${Math.min(255, c[1] * k) | 0},${Math.min(255, c[2] * k) | 0})`;
+
+function stripes(cv, bars, opt = {}) {
+  const { ctx, w, h } = Draw.fit(cv);
+  if (!bars || !bars.length) return;
+  const rets = bars.map((b, i) => {
+    const ref = opt.prevRef ? (i ? bars[i - 1].c : (opt.base || b.o)) : b.o;
+    return (b.c - ref) / ref;
+  });
+  const absSorted = rets.map(Math.abs).sort((a, b) => a - b);
+  const scale = absSorted[Math.floor(absSorted.length * 0.985)] || 1e-9;
+  const vols = bars.map((b) => (opt.equal ? 1 : Math.sqrt(Math.max(b.v, 1e-9))));
+  const slots = opt.slots || bars.length;
+  const avg = vols.reduce((a, b) => a + b, 0) / vols.length;
+  const total = opt.slots ? avg * slots : vols.reduce((a, b) => a + b, 0);
+  let x = 0;
+  bars.forEach((b, i) => {
+    const bw = vols[i] / total * w;
+    const c = color(rets[i] / scale);
+    if (opt.grad !== false) {
+      const g = ctx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, rgb(c, 1.18)); g.addColorStop(1, rgb(c, 0.55));
+      ctx.fillStyle = g;
+    } else ctx.fillStyle = rgb(c);
+    ctx.fillRect(Math.floor(x), 0, Math.ceil(bw) + 0.5, h);
+    x += bw;
+  });
+  return x;
+}
+
+function main() {
+  const cv = $('cv');
+  const bars = S.bars['1m'];
+  const endX = stripes(cv, bars);
+  if (endX == null) return;
+  const ctx = cv.getContext('2d'), w = cv.clientWidth, h = cv.clientHeight;
+  // 整點刻度
+  ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '10px "Geist Mono"';
+  const vols = bars.map((b) => Math.sqrt(Math.max(b.v, 1e-9))), total = vols.reduce((a, b) => a + b, 0);
+  let x = 0;
+  bars.forEach((b, i) => {
+    if (new Date(b.t * 1000).getUTCMinutes() === 0) {
+      ctx.fillRect(Math.round(x), 0, 1, 12);
+      ctx.fillText(new Date(b.t * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), Math.round(x) + 5, 11);
+    }
+    x += vols[i] / total * w;
+  });
+  // 現在這一條：白色游標
+  const p = (Date.now() % 1200) / 1200;
+  ctx.fillStyle = `rgba(255,255,255,${0.6 + 0.4 * Math.sin(p * Math.PI)})`;
+  ctx.fillRect(w - 3, 0, 3, h);
+}
+
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s;
+  const [i, d] = s.split('.');
+  $('price').innerHTML = `${i}<small>.${d}</small>`;
+  document.title = s + ' · BTC';
+}
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('pct').textContent = pct(t.P);
+  $('kv').innerHTML = `H ${fmt(t.h, 0)} · L ${fmt(t.l, 0)}<br>AMP ${((t.h - t.l) / t.o * 100).toFixed(2)}% · VOL $${fmtBig(t.q)}`;
+});
+
+const cards = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s) => {
+    let c = cards[s.id];
+    if (!c) {
+      const el = document.createElement('div');
+      el.className = 'st';
+      el.innerHTML = `<div><div class="nm">${s.name.replace(' ETF', '')}<small>${s.code}</small></div><div class="px">—</div><div class="pc">—</div></div><div class="sp"><canvas></canvas></div>`;
+      $('stocks').appendChild(el);
+      c = cards[s.id] = { el, q: (x) => el.querySelector(x) };
+    }
+    if (s.price == null) return;
+    c.q('.px').textContent = fmt(s.price, s.dec);
+    c.q('.pc').innerHTML = `<span class="${cls(s.chg)}">${pct(s.pct)}</span>${s.isOpen ? ' · LIVE' : ''}`;
+    stripes(c.q('canvas'), s.bars, { equal: true, prevRef: true, base: s.prevClose, slots: s.market === 'TW' ? 54 : 78 });
+  });
+});
+
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; }
+setInterval(clocks, 1000); clocks();
+
+let last = 0, last4 = 0;
+function frame(t) {
+  drawPrice();
+  if (t - last > 150) { last = t; main(); }
+  if (t - last4 > 3000) { last4 = t; stripes($('c4h'), S.bars['4h'], { grad: false }); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

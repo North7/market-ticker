@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@500&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #070912; --fg: #eef0fa; --mute: #6b7193; --line: #1a1e33; --teal: #2ad6b5; --indigo: #6f7bff; --mag: #e14bff; --up: #ff5d73; --down: #2ad6b5; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: radial-gradient(ellipse at 60% 40%, #10142a 0%, var(--bg) 65%); color: var(--fg); overflow: hidden; font-family: 'Space Grotesk', 'Noto Sans TC', sans-serif; }
+.wrap { height: 100vh; display: grid; grid-template-rows: 38px 176px 272px minmax(0, 1fr) 96px; gap: 10px; padding: 0 28px 20px; }
+.top { display: flex; align-items: center; gap: 22px; font-family: 'JetBrains Mono'; font-size: 11px; letter-spacing: .14em; color: var(--mute); text-transform: uppercase; border-bottom: 1px solid var(--line); }
+.top b { color: var(--fg); font-weight: 500; }
+.top .dot { width: 8px; height: 8px; border-radius: 2px; background: var(--teal); box-shadow: 0 0 10px var(--teal); display: inline-block; margin-right: 8px; transform: rotate(45deg); }
+.top .sp { margin-left: auto; }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.price { font-weight: 300; font-size: min(19vh, 168px); line-height: .9; letter-spacing: -.05em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.price small { font-size: .36em; color: var(--mute); letter-spacing: -.02em; }
+.price .p { font-size: .22em; font-weight: 500; letter-spacing: 0; margin-left: 18px; vertical-align: .9em; }
+.net { display: grid; grid-template-columns: repeat(3, auto); gap: 4px 34px; text-align: right; padding-bottom: 6px; }
+.net span { font-family: 'JetBrains Mono'; font-size: 10.5px; letter-spacing: .16em; color: var(--mute); }
+.net b { font-size: 34px; font-weight: 500; letter-spacing: -.02em; }
+.net b.h { background: linear-gradient(90deg, var(--teal), var(--indigo)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.chain { position: relative; }
+.chain canvas, .cbox canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.charts { display: grid; grid-template-columns: minmax(0, 2.6fr) minmax(0, 1fr); gap: 14px; min-height: 0; }
+.cbox { position: relative; border: 1px solid var(--line); border-radius: 14px; background: rgba(16, 20, 42, .5); min-height: 0; overflow: hidden; }
+.cbox .lb { position: absolute; left: 14px; top: 10px; font-family: 'JetBrains Mono'; font-size: 10.5px; letter-spacing: .14em; color: var(--mute); z-index: 2; }
+.cbox .lb b { color: var(--fg); font-weight: 500; margin-left: 8px; }
+.cbox canvas { top: 30px; left: 6px; right: 6px; bottom: 6px; width: calc(100% - 12px); height: calc(100% - 36px); }
+.stocks { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.st { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; background: rgba(16, 20, 42, .5); display: grid; grid-template-columns: minmax(0, 1fr) 70px; grid-template-rows: auto auto; column-gap: 8px; align-content: center; }
+.st .nm { font-family: 'Noto Sans TC'; font-size: 12px; color: var(--mute); white-space: nowrap; }
+.st .nm i { font-style: normal; font-family: 'JetBrains Mono'; font-size: 10px; margin-left: 6px; }
+.st .nm i.on { color: var(--teal); }
+.st .px { font-size: 22px; font-weight: 500; letter-spacing: -.02em; }
+.st .px em { font-style: normal; font-size: 12px; font-family: 'JetBrains Mono'; margin-left: 8px; }
+.st canvas { grid-column: 2; grid-row: 1 / 3; width: 70px; height: 40px; }
+.u { color: var(--up); } .d { color: var(--down); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><span><span class="dot"></span><b>Chain</b> · Bitcoin network · live</span><span>mempool.space · Binance</span>
+    <span class="sp">TPE <b id="tpe">—</b></span><span>NYC <b id="nyc">—</b></span></div>
+  <div class="hero">
+    <div class="price" id="price">—</div>
+    <div class="net">
+      <span>BLOCK HEIGHT</span><span>NEXT HALVING</span><span>FASTEST FEE</span>
+      <b class="h" id="height">—</b><b id="halv">—</b><b id="fee">—</b>
+    </div>
+  </div>
+  <div class="chain"><canvas id="cv"></canvas></div>
+  <div class="charts">
+    <div class="cbox"><div class="lb">BTC · 1 MIN · ▮ = block mined<b id="o1">—</b></div><canvas id="c1m"></canvas></div>
+    <div class="cbox"><div class="lb">BTC · 4H · 30D<b id="o4">—</b></div><canvas id="c4h"></canvas></div>
+  </div>
+  <section class="stocks" id="stocks"></section>
+</div>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
+Feed.start({ '1m': 240, '4h': 180 });
+const API = 'https://mempool.space/api/v1';
+const C = { blocks: [], mempool: [], fees: null, newAt: 0, lastTop: null };
+
+async function poll() {
+  try {
+    const [b, m, f] = await Promise.all([fetch(API + '/blocks').then((r) => r.json()), fetch(API + '/fees/mempool-blocks').then((r) => r.json()), fetch(API + '/fees/recommended').then((r) => r.json())]);
+    if (C.lastTop != null && b[0].height > C.lastTop) C.newAt = performance.now();
+    C.lastTop = b[0].height; C.blocks = b; C.mempool = m; C.fees = f;
+    $('height').textContent = b[0].height.toLocaleString();
+    const left = 1050000 - b[0].height;
+    $('halv').textContent = `${left.toLocaleString()} 塊 · ~${Math.round(left * 10 / 1440)} 天`;
+    $('fee').textContent = `${f.fastestFee} sat/vB`;
+  } catch (e) { /* 下一輪再試 */ }
+}
+poll(); setInterval(poll, 20000);
+
+// 手續費 → 顏色（青 → 靛 → 洋紅）
+function feeColor(fee) {
+  const t = Math.max(0, Math.min(1, (Math.log10(Math.max(0.1, fee)) + 1) / 2.7));
+  const stops = [[42, 214, 181], [111, 123, 255], [225, 75, 255]];
+  const k = t < 0.5 ? t * 2 : (t - 0.5) * 2, a = t < 0.5 ? stops[0] : stops[1], b = t < 0.5 ? stops[1] : stops[2];
+  return a.map((v, i) => Math.round(v + (b[i] - v) * k));
+}
+function priceAt(ts) {
+  const b = S.bars['1m']; if (!b || !b.length) return null;
+  for (let i = b.length - 1; i >= 0; i--) if (b[i].t <= ts) return b[i].c;
+  return null;
+}
+const ago = (ts) => { const m = Math.round((Date.now() / 1000 - ts) / 60); return m < 1 ? '剛剛' : m < 60 ? `${m} 分鐘前` : `${Math.floor(m / 60)} 小時 ${m % 60} 分前`; };
+
+function cube(ctx, x, y, s, fill, col, pending, lines, glow) {
+  const dx = s * 0.22, dy = s * 0.22;
+  const c = (a) => `rgba(${col},${a})`;
+  if (glow) { ctx.save(); ctx.shadowBlur = 40 * glow; ctx.shadowColor = c(1); ctx.fillStyle = c(0.25 * glow); ctx.fillRect(x, y, s, s); ctx.restore(); }
+  // 右側面、頂面
+  ctx.fillStyle = pending ? 'rgba(40,44,70,.7)' : 'rgba(26,30,52,.95)';
+  ctx.beginPath(); ctx.moveTo(x + s, y); ctx.lineTo(x + s + dx, y - dy); ctx.lineTo(x + s + dx, y + s - dy); ctx.lineTo(x + s, y + s); ctx.fill();
+  ctx.fillStyle = fill > 0.97 ? c(0.9) : 'rgba(48,54,88,.9)';
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx, y - dy); ctx.lineTo(x + s + dx, y - dy); ctx.lineTo(x + s, y); ctx.fill();
+  // 正面：空的部分 + 依填滿度的手續費色
+  ctx.fillStyle = pending ? 'rgba(30,34,58,.85)' : '#141831'; ctx.fillRect(x, y, s, s);
+  const fh = s * Math.min(1, fill);
+  const g = ctx.createLinearGradient(0, y + s - fh, 0, y + s); g.addColorStop(0, c(pending ? 0.55 : 0.95)); g.addColorStop(1, c(pending ? 0.3 : 0.6));
+  ctx.fillStyle = g; ctx.fillRect(x, y + s - fh, s, fh);
+  if (fill > 0.97) { ctx.fillStyle = c(0.55); ctx.beginPath(); ctx.moveTo(x + s, y + s - fh); ctx.lineTo(x + s + dx, y + s - fh - dy); ctx.lineTo(x + s + dx, y + s - dy); ctx.lineTo(x + s, y + s); ctx.fill(); }
+  ctx.strokeStyle = pending ? 'rgba(160,170,230,.35)' : 'rgba(200,210,255,.25)'; ctx.setLineDash(pending ? [4, 4] : []); ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, s - 1, s - 1); ctx.setLineDash([]);
+  ctx.textAlign = 'center';
+  lines.forEach(([txt, font, color, yy]) => { ctx.font = font; ctx.fillStyle = color; ctx.fillText(txt, x + s / 2, y + yy); });
+}
+
+function chain(t) {
+  const { ctx, w, h } = Draw.fit($('cv'));
+  if (!C.blocks.length) { ctx.fillStyle = '#6b7193'; ctx.font = '14px "JetBrains Mono"'; ctx.fillText('連線 mempool.space …', 20, 40); return; }
+  const s = Math.min(150, h - 70), gap = s * 0.36, step = s + gap, nP = 2;
+  const nC = Math.max(1, Math.floor((w - nP * step - 70) / step));
+  const divX = nP * step + 14, y = (h - s) / 2 + 14;
+  // 新區塊滑入
+  const k = Math.min(1, (t - C.newAt) / 1400), ease = 1 - Math.pow(1 - k, 3), shift = C.newAt ? (1 - ease) * -step : 0, glow = C.newAt && k < 1 ? 1 - k : 0;
+  // 記憶池（待打包）
+  C.mempool.slice(0, nP).reverse().forEach((m, i) => {
+    const idx = nP - 1 - i, x = i * step;
+    const col = feeColor(m.medianFee).join(',');
+    cube(ctx, x, y, s, m.blockVSize / 1e6, col, true, [
+      [`~${m.medianFee.toFixed(1)} sat/vB`, `600 ${s * 0.12}px "Space Grotesk"`, '#eef0fa', s * 0.3],
+      [`${m.feeRange[0].toFixed(1)} – ${m.feeRange[m.feeRange.length - 1].toFixed(0)}`, `${s * 0.075}px "JetBrains Mono"`, 'rgba(238,240,250,.65)', s * 0.43],
+      [`${m.nTx.toLocaleString()} 筆`, `${s * 0.085}px "Space Grotesk"`, 'rgba(238,240,250,.85)', s * 0.62],
+      [`預計 ~${(idx + 1) * 10} 分鐘`, `${s * 0.08}px "Noto Sans TC"`, 'rgba(238,240,250,.7)', s * 0.82]]);
+  });
+  ctx.fillStyle = '#6b7193'; ctx.font = '10.5px "JetBrains Mono"'; ctx.textAlign = 'center';
+  ctx.fillText('MEMPOOL · 待打包', (nP * step - gap) / 2, y - s * 0.22 - 14);
+  // 分隔線
+  ctx.strokeStyle = 'rgba(238,240,250,.4)'; ctx.setLineDash([3, 5]);
+  ctx.beginPath(); ctx.moveTo(divX, 10); ctx.lineTo(divX, h - 6); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = '#eef0fa'; ctx.fillText('NOW', divX, 8 + 2);
+  // 已確認區塊，用鏈條串起來
+  ctx.save(); ctx.beginPath(); ctx.rect(divX + 4, 0, w, h); ctx.clip();
+  const x0 = divX + 26 + shift;
+  C.blocks.slice(0, nC + 1).forEach((b, i) => {
+    const x = x0 + i * step;
+    if (i > 0) {
+      ctx.strokeStyle = 'rgba(160,170,230,.45)'; ctx.lineWidth = 2;
+      const ly = y + s / 2;
+      ctx.beginPath(); ctx.moveTo(x - gap + s * 0.22, ly); ctx.lineTo(x, ly); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(x - gap / 2 + s * 0.11, ly, 9, 5, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    const col = feeColor(b.extras.medianFee).join(',');
+    const p = priceAt(b.timestamp);
+    cube(ctx, x, y, s, b.weight / 4e6, col, false, [
+      [`#${b.height.toLocaleString()}`, `600 ${s * 0.11}px "Space Grotesk"`, '#eef0fa', s * 0.2],
+      [`~${b.extras.medianFee.toFixed(1)} sat/vB`, `500 ${s * 0.085}px "Space Grotesk"`, 'rgba(238,240,250,.9)', s * 0.36],
+      [`${b.tx_count.toLocaleString()} 筆`, `${s * 0.08}px "Space Grotesk"`, 'rgba(238,240,250,.75)', s * 0.5],
+      [p ? `BTC ${fmt(p, 0)}` : '', `600 ${s * 0.085}px "JetBrains Mono"`, '#fff', s * 0.68],
+      [ago(b.timestamp), `${s * 0.075}px "Noto Sans TC"`, 'rgba(238,240,250,.7)', s * 0.82],
+      [(b.extras.pool && b.extras.pool.name) || '', `${s * 0.07}px "Space Grotesk"`, 'rgba(238,240,250,.55)', s * 0.94]], i === 0 ? glow : 0);
+  });
+  ctx.restore();
+  ctx.fillStyle = '#6b7193'; ctx.font = '10.5px "JetBrains Mono"'; ctx.textAlign = 'left';
+  ctx.fillText('CONFIRMED · 已確認 · 填滿度 = 區塊重量 · 顏色 = 手續費', divX + 26, y - s * 0.22 - 14);
+}
+
+function charts() {
+  const r = Draw.candles($('c1m'), S.bars['1m'], { count: 240, pad: { t: 10, r: 66, b: 8, l: 8 }, up: '#ff5d73', down: '#2ad6b5', body: 0.6,
+    grid: { color: 'rgba(160,170,230,.06)', rows: 4 }, ema: [{ n: 20, color: 'rgba(111,123,255,.9)', width: 1.4 }],
+    lastLine: { color: 'rgba(238,240,250,.4)', dash: [2, 4], full: true }, axis: { font: '10.5px "JetBrains Mono"', color: '#6b7193', ticks: 4, fmt: (v) => fmt(v, 0) } });
+  if (r) {
+    const ctx = $('c1m').getContext('2d'), d = S.bars['1m'].slice(-240);
+    // 出塊時間標記
+    C.blocks.forEach((b) => {
+      const i = d.findIndex((x) => x.t <= b.timestamp && b.timestamp < x.t + 60); if (i < 0) return;
+      const x = r.X(i), col = feeColor(b.extras.medianFee).join(',');
+      ctx.strokeStyle = `rgba(${col},.45)`; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(x, 4); ctx.lineTo(x, r.h - 8); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = `rgba(${col},1)`; ctx.fillRect(x - 4, 0, 8, 8);
+      ctx.fillStyle = '#6b7193'; ctx.font = '9.5px "JetBrains Mono"'; ctx.textAlign = 'center'; ctx.fillText(String(b.height).slice(-3), x, 20);
+    });
+    $('o1').textContent = fmt(r.last.c, 1);
+  }
+  const r4 = Draw.candles($('c4h'), S.bars['4h'], { mode: 'area', count: 180, pad: { t: 6, r: 4, b: 4, l: 4 }, rightGap: 0, line: '#6f7bff', lineWidth: 1.4,
+    areaTop: 'rgba(111,123,255,.3)', areaBottom: 'rgba(111,123,255,0)' });
+  if (r4) { const b = S.bars['4h'], v = (b[b.length - 1].c - b[0].o) / b[0].o * 100; $('o4').textContent = pct(v); }
+}
+
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s;
+  const [i, d] = s.split('.');
+  const t = S.ticker;
+  $('price').innerHTML = `${i}<small>.${d}</small>${t ? `<span class="p ${cls(t.P)}">${pct(t.P)}</span>` : ''}`;
+  document.title = s + ' · BTC';
+}
+
+const cards = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s) => {
+    let c = cards[s.id];
+    if (!c) {
+      const el = document.createElement('div');
+      el.className = 'st';
+      el.innerHTML = `<div class="nm">${s.name.replace(' ETF', '')}<i>${s.code}</i></div><div class="px">—</div><canvas></canvas>`;
+      $('stocks').appendChild(el);
+      c = cards[s.id] = { el, q: (x) => el.querySelector(x) };
+    }
+    if (s.price == null) return;
+    const tag = c.q('.nm i'); tag.textContent = (s.isOpen ? '● ' : '') + s.code; tag.className = s.isOpen ? 'on' : '';
+    c.q('.px').innerHTML = `${fmt(s.price, s.dec)}<em class="${cls(s.chg)}">${pct(s.pct)}</em>`;
+    Draw.spark(c.q('canvas'), s.bars, { mode: 'line', slots: s.market === 'TW' ? 54 : 78, base: s.prevClose, line: s.chg >= 0 ? '#ff5d73' : '#2ad6b5', lineWidth: 1.4, baseColor: 'rgba(160,170,230,.25)', baseDash: [2, 3] });
+  });
+});
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; }
+setInterval(clocks, 1000); clocks();
+
+let lc = 0;
+function frame(t) { drawPrice(); chain(t); if (t - lc > 300) { lc = t; charts(); } requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

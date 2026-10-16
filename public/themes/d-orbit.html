@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100;200;300;400;500&family=Geist+Mono:wght@300;400&family=Noto+Sans+TC:wght@300;500&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #07080a; --fg: #eceae4; --mute: #5f6168; --up: #ff5a3c; --down: #4bd3a7; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: radial-gradient(circle at 33% 50%, #12141a 0%, var(--bg) 60%); color: var(--fg); overflow: hidden; font-family: 'Geist', 'Noto Sans TC', sans-serif; }
+#cv { position: fixed; inset: 0; width: 100%; height: 100%; }
+.price { position: fixed; right: 40px; top: 70px; text-align: right; z-index: 2; mix-blend-mode: difference; }
+.price .big { font-weight: 100; font-size: min(27vh, 240px); line-height: .9; letter-spacing: -.05em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.price .big small { font-size: .36em; font-weight: 200; letter-spacing: -.02em; }
+.price .cap { font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .3em; color: #8c8e95; text-transform: uppercase; margin-bottom: 8px; }
+.chg { position: fixed; right: 44px; top: calc(70px + min(27vh, 240px) + 30px); display: flex; gap: 28px; align-items: baseline; font-family: 'Geist Mono'; font-size: 13px; color: var(--mute); z-index: 2; }
+.chg .p { font-family: 'Geist'; font-weight: 300; font-size: 40px; letter-spacing: -.02em; }
+.chg b { color: var(--fg); font-weight: 400; margin-left: 6px; }
+.corner { position: fixed; left: 32px; top: 26px; font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .28em; color: var(--mute); text-transform: uppercase; z-index: 2; }
+.corner b { color: var(--fg); font-weight: 400; }
+.legend { position: fixed; left: 32px; top: 52px; font-family: 'Geist Mono'; font-size: 10.5px; letter-spacing: .2em; color: var(--mute); text-transform: uppercase; z-index: 2; line-height: 1.9; }
+.legend i { display: inline-block; width: 18px; height: 1px; background: var(--fg); vertical-align: middle; margin-right: 10px; }
+.orbs { position: fixed; right: 24px; bottom: 26px; width: 560px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 10px; z-index: 2; }
+.orb { position: relative; height: 176px; }
+.orb canvas { position: absolute; left: 50%; top: 0; width: 150px; height: 150px; margin-left: -75px; }
+.orb .in { position: absolute; left: 0; right: 0; top: 46px; text-align: center; }
+.orb .px { font-weight: 300; font-size: 22px; letter-spacing: -.02em; }
+.orb .pc { font-family: 'Geist Mono'; font-size: 11px; margin-top: 2px; }
+.orb .nm { position: absolute; left: 0; right: 0; top: 150px; text-align: center; font-size: 12px; font-weight: 500; color: #a9abb1; white-space: nowrap; }
+.orb .nm small { font-family: 'Geist Mono'; font-size: 10px; color: var(--mute); margin-left: 6px; letter-spacing: .12em; }
+.u { color: var(--up); } .d { color: var(--down); }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="corner"><b>Orbit</b> · BTC / USDT · TPE <b id="tpe">--</b> · NYC <b id="nyc">--</b></div>
+<div class="price"><div class="cap">Bitcoin · last trade</div><div class="big" id="price">—</div></div>
+<div class="chg"><span class="p" id="pct">—</span><span>H<b id="h">—</b></span><span>L<b id="l">—</b></span><span>AMP<b id="amp">—</b></span></div>
+<div class="legend"><div><i></i>outer orbit · 4H closes · 30 days</div><div><i style="opacity:.5"></i>inner orbit · 1M candles · 60 minutes</div><div><i style="opacity:.25"></i>sweep · seconds</div><div><i style="opacity:.5"></i>orbs · line vs prev close · arc = day range</div></div>
+<div class="orbs" id="orbs"></div>
+
+<script src="feed.js"></script>
+<script src="draw.js"></script>
+<script>
+const { S, fmt, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const UP = '#ff5a3c', DOWN = '#4bd3a7', FG = '#eceae4';
+const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
+Feed.start({ '1m': 120, '4h': 180 });
+const TAU = Math.PI * 2, GAP = 0.05;   // 頂端留一道縫代表「現在」
+const ang = (i, n) => -Math.PI / 2 + TAU * GAP / 2 + (i / Math.max(1, n - 1)) * TAU * (1 - GAP);
+
+function orbit() {
+  const { ctx, w, h } = Draw.fit($('cv'));
+  const cx = w * 0.31, cy = h * 0.54, R = Math.min(h * 0.43, w * 0.29);
+  // 刻度環：對齊外環 4H 資料，短刻度＝1 根 4H，長刻度＝1 天，標出天數
+  ctx.save();
+  const N4 = Math.min(180, (S.bars['4h'] || []).length || 180);
+  for (let i = 0; i < N4; i++) {
+    const a = ang(i, N4), back = N4 - 1 - i, long = back % 6 === 0;
+    ctx.strokeStyle = long ? 'rgba(236,234,228,.55)' : 'rgba(236,234,228,.16)';
+    ctx.lineWidth = long ? 1.4 : 1;
+    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * (R + 10), cy + Math.sin(a) * (R + 10)); ctx.lineTo(cx + Math.cos(a) * (R + (long ? 26 : 17)), cy + Math.sin(a) * (R + (long ? 26 : 17))); ctx.stroke();
+    if (back > 0 && back % 60 === 0) {
+      ctx.fillStyle = 'rgba(236,234,228,.6)'; ctx.font = '10px "Geist Mono"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(`−${back / 6}d`, cx + Math.cos(a) * (R + 42), cy + Math.sin(a) * (R + 42));
+    }
+  }
+  ctx.restore();
+
+  // 秒針掃描
+  const now = new Date(), sec = now.getSeconds() + now.getMilliseconds() / 1000;
+  const sa = -Math.PI / 2 + sec / 60 * TAU;
+  if (ctx.createConicGradient) {
+    const g = ctx.createConicGradient(sa - 1.2, cx, cy);
+    g.addColorStop(0, 'rgba(236,234,228,0)'); g.addColorStop(1.2 / TAU, 'rgba(236,234,228,.10)'); g.addColorStop(1.2 / TAU + 0.0001, 'rgba(236,234,228,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R + 8, sa - 1.2, sa); ctx.closePath(); ctx.fill();
+  }
+  ctx.strokeStyle = 'rgba(236,234,228,.5)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx + Math.cos(sa) * R * 0.2, cy + Math.sin(sa) * R * 0.2); ctx.lineTo(cx + Math.cos(sa) * (R + 30), cy + Math.sin(sa) * (R + 30)); ctx.stroke();
+
+  // 外環：30 天 4H 收盤，半徑＝價格
+  const b4 = S.bars['4h'];
+  if (b4 && b4.length > 10) {
+    const d = b4.slice(-180);
+    let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.c); lo = Math.min(lo, b.c); }
+    const r0 = R * 0.72, r1 = R;
+    const rad = (p) => r0 + (p - lo) / (hi - lo || 1) * (r1 - r0);
+    ctx.beginPath();
+    d.forEach((b, i) => { const a = ang(i, d.length), r = rad(b.c); i ? ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r) : ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); });
+    for (let i = d.length - 1; i >= 0; i--) { const a = ang(i, d.length); ctx.lineTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); }
+    ctx.closePath();
+    const rg = ctx.createRadialGradient(cx, cy, r0, cx, cy, r1);
+    rg.addColorStop(0, 'rgba(236,234,228,0)'); rg.addColorStop(1, 'rgba(236,234,228,.09)');
+    ctx.fillStyle = rg; ctx.fill();
+    ctx.beginPath();
+    d.forEach((b, i) => { const a = ang(i, d.length), r = rad(b.c); i ? ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r) : ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); });
+    ctx.strokeStyle = FG; ctx.lineWidth = 1.4; ctx.stroke();
+    // 每天一條徑向細線
+    ctx.strokeStyle = 'rgba(236,234,228,.07)';
+    d.forEach((b, i) => { if (i % 6) return; const a = ang(i, d.length); ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r0 * 0.98, cy + Math.sin(a) * r0 * 0.98); ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.stroke(); });
+    const la = ang(d.length - 1, d.length), lr = rad(d[d.length - 1].c);
+    ctx.fillStyle = '#fff'; ctx.shadowBlur = 14; ctx.shadowColor = '#fff';
+    ctx.beginPath(); ctx.arc(cx + Math.cos(la) * lr, cy + Math.sin(la) * lr, 3.5, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
+  }
+
+  // 內環：60 根 1 分 K，徑向 K 棒
+  const b1 = S.bars['1m'];
+  if (b1 && b1.length > 10) {
+    const d = b1.slice(-60);
+    let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
+    const r0 = R * 0.36, r1 = R * 0.66;
+    const rad = (p) => r0 + (p - lo) / (hi - lo || 1) * (r1 - r0);
+    ctx.strokeStyle = 'rgba(236,234,228,.08)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, r0 - 6, 0, TAU); ctx.stroke();
+    d.forEach((b, i) => {
+      const a = ang(i, d.length), up = b.c >= b.o, c = Math.cos(a), s = Math.sin(a);
+      ctx.strokeStyle = up ? UP : DOWN;
+      ctx.lineWidth = 1; ctx.globalAlpha = 0.55;
+      ctx.beginPath(); ctx.moveTo(cx + c * rad(b.l), cy + s * rad(b.l)); ctx.lineTo(cx + c * rad(b.h), cy + s * rad(b.h)); ctx.stroke();
+      ctx.globalAlpha = 1; ctx.lineWidth = Math.max(2, (TAU * r0 / 60) * 0.55);
+      const o = rad(Math.min(b.o, b.c)), e = Math.max(o + 1.5, rad(Math.max(b.o, b.c)));
+      ctx.beginPath(); ctx.moveTo(cx + c * o, cy + s * o); ctx.lineTo(cx + c * e, cy + s * e); ctx.stroke();
+    });
+    const lb = d[d.length - 1], la = ang(d.length - 1, d.length), lr = rad(lb.c);
+    const pulse = (Date.now() % 1500) / 1500;
+    ctx.strokeStyle = `rgba(255,255,255,${1 - pulse})`; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx + Math.cos(la) * lr, cy + Math.sin(la) * lr, 4 + pulse * 18, 0, TAU); ctx.stroke();
+  }
+
+  // 中心：現在的縫與標記
+  ctx.fillStyle = 'rgba(236,234,228,.85)'; ctx.font = '10px "Geist Mono"'; ctx.textAlign = 'center';
+  ctx.fillText('NOW', cx, cy - R - 40);
+  ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(236,234,228,.25)'; ctx.setLineDash([2, 4]);
+  ctx.beginPath(); ctx.moveTo(cx, cy - R * 0.3); ctx.lineTo(cx, cy - R - 32); ctx.stroke(); ctx.setLineDash([]);
+}
+
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s;
+  const [i, d] = s.split('.');
+  $('price').innerHTML = `${i}<small>.${d}</small>`;
+  document.title = s + ' · BTC';
+}
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('pct').textContent = pct(t.P); $('pct').className = 'p ' + cls(t.P);
+  $('h').textContent = fmt(t.h, 0); $('l').textContent = fmt(t.l, 0);
+  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+});
+
+const orbs = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s) => {
+    let o = orbs[s.id];
+    if (!o) {
+      const el = document.createElement('div');
+      el.className = 'orb';
+      el.innerHTML = `<canvas></canvas><div class="in"><div class="px">—</div><div class="pc">—</div></div><div class="nm">${s.name}<small>${s.code}</small></div>`;
+      $('orbs').appendChild(el);
+      o = orbs[s.id] = { el, q: (x) => el.querySelector(x) };
+    }
+    if (s.price == null) return;
+    o.q('.px').textContent = fmt(s.price, s.dec);
+    o.q('.pc').textContent = pct(s.pct); o.q('.pc').className = 'pc ' + cls(s.chg);
+    // 迷你軌道：整個交易時段一圈，半徑＝相對昨收
+    const { ctx, w, h } = Draw.fit(o.q('canvas'));
+    const cx = w / 2, cy = h / 2, R = 56, slots = s.market === 'TW' ? 54 : 78;
+    const bars = s.bars || [];
+    ctx.strokeStyle = 'rgba(236,234,228,.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
+    if (!bars.length || !s.prevClose) return;
+    const maxAbs = Math.max(...bars.map((b) => Math.abs(b.c - s.prevClose)), 1e-9);
+    const a = (i) => -Math.PI / 2 + i / slots * TAU;
+    const r = (p) => R + (p - s.prevClose) / maxAbs * 16;
+    ctx.beginPath();
+    bars.forEach((b, i) => { const x = cx + Math.cos(a(i)) * r(b.c), y = cy + Math.sin(a(i)) * r(b.c); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.strokeStyle = s.chg >= 0 ? UP : DOWN; ctx.lineWidth = 1.5; ctx.stroke();
+    const li = bars.length - 1;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx + Math.cos(a(li)) * r(bars[li].c), cy + Math.sin(a(li)) * r(bars[li].c), 2.5, 0, TAU); ctx.fill();
+    // 振幅弧
+    ctx.strokeStyle = 'rgba(236,234,228,.5)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, R + 22, -Math.PI / 2, -Math.PI / 2 + Math.min(1, s.amp / 5) * TAU); ctx.stroke();
+  });
+});
+
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; }
+setInterval(clocks, 1000); clocks();
+
+function frame() { drawPrice(); orbit(); requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

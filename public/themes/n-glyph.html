@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glyph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root { --lime: #d2ff1f; --bg: #000; --fg: #f4f4f2; --mute: #6c6c70; --dim: #2a2a2c; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: 'Inter Tight', 'Noto Sans TC', sans-serif; }
+.wrap { height: 100vh; display: grid; grid-template-rows: clamp(130px, 24vh, 216px) minmax(0, 1fr) 46px 26px; grid-template-columns: minmax(0, 1fr) 330px; column-gap: 26px; padding: 18px 28px 14px; }
+.banner { grid-column: 1 / -1; position: relative; border: 3px solid var(--lime); border-radius: 46px; display: flex; align-items: center; padding: 0 40px; overflow: hidden; }
+.price { font-weight: 500; font-size: min(21vh, 188px); line-height: 1; letter-spacing: -.045em; white-space: nowrap; background: linear-gradient(90deg, #ffffff 0%, #e6e6ea 45%, #8c8c94 100%); -webkit-background-clip: text; background-clip: text; color: transparent; font-variant-numeric: tabular-nums; }
+.price small { font-size: .42em; }
+.banner .side { margin-left: auto; text-align: right; font-family: 'JetBrains Mono'; font-size: 11px; line-height: 1.5; color: var(--mute); text-transform: uppercase; }
+.banner .side b { display: block; font-family: 'Inter Tight'; font-weight: 600; font-size: 46px; letter-spacing: -.03em; color: var(--lime); text-transform: none; margin-bottom: 4px; }
+.banner .tag { position: absolute; left: 44px; top: 16px; font-family: 'JetBrains Mono'; font-size: 10px; color: var(--mute); letter-spacing: .1em; text-transform: uppercase; line-height: 1.35; }
+.banner .tag i { display: inline-block; width: 8px; height: 8px; background: var(--lime); margin-right: 8px; animation: bl 1s steps(2) infinite; }
+@keyframes bl { 50% { opacity: .2; } }
+.mx { position: relative; margin-top: 18px; min-height: 0; }
+.mx canvas, .h4 canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.list { margin-top: 18px; display: flex; flex-direction: column; min-height: 0; grid-row: 2 / 4; grid-column: 2; }
+.list .hd { font-weight: 600; font-size: 46px; letter-spacing: -.03em; color: #2c2c2f; line-height: 1; margin-bottom: 8px; }
+.row { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border-bottom: 1px solid #1a1a1c; }
+.row .tk { font-weight: 700; font-size: 38px; letter-spacing: -.03em; line-height: 1; color: var(--lime); }
+.row .tk small { display: block; font-family: 'Noto Sans TC'; font-weight: 500; font-size: 11px; color: var(--mute); letter-spacing: 0; margin-top: 3px; }
+.row .rt { text-align: right; }
+.row .rt b { display: block; font-weight: 500; font-size: 22px; letter-spacing: -.02em; }
+.row .rt span { font-family: 'JetBrains Mono'; font-size: 11.5px; }
+.row.btc .tk { color: var(--fg); }
+.h4 { position: relative; }
+.foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; font-family: 'JetBrains Mono'; font-size: 10.5px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
+.foot b { font-family: 'Inter Tight'; font-weight: 700; font-size: 13px; color: var(--fg); letter-spacing: 0; }
+.u { color: var(--lime); } .d { color: #9a9aa0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner">
+    <div class="price" id="price">—</div>
+    <div class="side"><div style="margin-bottom:6px"><i style="display:inline-block;width:8px;height:8px;background:var(--lime);margin-right:8px;animation:bl 1s steps(2) infinite"></i>LIVE · BTC / USDT · BINANCE SPOT</div><b id="pct">—</b>H <span id="h">—</span> · L <span id="l">—</span><br>AMP <span id="amp">—</span> · <span id="clk">—</span></div>
+  </div>
+  <div class="mx"><canvas id="cv"></canvas></div>
+  <div class="list" id="list"><div class="hd">MARKETS</div></div>
+  <div class="h4"><canvas id="c4h"></canvas></div>
+  <div class="foot"><span>1 column = 1 minute · ◎ up body · ▢ down body · ✕ large drop · ✚ wick · ■ volume spike (top 10%, height = volume) · 4H bars = return per 4 hours</span><b>MARKET<br>INTERFACE</b></div>
+</div>
+
+<script src="feed.js"></script>
+<script src="draw.js"></script>
+<script>
+const { S, fmt, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const LIME = '#d2ff1f';
+const cls = (v) => (v >= 0 ? 'u' : 'd');
+Feed.start({ '1m': 200, '4h': 90 });
+
+// 符號
+function glyph(ctx, kind, x, y, s, col, a = 1) {
+  const r = s * 0.36;
+  ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = Math.max(1.4, s * 0.09);
+  ctx.beginPath();
+  switch (kind) {
+    case 'ring': ctx.arc(x, y, r, 0, 7); ctx.moveTo(x + r * 0.45, y); ctx.arc(x, y, r * 0.45, 0, 7); ctx.stroke(); break;
+    case 'sq': ctx.rect(x - r, y - r, r * 2, r * 2); ctx.moveTo(x + r * 0.4, y); ctx.rect(x - r * 0.4, y - r * 0.4, r * 0.8, r * 0.8); ctx.stroke(); break;
+    case 'x': ctx.moveTo(x - r, y - r); ctx.lineTo(x + r, y + r); ctx.moveTo(x + r, y - r); ctx.lineTo(x - r, y + r); ctx.lineWidth *= 1.5; ctx.stroke(); break;
+    case 'plus': ctx.moveTo(x - r * 0.6, y); ctx.lineTo(x + r * 0.6, y); ctx.moveTo(x, y - r * 0.6); ctx.lineTo(x, y + r * 0.6); ctx.stroke(); break;
+    case 'slash': ctx.moveTo(x - r * 0.5, y - r * 0.5); ctx.lineTo(x + r * 0.5, y + r * 0.5); ctx.stroke(); break;
+    case 'dot': ctx.arc(x, y, s * 0.07, 0, 7); ctx.fill(); break;
+  }
+  ctx.globalAlpha = 1;
+}
+
+function matrix(t) {
+  const { ctx, w, h } = Draw.fit($('cv'));
+  const bars = S.bars['1m']; if (!bars || bars.length < 20) return;
+  const G = 18, axisW = 80;
+  const cols = Math.floor((w - axisW) / G), rows = Math.floor((h - 18) / G);
+  const d = bars.slice(-cols);
+  let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
+  const R = (p) => Math.round((hi - p) / (hi - lo || 1) * (rows - 1));
+  const vs = d.map((b) => b.v).slice().sort((a, b) => a - b), vHot = vs[Math.floor(vs.length * 0.9)];
+  const cell = new Map();
+  d.forEach((b, c) => {
+    const up = b.c >= b.o, r1 = R(Math.max(b.o, b.c)), r2 = R(Math.min(b.o, b.c));
+    for (let r = R(b.h); r <= R(b.l); r++) cell.set(r * 1000 + c, r >= r1 && r <= r2 ? (up ? 'ring' : 'sq') : 'plus');
+    if (Math.abs(b.c - b.o) / (hi - lo || 1) > 0.18) for (let r = r1; r <= r2; r++) cell.set(r * 1000 + c, up ? 'ring' : 'x');
+  });
+  // 爆量分鐘：底部實心萊姆色塊（高度＝成交量）
+  ctx.fillStyle = LIME;
+  d.forEach((b, c) => { if (b.v < vHot) return; const hh = Math.max(2, Math.round(b.v / vs[vs.length - 1] * rows * 0.32)); ctx.fillRect(c * G, (rows - hh) * G, G + 1, hh * G); });
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols && c < d.length; c++) {
+    const x = c * G + G / 2, y = r * G + G / 2;
+    const k = cell.get(r * 1000 + c);
+    const b = d[c], hot = b.v >= vHot && r >= rows - Math.max(2, Math.round(b.v / vs[vs.length - 1] * rows * 0.32));
+    const col = hot ? '#000' : LIME;
+    if (k) glyph(ctx, k, x, y, G, col, c === d.length - 1 && Math.floor(t / 500) % 2 ? 0.35 : 1);
+    else if (!hot) {
+      // 背景只是方格紙：暗點，每 5 格稍亮，方便對位；不用資料符號，避免誤讀
+      glyph(ctx, 'dot', x, y, G, LIME, (r % 5 === 0 || c % 5 === 0) ? 0.32 : 0.16);
+    }
+  }
+  // 爆量說明：最大的那根標上量
+  const vmax = vs[vs.length - 1];
+  const ci = d.findIndex((b) => b.v === vmax);
+  if (ci >= 0) {
+    const hh = Math.max(2, Math.round(vmax / vmax * rows * 0.32));
+    ctx.font = '600 10px "JetBrains Mono"'; ctx.fillStyle = LIME; ctx.textAlign = ci * G > cols * G - 120 ? 'right' : 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText(`VOL ${vmax.toFixed(1)} BTC/min`, ci * G + (ctx.textAlign === 'right' ? G : 0), (rows - hh) * G - 4);
+  }
+  // 價格軸
+  ctx.font = '11px "JetBrains Mono"'; ctx.fillStyle = '#6c6c70'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  for (let k = 0; k <= 4; k++) { const r = Math.round((rows - 1) * k / 4), p = hi - (hi - lo) * r / (rows - 1); ctx.fillText(fmt(p, 0), cols * G + 10, r * G + G / 2); }
+  const lr = R(d[d.length - 1].c);
+  ctx.fillStyle = LIME; ctx.fillRect(cols * G + 4, lr * G + 2, axisW - 6, G - 4);
+  ctx.fillStyle = '#000'; ctx.font = '600 11px "JetBrains Mono"'; ctx.fillText(fmt(d[d.length - 1].c, 0), cols * G + 8, lr * G + G / 2);
+  ctx.fillStyle = '#6c6c70'; ctx.font = '10px "JetBrains Mono"'; ctx.textBaseline = 'top';
+  d.forEach((b, c) => { const tt = new Date(b.t * 1000); if (tt.getMinutes() % 30 === 0) ctx.fillText(tt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), c * G, rows * G + 4); });
+}
+
+function strip4h() {
+  const { ctx, w, h } = Draw.fit($('c4h'));
+  const b4 = S.bars['4h']; if (!b4 || !b4.length) return;
+  const L = 110, Rr = w - 80, n = Math.min(b4.length, Math.floor((Rr - L) / 8)), d = b4.slice(-n);
+  const ret = d.map((b) => (b.c - b.o) / b.o), mx = Math.max(...ret.map(Math.abs)) || 1;
+  const mid = h / 2, hh = h / 2 - 4, bw = (Rr - L) / n;
+  ctx.font = '10px "JetBrains Mono"'; ctx.fillStyle = '#6c6c70'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillText('4H · ' + Math.round(n / 6) + ' DAYS', 0, mid);
+  ctx.fillStyle = 'rgba(210,255,31,.25)'; ctx.fillRect(L, mid, Rr - L, 1);
+  d.forEach((b, i) => {
+    const v = ret[i] / mx * hh, x = L + i * bw;
+    ctx.fillStyle = v >= 0 ? LIME : '#8a8a90';
+    ctx.fillRect(x + bw * 0.2, v >= 0 ? mid - v : mid + 1, Math.max(1.5, bw * 0.6), Math.max(1, Math.abs(v)));
+  });
+  const last = ret[ret.length - 1] * 100;
+  ctx.font = '600 11px "JetBrains Mono"'; ctx.fillStyle = last >= 0 ? LIME : '#9a9aa0'; ctx.textAlign = 'left';
+  ctx.fillText(`${last >= 0 ? '+' : ''}${last.toFixed(2)}%`, Rr + 10, mid);
+}
+
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s;
+  const [i, d] = s.split('.');
+  $('price').innerHTML = `${i}<small>.${d}</small>`;
+  document.title = s + ' · BTC';
+  if (rows.BTC) rows.BTC.q('.rt b').textContent = s;   // 清單裡的 BTC 跟大字同步
+}
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('pct').textContent = pct(t.P);
+  $('h').textContent = fmt(t.h, 0); $('l').textContent = fmt(t.l, 0);
+  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+  renderList();
+});
+const rows = {};
+function renderList() {
+  const items = [{ id: 'BTC', code: 'BTC', name: 'Bitcoin', price: S.price, pct: S.ticker ? S.ticker.P : 0, dec: 2 }, ...S.markets.map((m) => ({ id: m.id, code: m.code, name: m.name, price: m.price, pct: m.pct, dec: m.dec, open: m.isOpen }))];
+  items.forEach((m) => {
+    let r = rows[m.id];
+    if (!r) {
+      const el = document.createElement('div');
+      el.className = 'row' + (m.id === 'BTC' ? ' btc' : '');
+      el.innerHTML = `<div class="tk">${m.code}<small>${m.name}</small></div><div class="rt"><b>—</b><span>—</span></div>`;
+      $('list').appendChild(el);
+      r = rows[m.id] = { el, q: (x) => el.querySelector(x) };
+    }
+    if (m.price == null) return;
+    r.q('.rt b').textContent = fmt(m.price, m.dec);
+    r.q('.rt span').innerHTML = `<span class="${cls(m.pct || 0)}">${pct(m.pct || 0)}</span>${m.id !== 'BTC' && !m.open ? ' · CLOSED' : ''}`;
+  });
+}
+Feed.on('markets', renderList);
+function clocks() { $('clk').textContent = 'TPE ' + Feed.tzNow('Asia/Taipei').str; }
+setInterval(clocks, 1000); clocks();
+
+let last = 0, l4 = 0;
+function frame(t) {
+  drawPrice();
+  if (t - last > 250) { last = t; matrix(t); }
+  if (t - l4 > 3000) { l4 = t; strip4h(); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

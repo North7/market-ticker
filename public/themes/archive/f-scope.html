@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scope</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@200;300;400;500&family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #0a0b0d; --panel: #0e1013; --fg: #e8eef6; --mute: #5b616b; --line: #1d2026; --cur: #ff8a1f; --up: #ff5a3c; --down: #4bd3a7; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: 'Geist Mono', monospace; }
+.wrap { height: 100vh; display: grid; grid-template-rows: 30px 214px minmax(0, 1fr) 124px; gap: 12px; padding: 14px 26px 22px; }
+.top { display: flex; gap: 26px; align-items: center; font-size: 10.5px; letter-spacing: .24em; color: var(--mute); text-transform: uppercase; }
+.top b { color: var(--fg); font-weight: 400; }
+.top .run { color: var(--cur); }
+.top .run::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--cur); margin-right: 8px; box-shadow: 0 0 8px var(--cur); animation: bl 1s steps(2) infinite; }
+@keyframes bl { 50% { opacity: .2; } }
+.top .sp { margin-left: auto; }
+
+.readout { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.big { font-weight: 200; font-size: min(25vh, 214px); line-height: .86; letter-spacing: -.06em; white-space: nowrap; }
+.big small { font-size: .34em; letter-spacing: -.03em; color: var(--mute); }
+.big .u { font-size: .1em; letter-spacing: .24em; color: var(--mute); margin-left: 18px; }
+.meas { display: grid; grid-template-columns: repeat(2, auto); gap: 10px 34px; padding-bottom: 8px; }
+.meas div { text-align: right; }
+.meas label { display: block; font-size: 10px; letter-spacing: .22em; color: var(--mute); }
+.meas b { font-weight: 300; font-size: 26px; letter-spacing: -.02em; }
+
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 14px; min-height: 0; }
+.screen { position: relative; background: radial-gradient(ellipse at center, #12151a 0%, var(--panel) 70%); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; min-height: 0; }
+.screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.screen .tl, .screen .tr, .screen .bl, .screen .br { position: absolute; font-size: 10.5px; letter-spacing: .14em; color: var(--mute); z-index: 2; }
+.screen .tl { top: 10px; left: 14px; } .screen .tr { top: 10px; right: 14px; } .screen .bl { bottom: 10px; left: 14px; } .screen .br { bottom: 10px; right: 14px; }
+.screen b { color: var(--fg); font-weight: 400; }
+.screen .ch1 { color: #0b0c0e; background: var(--fg); padding: 1px 6px; margin-right: 8px; font-weight: 500; }
+.chans { display: grid; grid-auto-rows: minmax(0, 1fr); gap: 8px; min-height: 0; }
+.chan { position: relative; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); min-height: 0; overflow: hidden; }
+.chan canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.chan .lb { position: absolute; left: 10px; top: 7px; font-size: 10px; letter-spacing: .12em; color: var(--mute); z-index: 2; display: flex; gap: 8px; align-items: center; }
+.chan .lb i { font-style: normal; color: #0b0c0e; background: #8a929e; padding: 0 5px; font-weight: 500; }
+.chan .lb em { font-family: 'Noto Sans TC'; font-style: normal; color: var(--fg); letter-spacing: 0; font-size: 12px; }
+.chan .v { position: absolute; right: 10px; top: 6px; text-align: right; z-index: 2; }
+.chan .v b { display: block; font-weight: 300; font-size: 20px; letter-spacing: -.02em; }
+.chan .v span { font-size: 11px; }
+.chan .live { color: var(--cur); }
+.slow { position: relative; }
+.u2 { color: var(--up); } .d2 { color: var(--down); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><span><b>Scope</b> · tick oscilloscope</span><span class="run">RUN</span><span>Binance spot · aggTrade</span>
+    <span class="sp">TPE <b id="tpe">--</b></span><span>NYC <b id="nyc">--</b></span></div>
+  <div class="readout">
+    <div class="big" id="price">—</div>
+    <div class="meas">
+      <div><label>Δ 24H</label><b id="pct">—</b></div>
+      <div><label>Vpp · 60 S</label><b id="vpp">—</b></div>
+      <div><label>RATE</label><b id="rate">—</b></div>
+      <div><label>AMP · 24H</label><b id="amp">—</b></div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="screen" id="scr">
+      <canvas id="cv"></canvas>
+      <div class="tl"><span class="ch1">CH1</span>BTC/USDT · <b id="div">—</b> USDT/div</div>
+      <div class="tr"><b>12 s</b>/div · trig ▸ last</div>
+      <div class="bl">window <b>120 s</b> · <b id="cnt">—</b> trades</div>
+      <div class="br">1M envelope · <b id="env">—</b></div>
+    </div>
+    <div class="chans" id="chans"></div>
+  </div>
+  <div class="screen slow"><canvas id="c4h"></canvas><div class="tl"><span class="ch1">CH8</span>slow timebase · BTC 4H · 30 days</div><div class="tr" id="k4h">—</div></div>
+</div>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const TRACE = '#e8eef6', CUR = '#ff8a1f', UP = '#ff5a3c', DOWN = '#4bd3a7';
+const cls = (v) => (v > 0 ? 'u2' : v < 0 ? 'd2' : '');
+Feed.start({ '1m': 60, '4h': 180 });
+const WIN = 120000;
+
+function niceDiv(range, divs) {
+  const raw = range / divs, p = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / p;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+}
+function graticule(ctx, w, h, nx, ny, minor) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(232,238,246,.07)'; ctx.lineWidth = 1;
+  for (let i = 1; i < nx; i++) { const x = Math.round(w * i / nx) + 0.5; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  for (let j = 1; j < ny; j++) { const y = Math.round(h * j / ny) + 0.5; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+  if (minor) {
+    ctx.strokeStyle = 'rgba(232,238,246,.18)';
+    const cy = Math.round(h / 2) + 0.5, cx = Math.round(w / 2) + 0.5;
+    for (let i = 0; i <= nx * 5; i++) { const x = w * i / (nx * 5); ctx.beginPath(); ctx.moveTo(x, cy - 3); ctx.lineTo(x, cy + 3); ctx.stroke(); }
+    for (let j = 0; j <= ny * 5; j++) { const y = h * j / (ny * 5); ctx.beginPath(); ctx.moveTo(cx - 3, y); ctx.lineTo(cx + 3, y); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+
+let span = null;   // 垂直刻度平滑
+function scope() {
+  const { ctx, w, h } = Draw.fit($('cv'));
+  graticule(ctx, w, h, 10, 8, true);
+  const ticks = S.ticks;
+  if (!ticks.length) return;
+  const now = Date.now(), t0 = now - WIN;
+  const vis = ticks.filter((t) => t.T >= t0);
+  const last = ticks[ticks.length - 1].p;
+  let dev = 0; for (const t of vis) dev = Math.max(dev, Math.abs(t.p - last));
+  const b1 = S.bars['1m']; const cb = b1 && b1[b1.length - 1];
+  if (cb) dev = Math.max(dev, Math.abs(cb.h - last), Math.abs(cb.l - last));
+  const div = niceDiv(Math.max(dev * 2.3, 2), 8);
+  span = span == null ? div * 8 : span + (div * 8 - span) * 0.08;
+  $('div').textContent = div >= 1 ? div.toFixed(0) : div.toFixed(2);
+  const X = (T) => (T - t0) / WIN * w, Y = (p) => h / 2 - (p - last) / span * h;
+
+  // 這一分鐘的 1M 高低包絡
+  if (cb) {
+    ctx.fillStyle = 'rgba(255,138,31,.05)';
+    ctx.fillRect(X(cb.t * 1000), Y(cb.h), w - X(cb.t * 1000), Y(cb.l) - Y(cb.h));
+    ctx.strokeStyle = 'rgba(255,138,31,.35)'; ctx.setLineDash([2, 3]);
+    ctx.strokeRect(X(cb.t * 1000) + 0.5, Y(cb.h) + 0.5, w - X(cb.t * 1000), Y(cb.l) - Y(cb.h)); ctx.setLineDash([]);
+    $('env').textContent = `${fmt(cb.l, 1)} – ${fmt(cb.h, 1)}`;
+  }
+  // 每分鐘邊界
+  ctx.strokeStyle = 'rgba(232,238,246,.12)'; ctx.setLineDash([1, 4]);
+  for (let m = Math.ceil(t0 / 60000) * 60000; m < now; m += 60000) { ctx.beginPath(); ctx.moveTo(X(m), 0); ctx.lineTo(X(m), h); ctx.stroke(); }
+  ctx.setLineDash([]);
+
+  // 軌跡：階梯線，越舊越淡（餘輝）
+  const B = 8;
+  for (let pass = 0; pass < 2; pass++) {
+    for (let b = 0; b < B; b++) {
+      const a0 = t0 + WIN * b / B, a1 = t0 + WIN * (b + 1) / B;
+      ctx.beginPath();
+      let started = false, py = null;
+      for (let i = 0; i < ticks.length; i++) {
+        const t = ticks[i]; if (t.T < a0 - 2000 || t.T > a1) continue;
+        const x = X(t.T), y = Y(t.p);
+        if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, py); ctx.lineTo(x, y); }
+        py = y;
+      }
+      if (b === B - 1 && py != null) ctx.lineTo(w, py);
+      const age = (b + 1) / B;
+      if (pass === 0) { ctx.strokeStyle = `rgba(160,200,255,${0.25 * age})`; ctx.lineWidth = 5; ctx.filter = 'blur(4px)'; }
+      else { ctx.strokeStyle = `rgba(232,238,246,${0.18 + 0.82 * age})`; ctx.lineWidth = 1.3; ctx.filter = 'none'; }
+      ctx.stroke();
+    }
+  }
+  ctx.filter = 'none';
+  // 觸發游標
+  const ly = Y(last);
+  ctx.strokeStyle = 'rgba(255,138,31,.6)'; ctx.setLineDash([6, 5]);
+  ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(w, ly); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = CUR;
+  ctx.beginPath(); ctx.moveTo(w, ly); ctx.lineTo(w - 12, ly - 7); ctx.lineTo(w - 12, ly + 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.shadowBlur = 16; ctx.shadowColor = '#bcd6ff';
+  ctx.beginPath(); ctx.arc(w - 16, ly, 3, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+
+  const v60 = ticks.filter((t) => t.T >= now - 60000);
+  let hi = -Infinity, lo = Infinity; for (const t of v60) { hi = Math.max(hi, t.p); lo = Math.min(lo, t.p); }
+  $('vpp').textContent = v60.length ? fmt(hi - lo, 2) : '—';
+  $('rate').textContent = (v60.length / 60).toFixed(1) + ' t/s';
+  $('cnt').textContent = vis.length.toLocaleString();
+}
+
+function slow() {
+  const cv = $('c4h');
+  const r = Draw.candles(cv, S.bars['4h'], { mode: 'ohlc', count: 180, pad: { t: 30, r: 16, b: 12, l: 16 }, up: 'rgba(232,238,246,.55)', down: 'rgba(232,238,246,.3)', body: 0.7, rightGap: 2 });
+  if (!r) return;
+  const ctx = cv.getContext('2d');
+  const d = S.bars['4h'].slice(-180);
+  ctx.beginPath(); d.forEach((b, i) => (i ? ctx.lineTo(r.X(i), r.Y(b.c)) : ctx.moveTo(r.X(i), r.Y(b.c))));
+  ctx.strokeStyle = TRACE; ctx.lineWidth = 1.2; ctx.shadowBlur = 8; ctx.shadowColor = '#9cc2ff'; ctx.stroke(); ctx.shadowBlur = 0;
+  ctx.fillStyle = CUR; ctx.beginPath(); ctx.arc(r.last.x, r.last.y, 3.5, 0, Math.PI * 2); ctx.fill();
+  const lb = d[d.length - 1], v = (lb.c - lb.o) / lb.o * 100;
+  $('k4h').innerHTML = `this bar <b class="${cls(v)}">${pct(v)}</b> · 30d ${pct((lb.c - d[0].o) / d[0].o * 100)}`;
+}
+
+const chans = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s, i) => {
+    let c = chans[s.id];
+    if (!c) {
+      const el = document.createElement('div');
+      el.className = 'chan';
+      el.innerHTML = `<canvas></canvas><div class="lb"><i>CH${i + 2}</i><em>${s.name}</em>${s.code}</div><div class="v"><b>—</b><span>—</span></div>`;
+      $('chans').appendChild(el);
+      c = chans[s.id] = { el, q: (x) => el.querySelector(x) };
+    }
+    if (s.price == null) return;
+    c.q('.v b').textContent = fmt(s.price, s.dec);
+    c.q('.v span').innerHTML = `<span class="${cls(s.chg)}">${pct(s.pct)}</span>${s.isOpen ? ' <span class="live">● RUN</span>' : ' · HOLD'}`;
+    const cv = c.q('canvas');
+    const { ctx, w, h } = Draw.fit(cv);
+    graticule(ctx, w, h, 8, 4, false);
+    const bars = s.bars || [], slots = s.market === 'TW' ? 54 : 78;
+    if (!bars.length || !s.prevClose) return;
+    const top = 30, bot = h - 8;
+    const dev = Math.max(...bars.map((b) => Math.max(Math.abs(b.h - s.prevClose), Math.abs(b.l - s.prevClose))), 1e-9);
+    const X = (k) => 8 + (w - 16) * k / slots, Y = (p) => (top + bot) / 2 - (p - s.prevClose) / dev * (bot - top) / 2;
+    ctx.strokeStyle = 'rgba(255,138,31,.45)'; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(0, Y(s.prevClose)); ctx.lineTo(w, Y(s.prevClose)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath();
+    bars.forEach((b, k) => { const x = X(k), y = Y(b.c); if (!k) ctx.moveTo(x, y); else { ctx.lineTo(x, Y(bars[k - 1].c)); ctx.lineTo(x, y); } });
+    ctx.lineTo(X(bars.length), Y(bars[bars.length - 1].c));
+    ctx.strokeStyle = TRACE; ctx.lineWidth = 1.2; ctx.shadowBlur = 8; ctx.shadowColor = '#9cc2ff'; ctx.stroke(); ctx.shadowBlur = 0;
+  });
+});
+
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s;
+  const [i, d] = s.split('.');
+  $('price').innerHTML = `${i}<small>.${d}</small><span class="u">USDT</span>`;
+  document.title = s + ' · BTC';
+}
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('pct').textContent = pct(t.P); $('pct').className = cls(t.P);
+  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+});
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; }
+setInterval(clocks, 1000); clocks();
+
+let lastSlow = 0;
+function frame(t) {
+  drawPrice(); scope();
+  if (t - lastSlow > 1000) { lastSlow = t; slow(); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

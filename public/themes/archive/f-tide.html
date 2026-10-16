@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tidemark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Tidemark 設計語言（夜間）：極光天空、空心巨型數字灌水；K 線沉在海裡，海床是 4H，整頁不用卡片 */
+:root {
+  --disp: "Archivo", -apple-system, "PingFang TC", "Noto Sans TC", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --bg: #03040a; --line: rgba(255, 255, 255, .08); --fg: #f3f5ff; --mut: #9aa1c0; --faint: #6b7190;
+  --mint: #7cffcb; --bot-c: #20e3b2; --blue: #2aa8ff; --up: #ff4d6d; --down: #20e3b2;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: var(--disp); -webkit-font-smoothing: antialiased; }
+#sea { position: fixed; inset: 0; width: 100%; height: 100%; }
+.tape { position: fixed; left: 0; right: 0; top: 0; height: 26px; overflow: hidden; display: flex; align-items: center; font-family: var(--mono); font-size: 11px; color: var(--faint); border-bottom: 1px solid var(--line); z-index: 3; }
+.tape .tr { display: flex; white-space: nowrap; animation: run 70s linear infinite; }
+.tape .tr span { padding: 0 22px; letter-spacing: .06em; }
+.tape .tr b { color: var(--fg); font-weight: 500; margin-left: 6px; }
+@keyframes run { to { transform: translateX(-50%); } }
+.head { position: fixed; left: 40px; right: 40px; top: 40px; height: 40px; display: flex; align-items: center; gap: 12px; z-index: 3; }
+.logo { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, var(--bot-c), var(--blue)); display: grid; place-items: center; box-shadow: 0 6px 20px rgba(32, 227, 178, .3); }
+.logo svg { width: 19px; height: 19px; }
+.head b { font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+.head .live { margin-left: 18px; font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: var(--mut); }
+.head .live i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--bot-c); margin-right: 8px; box-shadow: 0 0 8px var(--bot-c); animation: bl 1.6s infinite; }
+@keyframes bl { 50% { opacity: .3; } }
+.head .clk { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.head .clk b { color: var(--fg); font-weight: 500; font-size: 12px; margin: 0 0 0 6px; }
+.head .clk b + span { margin-left: 18px; }
+#big { position: fixed; left: 24px; top: 92px; width: 68%; height: 27vh; z-index: 2; }
+.stats { position: fixed; right: 44px; top: 104px; z-index: 3; text-align: right; }
+.stats .p { font-size: 58px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
+.stats .kv { margin-top: 14px; display: grid; grid-template-columns: auto auto; gap: 7px 18px; font-family: 'Noto Sans TC'; font-size: 13px; color: var(--mut); }
+.stats .kv b { font-family: var(--disp); font-size: 18px; font-weight: 600; color: var(--fg); text-align: right; letter-spacing: -.01em; }
+.note { position: fixed; left: 40px; top: calc(92px + 27vh + 8px); width: 62%; z-index: 3; border-left: 3px solid var(--bot-c); padding: 2px 0 2px 16px; }
+.note small { font-size: 11px; color: var(--bot-c); letter-spacing: .1em; font-family: 'Noto Sans TC'; margin-right: 12px; }
+.note small b { color: #04120e; background: linear-gradient(90deg, #20e3b2, #2aa8ff); padding: 2px 10px; border-radius: 999px; font-weight: 700; margin-left: 8px; }
+.note p { margin: 4px 0 0; font-family: 'Noto Sans TC'; font-size: 15.5px; line-height: 1.6; color: var(--fg); }
+.stocks { position: fixed; left: 40px; right: 120px; bottom: 16px; height: 70px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 24px; z-index: 3; }
+.st { display: grid; grid-template-columns: minmax(0, 1fr) 64px; grid-template-rows: auto auto; column-gap: 10px; align-content: center; min-width: 0; }
+.st .nm { font-family: 'Noto Sans TC'; font-size: 12px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st .nm i { font-style: normal; font-family: var(--mono); font-size: 10px; margin-left: 6px; color: var(--faint); }
+.st .nm i.on { color: var(--bot-c); }
+.st .px { font-size: 21px; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
+.st .px em { font-style: normal; font-family: var(--mono); font-size: 11.5px; font-weight: 500; margin-left: 6px; }
+.st canvas { grid-column: 2; grid-row: 1 / 3; width: 64px; height: 34px; }
+.u { color: var(--up); } .d { color: var(--down); }
+</style>
+</head>
+<body>
+<canvas id="sea"></canvas>
+<div class="tape"><div class="tr" id="tape"></div></div>
+<div class="head">
+  <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#04120e" stroke-width="2.4" stroke-linecap="round"><path d="M3 15c2.5 0 2.5-6 5-6s2.5 6 5 6 2.5-6 5-6 2.5 3 3 3"/></svg></div>
+  <b>Tidemark</b>
+  <span class="live"><i></i>LIVE · <span id="date">—</span> · BTC / USDT</span>
+  <div class="clk">台北<b id="tpe">—</b><span>紐約</span><b id="nyc">—</b></div>
+</div>
+<canvas id="big"></canvas>
+<div class="stats">
+  <div class="p" id="pct">—</div>
+  <div class="kv"><span>潮位</span><b id="lvl">—</b><span>振幅</span><b id="amp">—</b><span>60 秒買盤</span><b id="flow">—</b><span>24H 高</span><b id="h">—</b><span>24H 低</span><b id="l">—</b></div>
+</div>
+<div class="note"><small>潮汐筆記<b id="chip">—</b></small><p id="note">—</p></div>
+<section class="stocks" id="stocks"></section>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
+Feed.start({ '1m': 180, '4h': 180 });
+
+const PAL = [[32, 227, 178], [42, 168, 255], [124, 255, 203]];   // Tidemark 首頁的青綠—藍
+let level = 0.5, levelS = 0.5, flowShare = 0.5, swell = 0.5;
+const stars = Array.from({ length: 120 }, () => ({ x: Math.random(), y: Math.random() * 0.45, r: Math.random() * 1.3 + 0.2, p: Math.random() * 6 }));
+const bubbles = Array.from({ length: 44 }, () => ({ x: Math.random(), y: Math.random(), r: 1.5 + Math.random() * 4, s: 0.2 + Math.random() * 0.7, ph: Math.random() * 6 }));
+const motes = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), s: 0.1 + Math.random() * 0.3 }));
+
+function sea(t) {
+  const { ctx, w, h } = Draw.fit($('sea'));
+  const T = t / 1000, c = (k, a) => `rgba(${PAL[k]},${a})`;
+  ctx.fillStyle = '#03040a'; ctx.fillRect(0, 0, w, h);
+
+  // ---- 天空：極光 + 星
+  const HZ = h * 0.49;                                  // 海平線
+  ctx.globalCompositeOperation = 'lighter';
+  for (const [bx, by, br, k, a] of [[0.14 + Math.sin(T * 0.05) * 0.05, 0.1, 0.55, 0, 0.5], [0.58 + Math.cos(T * 0.04) * 0.06, 0.02, 0.6, 1, 0.55], [0.34, 0.3 + Math.sin(T * 0.06) * 0.03, 0.4, 2, 0.3]]) {
+    const g = ctx.createRadialGradient(bx * w, by * h, 0, bx * w, by * h, br * w);
+    g.addColorStop(0, c(k, a * 0.6)); g.addColorStop(1, c(k, 0));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, HZ + 40);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  const veil = ctx.createLinearGradient(0, h * 0.18, 0, HZ); veil.addColorStop(0, 'rgba(3,4,10,0)'); veil.addColorStop(1, 'rgba(3,4,10,.75)');
+  ctx.fillStyle = veil; ctx.fillRect(0, 0, w, HZ);
+  for (const s of stars) { ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.4 * Math.sin(T * 1.3 + s.p)})`; ctx.fillRect(s.x * w, s.y * h, s.r, s.r); }
+
+  // ---- 海面
+  const surf = (x, ph = 0) => HZ + (Math.sin(x * 0.009 + T * 0.9 + ph) * 4 + Math.sin(x * 0.023 - T * 1.3 + ph) * 2) * (0.6 + swell);
+  ctx.beginPath(); ctx.moveTo(0, h);
+  for (let x = 0; x <= w; x += 6) ctx.lineTo(x, surf(x));
+  ctx.lineTo(w, h); ctx.closePath();
+  const wg = ctx.createLinearGradient(0, HZ, 0, h);
+  wg.addColorStop(0, c(0, 0.2)); wg.addColorStop(0.08, 'rgba(8,52,70,.55)'); wg.addColorStop(0.55, 'rgba(4,22,38,.85)'); wg.addColorStop(1, '#010409');
+  ctx.fillStyle = wg; ctx.fill();
+  ctx.save(); ctx.clip();
+  // 水中光柱與焦散（低解析度畫完再放大，邊緣自然柔化）
+  lightRays(ctx, w, h, HZ, T);
+  // 懸浮微粒
+  for (const m of motes) {
+    m.y -= m.s * 0.0002; if (m.y < 0) m.y = 1;
+    ctx.fillStyle = c(2, 0.25); ctx.fillRect(m.x * w + Math.sin(T * 0.5 + m.y * 9) * 8, HZ + m.y * (h - HZ), 1.4, 1.4);
+  }
+  ctx.restore();
+  // 海面高光
+  for (const [ph, a, lw] of [[1.2, 0.25, 1], [0, 0.9, 1.6]]) {
+    ctx.beginPath(); for (let x = 0; x <= w; x += 6) x ? ctx.lineTo(x, surf(x, ph)) : ctx.moveTo(x, surf(x, ph));
+    ctx.strokeStyle = c(2, a); ctx.lineWidth = lw; ctx.shadowBlur = 14; ctx.shadowColor = c(0, 0.8); ctx.stroke(); ctx.shadowBlur = 0;
+  }
+
+  // ---- 海床：4H 30 天
+  const BED0 = h - 160, BED1 = h - 94;
+  const b4 = S.bars['4h'];
+  if (b4 && b4.length > 10) {
+    let a = Infinity, z = -Infinity; for (const b of b4) { a = Math.min(a, b.c); z = Math.max(z, b.c); }
+    const X = (i) => (i / (b4.length - 1)) * w, Y = (p) => BED1 - (p - a) / (z - a || 1) * (BED1 - BED0);
+    ctx.beginPath(); ctx.moveTo(0, h);
+    b4.forEach((b, i) => ctx.lineTo(X(i), Y(b.c)));
+    ctx.lineTo(w, h); ctx.closePath();
+    const bg = ctx.createLinearGradient(0, BED0, 0, h); bg.addColorStop(0, 'rgba(10,46,58,.92)'); bg.addColorStop(1, 'rgba(2,8,14,1)');
+    ctx.fillStyle = bg; ctx.fill();
+    ctx.beginPath(); b4.forEach((b, i) => (i ? ctx.lineTo(X(i), Y(b.c)) : ctx.moveTo(X(i), Y(b.c))));
+    ctx.strokeStyle = c(0, 0.55); ctx.lineWidth = 1.2; ctx.stroke();
+    const v = (b4[b4.length - 1].c - b4[0].o) / b4[0].o * 100;
+    ctx.fillStyle = 'rgba(154,161,192,.8)'; ctx.font = '11px "JetBrains Mono"'; ctx.textAlign = 'left';
+    ctx.fillText(`海床 · 4H · 30 天 · ${pct(v)}`, 40, BED0 - 10);
+  }
+
+  // ---- 1 分 K：沉在海裡、隨水流輕擺
+  const b1 = S.bars['1m'];
+  const TOP = HZ + 38, BOT = BED0 - 26, L = 40, R = w - 108;
+  if (b1 && b1.length > 10) {
+    const n = Math.min(150, b1.length), d = b1.slice(-n);
+    let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
+    const pd = (hi - lo) * 0.06; hi += pd; lo -= pd;
+    const cw = (R - L) / n, bw = Math.max(2, cw * 0.58);
+    const X = (i) => L + cw * (i + 0.5), Y = (p) => TOP + (hi - p) / (hi - lo) * (BOT - TOP);
+    const sway = (i) => [Math.sin(T * 0.8 + i * 0.13) * 1.6, Math.sin(T * 1.1 + i * 0.21) * 2.4];
+    // 潮位尺（右）
+    ctx.font = '10.5px "JetBrains Mono"'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    const raw = (hi - lo) / 5, pw = Math.pow(10, Math.floor(Math.log10(raw))), mm = raw / pw, step = (mm <= 1 ? 1 : mm <= 2 ? 2 : mm <= 5 ? 5 : 10) * pw;
+    ctx.strokeStyle = 'rgba(124,255,203,.25)'; ctx.beginPath(); ctx.moveTo(R + 18, TOP); ctx.lineTo(R + 18, BOT); ctx.stroke();
+    for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+      const y = Y(v);
+      ctx.strokeStyle = 'rgba(124,255,203,.06)'; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(R + 12, y); ctx.stroke();
+      ctx.strokeStyle = 'rgba(124,255,203,.45)'; ctx.beginPath(); ctx.moveTo(R + 12, y); ctx.lineTo(R + 18, y); ctx.stroke();
+      ctx.fillStyle = 'rgba(154,161,192,.85)'; ctx.fillText(fmt(v, 0), R + 24, y);
+    }
+    // 先畫一層模糊當水中光暈，再畫清楚的本體
+    const paint = (blur) => {
+      for (const up of [true, false]) {
+        ctx.fillStyle = up ? `rgba(255,77,109,${blur ? 0.55 : 0.92})` : `rgba(32,227,178,${blur ? 0.55 : 0.92})`;
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.beginPath();
+        d.forEach((b, i) => {
+          if ((b.c >= b.o) !== up) return;
+          const [sx, sy] = sway(i), x = X(i) + sx;
+          ctx.rect(x - 0.6, Y(b.h) + sy, 1.2, Y(b.l) - Y(b.h));
+          const y1 = Y(Math.max(b.o, b.c)) + sy;
+          ctx.rect(x - bw / 2, y1, bw, Math.max(1.5, Y(Math.min(b.o, b.c)) - Y(Math.max(b.o, b.c))));
+        });
+        ctx.fill();
+      }
+    };
+    ctx.filter = 'blur(6px)'; paint(true); ctx.filter = 'none'; paint(false);
+    // EMA 20
+    let e = null; const ema = d.map((b) => (e = e == null ? b.c : b.c * (2 / 21) + e * (19 / 21)));
+    ctx.beginPath(); ema.forEach((v, i) => { const [sx, sy] = sway(i); i ? ctx.lineTo(X(i) + sx, Y(v) + sy) : ctx.moveTo(X(i) + sx, Y(v) + sy); });
+    ctx.strokeStyle = c(2, 0.85); ctx.lineWidth = 1.6; ctx.shadowBlur = 10; ctx.shadowColor = c(2, 0.9); ctx.stroke(); ctx.shadowBlur = 0;
+    // 越深越暗
+    const dg = ctx.createLinearGradient(0, TOP, 0, BOT); dg.addColorStop(0, 'rgba(4,22,38,0)'); dg.addColorStop(1, 'rgba(4,22,38,.35)');
+    ctx.fillStyle = dg; ctx.fillRect(L - 10, TOP - 10, R - L + 20, BOT - TOP + 20);
+    // 現價
+    const lb = d[n - 1], ly = Y(lb.c) + sway(n - 1)[1], lx = X(n - 1);
+    ctx.setLineDash([3, 5]); ctx.strokeStyle = 'rgba(124,255,203,.55)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(lx + 8, ly); ctx.lineTo(R + 18, ly); ctx.stroke(); ctx.setLineDash([]);
+    const p = (Date.now() % 2000) / 2000;
+    ctx.strokeStyle = `rgba(124,255,203,${1 - p})`; ctx.beginPath(); ctx.arc(lx, ly, 4 + p * 18, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(32,227,178,.95)'; ctx.beginPath(); ctx.roundRect(R + 20, ly - 10, 76, 20, 10); ctx.fill();
+    ctx.fillStyle = '#04120e'; ctx.font = '600 11px "JetBrains Mono"'; ctx.textAlign = 'center'; ctx.fillText(fmt(lb.c, 1), R + 58, ly + 1);
+    ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(154,161,192,.8)'; ctx.font = '11px "JetBrains Mono"';
+    ctx.fillText(`1 分 K · ${n} 分鐘 · EMA 20`, L, TOP - 14);
+  }
+  // 氣泡：從海床冒到海面
+  for (const b of bubbles) {
+    b.y -= b.s * 0.0007 * (0.7 + swell); if (b.y < 0) { b.y = 1; b.x = Math.random(); }
+    const y = HZ + 8 + b.y * (BED0 - HZ), x = b.x * w + Math.sin(T * 1.4 + b.ph) * 5;
+    ctx.strokeStyle = c(2, 0.12 + 0.3 * (1 - b.y)); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, b.r, 0, Math.PI * 2); ctx.stroke();
+  }
+}
+
+// ---- 光從海面灑下：每道光的強弱、寬窄、斜角、長度各自緩慢起伏；海面下一層粼粼焦散
+const RS = 4, rayC = document.createElement('canvas');
+const rays = Array.from({ length: 11 }, (_, i) => ({ x: (i + 0.2 + Math.random() * 0.6) / 11, w: 0.02 + Math.random() * 0.045, ph: Math.random() * 6.28, sp: 0.5 + Math.random() * 0.7 }));
+function lightRays(ctx, w, h, HZ, T) {
+  const W = Math.ceil(w / RS), H = Math.ceil(h / RS), hz = Math.round(HZ / RS);
+  if (rayC.width !== W || rayC.height !== H) { rayC.width = W; rayC.height = H; }
+  const r = rayC.getContext('2d');
+  r.clearRect(0, 0, W, H);
+  // 焦散：三組正弦干涉，取峰值當亮紋
+  const bh = Math.round(90 / RS), img = r.createImageData(W, bh), dd = img.data;
+  for (let y = 0; y < bh; y++) {
+    const fade = Math.pow(1 - y / bh, 1.6);
+    for (let x = 0; x < W; x++) {
+      const v = Math.sin(x * 0.31 + T * 1.5) + Math.sin(y * 0.8 - T * 1.15 + x * 0.11) + Math.sin(x * 0.17 - y * 0.47 + T * 0.75 + Math.sin(x * 0.05 + T * 0.3) * 2);
+      const c = Math.max(0, v - 1.1) / 1.9, a = Math.pow(c, 1.4) * fade;
+      const k = (y * W + x) * 4; dd[k] = 150; dd[k + 1] = 255; dd[k + 2] = 220; dd[k + 3] = a * 120;
+    }
+  }
+  r.putImageData(img, 0, hz);
+  r.globalCompositeOperation = 'lighter';
+  for (const ray of rays) {
+    const breathe = 0.5 + 0.5 * Math.sin(T * 0.45 * ray.sp + ray.ph);
+    const flicker = 0.75 + 0.25 * Math.sin(T * 1.9 * ray.sp + ray.ph * 3) * Math.sin(T * 0.7 + ray.ph);
+    const inten = (0.03 + 0.12 * breathe * breathe) * flicker;
+    const x0 = (ray.x + Math.sin(T * 0.04 * ray.sp + ray.ph) * 0.04) * W;
+    const ww = ray.w * W * (0.7 + 0.6 * Math.sin(T * 0.33 + ray.ph * 2) ** 2);
+    const len = (H - hz) * (0.45 + 0.4 * (0.5 + 0.5 * Math.sin(T * 0.18 * ray.sp + ray.ph * 1.7)));
+    const slant = len * (0.28 + Math.sin(T * 0.09 + ray.ph) * 0.1);
+    const g = r.createLinearGradient(0, hz, 0, hz + len);
+    g.addColorStop(0, `rgba(170,255,228,${inten})`); g.addColorStop(0.35, `rgba(120,230,215,${inten * 0.6})`); g.addColorStop(1, 'rgba(90,200,220,0)');
+    r.fillStyle = g; r.beginPath();
+    r.moveTo(x0 - ww * 0.5, hz); r.lineTo(x0 + ww * 0.5, hz); r.lineTo(x0 + ww * 1.8 + slant, hz + len); r.lineTo(x0 - ww * 0.4 + slant, hz + len); r.fill();
+  }
+  r.globalCompositeOperation = 'source-over';
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(rayC, 0, 0, w, h); ctx.restore();
+}
+
+// 空心巨型價格，裡面灌水；水位＝24H 區間位置
+const mask = document.createElement('canvas'), waterC = document.createElement('canvas');
+function bigPrice(t) {
+  if (S.price == null) return;
+  const { ctx, w, h } = Draw.fit($('big'));
+  const pal = PAL;
+  const [i, d] = fmt(S.price).split('.');
+  let fs = h * 1.02;
+  ctx.font = `700 ${fs}px Archivo`;
+  let wi = ctx.measureText(i).width; ctx.font = `700 ${fs * 0.36}px Archivo`; let wd = ctx.measureText('.' + d).width;
+  const scale = Math.min(1, (w - 20) / (wi + wd + 10));
+  fs *= scale; wi *= scale; wd *= scale;
+  const base = h * 0.86, x0 = 14, dpr = devicePixelRatio || 1;
+  mask.width = w * dpr; mask.height = h * dpr;
+  const m = mask.getContext('2d'); m.setTransform(dpr, 0, 0, dpr, 0, 0); m.clearRect(0, 0, w, h);
+  waterC.width = w * dpr; waterC.height = h * dpr;
+  const wc = waterC.getContext('2d'); wc.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const T = t / 1000, top = base - fs * 0.72, bot = base, wl = bot - (bot - top) * levelS;
+  const wave = (x, ph, amp) => wl + Math.sin(x * 0.012 + T * 1.6 + ph) * amp + Math.sin(x * 0.031 - T * 1.1 + ph) * amp * 0.4;
+  for (const [ph, a, alpha] of [[1.4, 7, 0.55], [0, 9, 1]]) {
+    wc.beginPath(); wc.moveTo(0, h);
+    for (let x = 0; x <= w; x += 8) wc.lineTo(x, wave(x, ph, a));
+    wc.lineTo(w, h); wc.closePath();
+    const g = wc.createLinearGradient(0, wl - 10, 0, bot);
+    g.addColorStop(0, `rgba(${pal[2]},${alpha})`); g.addColorStop(0.35, `rgba(${pal[0]},${alpha})`); g.addColorStop(1, `rgba(${pal[1]},${alpha})`);
+    wc.fillStyle = g; wc.fill();
+  }
+  m.fillStyle = '#000';
+  m.font = `700 ${fs}px Archivo`; m.fillText(i, x0, base);
+  m.font = `700 ${fs * 0.36}px Archivo`; m.fillText('.' + d, x0 + wi + 6, base);
+  m.globalCompositeOperation = 'source-in';
+  m.setTransform(1, 0, 0, 1, 0, 0); m.drawImage(waterC, 0, 0); m.setTransform(dpr, 0, 0, dpr, 0, 0);
+  m.globalCompositeOperation = 'source-over';
+  ctx.drawImage(mask, 0, 0, w, h);
+  ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(243,245,255,.85)';
+  ctx.font = `700 ${fs}px Archivo`; ctx.strokeText(i, x0, base);
+  ctx.font = `700 ${fs * 0.36}px Archivo`; ctx.strokeText('.' + d, x0 + wi + 6, base);
+  ctx.setLineDash([2, 5]); ctx.strokeStyle = `rgba(${pal[0]},.55)`; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x0, wl); ctx.lineTo(x0 + wi + wd + 10, wl); ctx.stroke(); ctx.setLineDash([]);
+}
+
+function note() {
+  const t = S.ticker; if (!t || S.price == null) return;
+  const lv = Math.round(level * 100), st = lv >= 80 ? '高潮位' : lv <= 20 ? '低潮位' : lv >= 55 ? '漲潮中' : lv <= 45 ? '退潮中' : '平潮';
+  $('chip').textContent = st;
+  const fl = Math.round(flowShare * 100);
+  $('note').textContent = `比特幣 ${fmt(S.price, 0)}，在 24 小時區間（${fmt(t.l, 0)} – ${fmt(t.h, 0)}）的 ${lv}% 處；近 60 秒主動買盤 ${fl}%，${fl >= 55 ? '買方推著潮水往上' : fl <= 45 ? '賣壓讓潮水回落' : '買賣兩邊勢均力敵'}。`;
+}
+
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('pct').textContent = pct(t.P); $('pct').className = 'p ' + cls(t.P);
+  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+  $('h').textContent = fmt(t.h, 0); $('l').textContent = fmt(t.l, 0);
+});
+const cards = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s) => {
+    let c = cards[s.id];
+    if (!c) {
+      const el = document.createElement('div');
+      el.className = 'st';
+      el.innerHTML = `<div class="nm">${s.name.replace(' ETF', '')}<i>${s.code}</i></div><div class="px">—</div><canvas></canvas>`;
+      $('stocks').appendChild(el);
+      c = cards[s.id] = { el, q: (x) => el.querySelector(x) };
+    }
+    if (s.price == null) return;
+    const tag = c.q('.nm i'); tag.textContent = (s.isOpen ? '● ' : '') + s.code; tag.className = s.isOpen ? 'on' : '';
+    c.q('.px').innerHTML = `${fmt(s.price, s.dec)}<em class="${cls(s.chg)}">${pct(s.pct)}</em>`;
+    Draw.spark(c.q('canvas'), s.bars, { mode: 'line', slots: s.market === 'TW' ? 54 : 78, base: s.prevClose, line: s.chg >= 0 ? '#ff4d6d' : '#20e3b2', lineWidth: 1.4,
+      baseColor: 'rgba(124,255,203,.2)', baseDash: [2, 3], glow: 6 });
+  });
+  const items = [`<span>BTC<b>$${fmt(S.price, 0)}</b></span>`, `<span>24H<b>${S.ticker ? pct(S.ticker.P) : '—'}</b></span>`, ...S.markets.map((s) => `<span>${s.code}<b>${fmt(s.price, s.dec)} ${pct(s.pct)}</b></span>`)].join('');
+  $('tape').innerHTML = items + items + items + items;
+});
+function clocks() {
+  $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str;
+  $('date').textContent = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+}
+setInterval(clocks, 1000); clocks();
+
+let lastN = 0, lastF = 0;
+function frame(t) {
+  const tk = S.ticker;
+  if (tk && S.price != null) level = Math.max(0, Math.min(1, (S.price - tk.l) / (tk.h - tk.l || 1)));
+  levelS += (level - levelS) * 0.04;
+  if (t - lastF > 33) {
+    lastF = t;
+    const now = Date.now(); let b = 0, s = 0, hi = -Infinity, lo = Infinity;
+    for (const x of S.ticks) { if (x.T < now - 60000) continue; if (x.m) s += x.q; else b += x.q; hi = Math.max(hi, x.p); lo = Math.min(lo, x.p); }
+    flowShare = b + s ? b / (b + s) : 0.5;
+    swell += (Math.min(1.5, (isFinite(hi) ? hi - lo : 0) / 60) - swell) * 0.02;
+    $('lvl').textContent = Math.round(level * 100); $('flow').textContent = Math.round(flowShare * 100) + '%';
+    sea(t); bigPrice(t);
+  }
+  if (t - lastN > 1000) { lastN = t; note(); if (S.price) document.title = fmt(S.price) + ' · BTC'; }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

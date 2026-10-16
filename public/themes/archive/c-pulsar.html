@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pulsar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #090909; --fg: #f1efe9; --mute: #6c6a65; --line: #232321; --up: #ff5b45; --down: #43d6a4; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: 'JetBrains Mono', monospace; }
+.wrap { position: relative; height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) 330px; }
+.stage { position: relative; min-width: 0; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.meta { position: absolute; left: 44px; top: 30px; font-size: 11px; letter-spacing: .24em; color: var(--mute); text-transform: uppercase; z-index: 2; }
+.meta b { color: var(--fg); font-weight: 400; }
+.price { position: absolute; left: 34px; top: 46px; z-index: 2; font-family: 'Instrument Serif', serif; font-size: min(31vh, 280px); line-height: 1; letter-spacing: -.035em; white-space: nowrap; }
+.price i { font-size: .42em; letter-spacing: -.01em; color: var(--mute); }
+.price.tick { text-shadow: 0 0 30px rgba(241, 239, 233, .35); }
+.legend { position: absolute; left: 44px; bottom: 22px; font-size: 10.5px; letter-spacing: .2em; color: var(--mute); text-transform: uppercase; z-index: 2; }
+
+.side { border-left: 1px solid var(--line); display: grid; grid-template-rows: auto 104px minmax(0, 1fr); padding: 28px 26px 18px; gap: 16px; min-height: 0; }
+.chg { font-family: 'Instrument Serif'; font-style: italic; font-size: 76px; line-height: .9; letter-spacing: -.02em; }
+.kv { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin-top: 14px; font-size: 12px; }
+.kv span { color: var(--mute); font-size: 10px; letter-spacing: .2em; display: block; }
+.tclock { margin-top: 14px; font-size: 11px; letter-spacing: .12em; color: var(--mute); }
+.tclock b { color: var(--fg); font-weight: 400; margin: 0 14px 0 6px; }
+.h4 { position: relative; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.h4 canvas { position: absolute; inset: 22px 0 6px 0; width: 100%; height: calc(100% - 28px); }
+.h4 .lb { position: absolute; top: 6px; left: 0; right: 0; display: flex; justify-content: space-between; font-size: 10px; letter-spacing: .22em; color: var(--mute); }
+.list { display: grid; grid-auto-rows: minmax(0, 1fr); min-height: 0; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) 104px; grid-template-rows: auto auto; column-gap: 12px; align-content: center; border-bottom: 1px solid var(--line); position: relative; }
+.row:last-child { border-bottom: 0; }
+.row .nm { font-family: 'Noto Sans TC'; font-size: 13px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .nm small { font-family: 'JetBrains Mono'; font-size: 10px; letter-spacing: .16em; color: var(--mute); margin-left: 8px; }
+.row .px { font-family: 'Instrument Serif'; font-size: 30px; line-height: 1.05; grid-column: 1; }
+.row .px em { font-family: 'JetBrains Mono'; font-style: normal; font-size: 11px; margin-left: 10px; }
+.row canvas { grid-column: 2; grid-row: 1 / 3; width: 104px; height: 52px; align-self: center; }
+.row .live { position: absolute; left: -14px; top: 50%; width: 5px; height: 5px; margin-top: -2px; border-radius: 50%; background: var(--fg); animation: bl 1.4s infinite; }
+@keyframes bl { 50% { opacity: .15; } }
+.u { color: var(--up); } .d { color: var(--down); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="stage">
+    <canvas id="cv"></canvas>
+    <div class="meta"><b>Pulsar</b> · BTC / USDT · each ridge is one hour of minute closes</div>
+    <div class="price" id="price">—</div>
+    <div class="legend" id="legend">—</div>
+  </section>
+  <aside class="side">
+    <div>
+      <div class="chg" id="pct">—</div>
+      <div class="kv"><div><span>24H HIGH</span><b id="h">—</b></div><div><span>24H LOW</span><b id="l">—</b></div><div><span>AMPLITUDE</span><b id="amp">—</b></div><div><span>TURNOVER</span><b id="qv">—</b></div></div>
+      <div class="tclock">TPE<b id="tpe">—</b>NYC<b id="nyc">—</b></div>
+    </div>
+    <div class="h4"><div class="lb"><span>BTC · 4H</span><span id="k4h">—</span></div><canvas id="c4h"></canvas></div>
+    <div class="list" id="list"></div>
+  </aside>
+</div>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, fmtBig, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
+Feed.start({ '1m': 960, '4h': 90 });
+const ROWS = 16;
+
+function ridges() {
+  const { ctx, w, h } = Draw.fit($('cv'));
+  const bars = S.bars['1m'];
+  if (!bars || bars.length < 60) return;
+  // 依小時分組
+  const groups = [];
+  for (const b of bars) {
+    const hr = Math.floor(b.t / 3600);
+    if (!groups.length || groups[groups.length - 1].hr !== hr) groups.push({ hr, pts: [] });
+    groups[groups.length - 1].pts.push(b);
+  }
+  const rows = groups.slice(-ROWS);
+  // 用第 92 百分位當尺度，避免單一極端小時把其他山脊壓平
+  const devs = [];
+  // 每條山脊以該小時均價為基準，兩端用正弦包絡收斂（經典脈衝星圖的輪廓）
+  const taper = (m) => Math.pow(Math.sin(Math.PI * (m + 0.5) / 60), 0.7);
+  for (const g of rows) { g.mean = g.pts.reduce((a, b) => a + b.c, 0) / g.pts.length; for (const b of g.pts) devs.push(Math.abs(b.c - g.mean)); }
+  devs.sort((a, b) => a - b);
+  const maxDev = devs[Math.floor(devs.length * 0.92)] || 1;
+  const top = h * 0.37, bottom = h - 64, spacing = (bottom - top) / (ROWS - 1), amp = spacing * 2.6;
+  const left = 70, right = w - 40;
+  rows.forEach((g, i) => {
+    const depth = i / (ROWS - 1);                 // 0 = 最遠
+    const scale = 0.74 + 0.26 * depth;
+    const cx = (left + right) / 2, half = (right - left) / 2 * scale;
+    const X = (m) => cx - half + (m / 59) * half * 2;
+    const base = top + i * spacing;
+    const lim = amp * 1.7;
+    const pts = g.pts.map((b) => { const m = new Date(b.t * 1000).getUTCMinutes(); return [X(m), base - Math.max(-lim, Math.min(lim, (b.c - g.mean) / maxDev * amp * taper(m)))]; });
+    const live = i === rows.length - 1;
+    const last = pts[pts.length - 1];
+    const trace = () => {
+      ctx.moveTo(X(0), base);
+      pts.forEach(([x, y], k) => {
+        if (!k) { ctx.lineTo(x, y); return; }
+        const [px, py] = pts[k - 1];
+        ctx.quadraticCurveTo(px, py, (px + x) / 2, (py + y) / 2);
+      });
+      ctx.lineTo(last[0], last[1]);
+      if (!live) ctx.lineTo(X(59), base);
+    };
+    // 先填底色遮住後面的山脊，再單獨描線
+    ctx.beginPath(); trace();
+    ctx.lineTo(live ? last[0] : X(59), h); ctx.lineTo(X(0), h); ctx.closePath();
+    ctx.fillStyle = '#090909'; ctx.fill();
+    ctx.beginPath(); trace();
+    ctx.lineWidth = live ? 2 : 1.3;
+    ctx.strokeStyle = `rgba(241,239,233,${live ? 1 : 0.2 + 0.65 * depth})`;
+    if (live) { ctx.shadowBlur = 16; ctx.shadowColor = 'rgba(241,239,233,.6)'; }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    // 時間刻度
+    ctx.fillStyle = `rgba(108,106,101,${0.4 + 0.6 * depth})`;
+    ctx.font = '10px "JetBrains Mono"';
+    ctx.textAlign = 'right';
+    ctx.fillText(new Date(g.hr * 3600e3).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), X(0) - 10, base + 3);
+    if (live) {
+      const pulse = (Date.now() % 1400) / 1400;
+      ctx.fillStyle = '#fff'; ctx.shadowBlur = 18; ctx.shadowColor = '#fff';
+      ctx.beginPath(); ctx.arc(last[0], last[1], 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0; ctx.strokeStyle = `rgba(255,255,255,${1 - pulse})`; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(last[0], last[1], 4 + pulse * 22, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([2, 4]); ctx.strokeStyle = 'rgba(241,239,233,.35)';
+      ctx.beginPath(); ctx.moveTo(last[0] + 8, last[1]); ctx.lineTo(right + 30, last[1]); ctx.stroke(); ctx.setLineDash([]);
+    }
+  });
+  $('legend').textContent = `${rows.length} hours · 1 ridge-height ≈ ${fmt(maxDev, 0)} USDT`;
+}
+
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s;
+  const [i, d] = s.split('.');
+  const el = $('price');
+  el.innerHTML = `${i}<i>.${d}</i>`;
+  el.classList.add('tick'); clearTimeout(drawPrice.t); drawPrice.t = setTimeout(() => el.classList.remove('tick'), 120);
+  document.title = s + ' · BTC';
+}
+
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('pct').textContent = pct(t.P); $('pct').className = 'chg ' + cls(t.P);
+  $('h').textContent = fmt(t.h); $('l').textContent = fmt(t.l);
+  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+  $('qv').textContent = '$' + fmtBig(t.q);
+});
+
+const rowsEl = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s) => {
+    let r = rowsEl[s.id];
+    if (!r) {
+      const el = document.createElement('div');
+      el.className = 'row';
+      el.innerHTML = `<div class="nm">${s.name}<small>${s.code}</small></div><div class="px">—</div><canvas></canvas>`;
+      $('list').appendChild(el);
+      r = rowsEl[s.id] = { el, q: (x) => el.querySelector(x) };
+    }
+    if (s.price == null) return;
+    r.q('.px').innerHTML = `${fmt(s.price, s.dec)}<em class="${cls(s.chg)}">${pct(s.pct)}</em>`;
+    let live = r.q('.live');
+    if (s.isOpen && !live) { live = document.createElement('i'); live.className = 'live'; r.el.appendChild(live); }
+    if (!s.isOpen && live) live.remove();
+    const g = Draw.spark(r.q('canvas'), s.bars, { mode: 'area', slots: s.market === 'TW' ? 54 : 78, base: s.prevClose, line: '#f1efe9', lineWidth: 1.2,
+      fill: 'rgba(241,239,233,.08)', baseColor: 'rgba(241,239,233,.25)', baseDash: [1, 3], dot: s.chg >= 0 ? '#ff5b45' : '#43d6a4', dotR: 2.5 });
+  });
+});
+
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; }
+setInterval(clocks, 1000); clocks();
+
+let last = 0;
+function frame(t) {
+  drawPrice();
+  if (t - last > 100) {
+    last = t;
+    ridges();
+    const r = Draw.candles($('c4h'), S.bars['4h'], { mode: 'area', count: 90, pad: { t: 4, r: 4, b: 2, l: 0 }, rightGap: 0, line: '#f1efe9', lineWidth: 1,
+      areaTop: 'rgba(241,239,233,.14)', areaBottom: 'rgba(241,239,233,0)' });
+    if (r) {
+      const b = S.bars['4h'], lb = b[b.length - 1];
+      const v = (lb.c - lb.o) / lb.o * 100;
+      $('k4h').textContent = 'THIS BAR ' + pct(v); $('k4h').className = cls(v);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

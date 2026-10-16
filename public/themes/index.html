@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Five Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;500;600&family=Geist+Mono&family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #111; --fg: #eee; --mute: #888; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: 'Geist', 'Noto Sans TC', sans-serif; padding: 28px 32px 40px; }
+h1 { font-weight: 300; font-size: 30px; margin: 0 0 4px; letter-spacing: -.01em; }
+p.sub { color: var(--mute); margin: 0 0 24px; font-size: 14px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); gap: 26px; }
+a.card { color: inherit; text-decoration: none; display: block; }
+.frame { position: relative; aspect-ratio: 1440 / 900; overflow: hidden; border-radius: 6px; background: #000; outline: 1px solid #2a2a2a; transition: outline-color .2s; }
+a.card:hover .frame { outline-color: #888; }
+.frame iframe { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; border: 0; transform-origin: 0 0; pointer-events: none; }
+.meta { display: flex; gap: 14px; align-items: baseline; margin-top: 12px; }
+.meta b { font-family: 'Geist Mono'; font-weight: 400; color: var(--mute); font-size: 13px; }
+.meta h2 { margin: 0; font-size: 19px; font-weight: 600; }
+.meta span { color: var(--mute); font-size: 14px; }
+.desc { color: #bbb; font-size: 14px; line-height: 1.6; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>Market Ticker — 主題總覽</h1>
+<p class="sub">每個都是即時資料。點擊縮圖單獨開啟；日常使用請開首頁，用 1–8 或 ← → 切換。</p>
+<div class="grid" id="grid"></div>
+<script>
+const C = [
+  ['1', 'b-signal.html', 'Signal', '點陣', 'BTC 橘 × 暖灰 LED 點陣；橘色圓盤隨 24H 區間位置升降。'],
+  ['2', 'd-orbit.html', 'Orbit', '軌道', '外環 30 天 4H、內環 1 分 K、秒針掃描。'],
+  ['3', 'd-daybreak.html', 'Daybreak', '破曉', '破曉日報語言：紙白墨黑號外紅、巨型收盤價疊紅線。'],
+  ['4', 'm-mission.html', 'Mission', '任務', '鼠尾草綠＋橘的任務控制台：貨櫃牌、交易時段甘特圖、螺栓窗框 K 線。'],
+  ['5', 'n-glyph.html', 'Glyph', '符號', '黑底螢光萊姆：K 線由 ◎ ▢ ✕ ＋ 符號矩陣排出，爆量分鐘是實心色塊。'],
+  ['6', 'o-glow.html', 'Glow', '發光', '深色便當格：萊姆價格卡、發光走勢、4H 收盤倒數、藍光成交額。'],
+  ['7', 'p-wave.html', 'Wave', '波形', '點陣球體隨每 5 秒漲跌鼓起凹陷；彩虹波峰是每 2 秒的漲跌，持續往左流。'],
+  ['8', 'q-vital.html', 'Vital', '脈動', '健康 App 語言：24H 區間儀表、心電圖 1 分 K、週報 4H、個股活動圓環。'],
+];
+const grid = document.getElementById('grid');
+for (const [k, file, name, zh, desc] of C) {
+  const a = document.createElement('a');
+  a.className = 'card'; a.href = file; a.target = '_blank';
+  a.innerHTML = `<div class="frame"><iframe src="${file}" loading="lazy" tabindex="-1"></iframe></div>
+    <div class="meta"><b>${k}</b><h2>${name}</h2><span>${zh}</span></div><div class="desc">${desc}</div>`;
+  grid.appendChild(a);
+}
+const fit = () => document.querySelectorAll('.frame').forEach((f) => { f.querySelector('iframe').style.transform = `scale(${f.clientWidth / 1440})`; });
+addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Departure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@500;600&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #0d0d0e; --tile: #1c1c1f; --tile2: #151517; --ink: #f2f0e8; --mute: #6f6e69; --amber: #ffc21a; --up: #ff4d3d; --down: #27c784; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: radial-gradient(ellipse at 50% 0%, #1a1a1c 0%, var(--bg) 60%); color: var(--ink); overflow: hidden; font-family: 'Barlow', 'Noto Sans TC', sans-serif; }
+.wrap { height: 100vh; display: grid; grid-template-rows: 46px 196px 56px minmax(0, 1fr) 318px; gap: 12px; padding: 18px 30px 22px; }
+
+/* ---------- 翻牌 ---------- */
+.flaps { display: flex; gap: var(--g, 4px); }
+.fl { position: relative; width: var(--w); height: var(--h); perspective: calc(var(--h) * 4); font-family: 'Barlow Condensed', 'Noto Sans TC', sans-serif; font-weight: 600; font-size: var(--fs); color: var(--fc, var(--ink)); }
+.fl.n { width: var(--wn); }
+.fl > div { position: absolute; left: 0; right: 0; height: 50%; overflow: hidden; background: var(--bgc, var(--tile)); backface-visibility: hidden; }
+.fl .t, .fl .lt { top: 0; border-radius: var(--r, 4px) var(--r, 4px) 0 0; background: linear-gradient(180deg, color-mix(in srgb, var(--bgc, var(--tile)) 88%, #fff), var(--bgc, var(--tile))); }
+.fl .b, .fl .lb { bottom: 0; border-radius: 0 0 var(--r, 4px) var(--r, 4px); background: linear-gradient(180deg, color-mix(in srgb, var(--bgc, var(--tile)) 85%, #000), color-mix(in srgb, var(--bgc, var(--tile)) 70%, #000)); border-top: 1px solid rgba(0, 0, 0, .75); }
+.fl span { position: absolute; left: 0; right: 0; height: 200%; line-height: var(--h); text-align: center; }
+.fl .t span, .fl .lt span { top: 0; } .fl .b span, .fl .lb span { bottom: 0; }
+.fl .lt { transform-origin: 50% 100%; z-index: 2; display: none; }
+.fl .lb { transform-origin: 50% 0; z-index: 2; display: none; transform: rotateX(90deg); }
+.fl.go .lt { display: block; animation: ft var(--d, .16s) ease-in forwards; }
+.fl.go .lb { display: block; animation: fb var(--d, .16s) ease-out var(--d, .16s) forwards; }
+@keyframes ft { to { transform: rotateX(-90deg); filter: brightness(.6); } }
+@keyframes fb { from { transform: rotateX(90deg); filter: brightness(1.5); } to { transform: rotateX(0); } }
+.fl::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(0, 0, 0, .9); z-index: 3; }
+.fl::before { content: ''; position: absolute; left: -1px; top: 47%; width: 3px; height: 6%; background: #050505; border-radius: 1px; z-index: 4; box-shadow: calc(var(--w) - 1px) 0 0 #050505; }
+
+/* ---------- 版面 ---------- */
+.head { display: flex; align-items: center; gap: 22px; border-bottom: 1px solid #262628; }
+.head .ttl { font-family: 'Barlow Condensed'; font-weight: 600; font-size: 22px; letter-spacing: .14em; color: var(--amber); display: flex; align-items: center; gap: 12px; }
+.head .ttl i { width: 26px; height: 26px; border-radius: 4px; background: var(--amber); color: #111; font-style: normal; display: grid; place-items: center; font-size: 16px; }
+.head .sub { font-size: 12px; letter-spacing: .24em; color: var(--mute); text-transform: uppercase; }
+.head .clk { margin-left: auto; display: flex; gap: 18px; align-items: center; font-size: 11px; letter-spacing: .2em; color: var(--mute); }
+.head .clk .flaps { --w: 19px; --wn: 9px; --h: 28px; --fs: 22px; --g: 2px; --r: 2px; }
+
+.hero { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 18px; align-items: center; }
+.hero .tag { display: flex; flex-direction: column; gap: 6px; }
+.hero .tag .flaps { --w: 40px; --wn: 20px; --h: 56px; --fs: 44px; --fc: #111; --bgc: var(--amber); }
+.hero .tag small { font-size: 12px; letter-spacing: .26em; color: var(--mute); }
+.hero .price { --w: 128px; --wn: 52px; --h: 190px; --fs: 172px; --g: 6px; --r: 6px; --d: .13s; }
+
+.info { display: flex; gap: 26px; align-items: center; }
+.info label { font-size: 11px; letter-spacing: .26em; color: var(--mute); margin-right: 10px; }
+.info .blk { display: flex; align-items: center; }
+.info .flaps { --w: 28px; --wn: 13px; --h: 42px; --fs: 34px; --g: 3px; --r: 3px; }
+
+.charts { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: 14px; min-height: 0; }
+.panel { position: relative; background: linear-gradient(180deg, #121214, #0c0c0d); border: 1px solid #232325; border-radius: 6px; box-shadow: inset 0 1px 0 rgba(255,255,255,.04); min-height: 0; }
+.panel .lbl { position: absolute; left: 14px; top: 10px; font-size: 11px; letter-spacing: .26em; color: var(--amber); z-index: 2; }
+.panel .lbl b { color: var(--mute); font-weight: 500; margin-left: 10px; letter-spacing: .12em; }
+.panel canvas { position: absolute; left: 8px; right: 8px; top: 32px; bottom: 8px; width: calc(100% - 16px); height: calc(100% - 40px); }
+
+.board { display: grid; grid-template-rows: 22px repeat(6, minmax(0, 1fr)); gap: 6px; }
+.row { display: grid; grid-template-columns: 210px 190px 330px 260px 200px minmax(0, 1fr); align-items: center; gap: 12px; }
+.row.hd { font-size: 11px; letter-spacing: .26em; color: var(--amber); border-bottom: 1px solid #262628; }
+.row .flaps { --w: 26px; --wn: 12px; --h: 40px; --fs: 31px; --g: 3px; --r: 3px; }
+.row .nm .flaps { --w: 34px; --fs: 24px; }
+.row .pc .flaps { --fc: #fff; }
+.row .st .flaps { --fs: 24px; --w: 22px; }
+.u { --bgc: #5a1a14; --fc: #ffd9d4; } .d { --bgc: #0f3d2a; --fc: #d2ffe9; }
+.open { --fc: var(--amber); }
+.cu { color: var(--up); } .cd { color: var(--down); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="ttl"><i>₿</i>MARKETS · LIVE BOARD</div>
+    <div class="sub">Binance · TWSE · NYSE / NASDAQ</div>
+    <div class="clk">TPE <div class="flaps" id="tpe"></div> NYC <div class="flaps" id="nyc"></div></div>
+  </div>
+  <div class="hero">
+    <div class="tag"><div class="flaps" id="sym"></div><small>BITCOIN / USDT</small></div>
+    <div class="flaps price" id="price"></div>
+  </div>
+  <div class="info">
+    <div class="blk"><label>24H</label><div class="flaps" id="pct"></div></div>
+    <div class="blk"><label>HIGH</label><div class="flaps" id="hi"></div></div>
+    <div class="blk"><label>LOW</label><div class="flaps" id="lo"></div></div>
+    <div class="blk"><label>AMP</label><div class="flaps" id="amp"></div></div>
+  </div>
+  <div class="charts">
+    <div class="panel"><div class="lbl">BTC · 1 MIN<b id="o1">—</b></div><canvas id="c1m"></canvas></div>
+    <div class="panel"><div class="lbl">BTC · 4 HOUR<b id="o4">—</b></div><canvas id="c4h"></canvas></div>
+  </div>
+  <div class="board" id="board">
+    <div class="row hd"><span>市場 MARKET</span><span>代號 CODE</span><span>價格 PRICE</span><span>漲跌 CHANGE</span><span>振幅 RANGE</span><span>狀態 STATUS</span></div>
+  </div>
+</div>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const UP = '#ff4d3d', DOWN = '#27c784';
+Feed.start({ '1m': 120, '4h': 90 });
+
+// 翻牌元件：只翻有變動的那一格；翻到一半又變就排隊
+const NARROW = new Set([',', '.', ':', ' ', '%']);
+function makeTile(ch) {
+  const el = document.createElement('div');
+  el.className = 'fl' + (NARROW.has(ch) ? ' n' : '');
+  el.innerHTML = `<div class="t"><span>${ch}</span></div><div class="b"><span>${ch}</span></div><div class="lt"><span>${ch}</span></div><div class="lb"><span>${ch}</span></div>`;
+  el._ch = ch; el._busy = false; el._want = ch;
+  return el;
+}
+function flip(el, ch) {
+  el._want = ch;
+  if (el._busy || el._ch === ch) return;
+  const from = el._ch;
+  el._busy = true;
+  const [t, b, lt, lb] = el.querySelectorAll('span');
+  t.textContent = ch; b.textContent = from; lt.textContent = from; lb.textContent = ch;
+  el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
+  const dur = (parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0.16) * 2000;
+  setTimeout(() => {
+    b.textContent = ch; el._ch = ch; el.classList.remove('go'); el._busy = false;
+    if (el._want !== ch) flip(el, el._want);
+  }, dur + 20);
+}
+function setFlaps(box, str) {
+  const chars = [...str];
+  if (box.children.length !== chars.length || chars.some((c, i) => NARROW.has(c) !== box.children[i].classList.contains('n'))) {
+    box.innerHTML = ''; chars.forEach((c) => box.appendChild(makeTile(c))); return;
+  }
+  chars.forEach((c, i) => flip(box.children[i], c));
+}
+const pad = (s, n) => s.padStart(n, ' ');
+
+setFlaps($('sym'), 'BTC');
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s; setFlaps($('price'), s);
+  document.title = s + ' · BTC';
+}
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  const p = $('pct'); setFlaps(p, pad(pct(t.P).replace('−', '-'), 7)); p.className = 'flaps ' + (t.P >= 0 ? 'u' : 'd');
+  setFlaps($('hi'), fmt(t.h, 0)); setFlaps($('lo'), fmt(t.l, 0));
+  setFlaps($('amp'), ((t.h - t.l) / t.o * 100).toFixed(2) + '%');
+});
+
+const rows = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s) => {
+    let r = rows[s.id];
+    if (!r) {
+      const el = document.createElement('div');
+      el.className = 'row';
+      el.innerHTML = `<div class="nm"><div class="flaps"></div></div><div class="cd"><div class="flaps"></div></div><div class="px"><div class="flaps"></div></div><div class="pc"><div class="flaps"></div></div><div class="am"><div class="flaps"></div></div><div class="st"><div class="flaps"></div></div>`;
+      $('board').appendChild(el);
+      r = rows[s.id] = { el, q: (x) => el.querySelector(x + ' .flaps') };
+      setFlaps(r.q('.nm'), ({ TAIEX: '加權指數', '0050': '台灣50', SPY: '標普500', QQQ: '納指100' })[s.id] || s.name);
+      setFlaps(r.q('.cd'), s.code.padEnd(5, ' '));
+    }
+    if (s.price == null) return;
+    setFlaps(r.q('.px'), pad(fmt(s.price, s.dec), 9));
+    const pc = r.q('.pc'); setFlaps(pc, pad(pct(s.pct).replace('−', '-'), 7)); pc.className = 'flaps ' + (s.chg >= 0 ? 'u' : 'd');
+    setFlaps(r.q('.am'), pad(s.amp.toFixed(2) + '%', 6));
+    const st = r.q('.st'); setFlaps(st, s.isOpen ? 'OPEN  ' : 'CLOSED'); st.className = 'flaps' + (s.isOpen ? ' open' : '');
+  });
+});
+
+function clocks() { setFlaps($('tpe'), Feed.tzNow('Asia/Taipei').str); setFlaps($('nyc'), Feed.tzNow('America/New_York').str); }
+setInterval(clocks, 1000); clocks();
+
+function charts() {
+  const opt = { up: UP, down: DOWN, body: 0.62, grid: { color: 'rgba(242,240,232,.06)', rows: 4, cols: 8 },
+    axis: { font: '500 12px "Barlow Condensed"', color: '#6f6e69', ticks: 4, fmt: (v) => fmt(v, 0) } };
+  const r = Draw.candles($('c1m'), S.bars['1m'], { ...opt, count: 120, pad: { t: 8, r: 64, b: 8, l: 6 }, volume: { up: 'rgba(255,77,61,.22)', down: 'rgba(39,199,132,.2)', h: 0.14 },
+    ema: [{ n: 20, color: 'rgba(255,194,26,.75)', width: 1.2 }], lastLine: { color: 'rgba(255,194,26,.7)', dash: [3, 4], full: true } });
+  if (r) {
+    const ctx = $('c1m').getContext('2d');
+    ctx.fillStyle = '#ffc21a'; ctx.fillRect(r.w - 62, r.last.y - 10, 60, 20);
+    ctx.fillStyle = '#111'; ctx.font = '600 13px "Barlow Condensed"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(fmt(r.last.c, 1), r.w - 32, r.last.y + 1);
+    const b = S.bars['1m'][S.bars['1m'].length - 1];
+    $('o1').textContent = `O ${fmt(b.o)}  H ${fmt(b.h)}  L ${fmt(b.l)}  C ${fmt(b.c)}  · EMA20`;
+  }
+  const r4 = Draw.candles($('c4h'), S.bars['4h'], { ...opt, count: 90, pad: { t: 8, r: 54, b: 8, l: 4 }, ema: [{ n: 20, color: 'rgba(255,194,26,.75)', width: 1.2 }] });
+  if (r4) { const b = S.bars['4h'], lb = b[b.length - 1]; $('o4').textContent = `THIS BAR ${pct((lb.c - lb.o) / lb.o * 100)}`; }
+}
+
+let last = 0;
+function frame(t) { drawPrice(); if (t - last > 250) { last = t; charts(); } requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

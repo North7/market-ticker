@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monolith</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@500;900&display=swap" rel="stylesheet">
+<style>
+:root { --ink: #0a0a0a; --bone: #efebe2; --mute: #7d7970; --rule: #262523; --sig: #ff4a1c; --up: #ff4a1c; --down: #3ddc97; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--ink); color: var(--bone); overflow: hidden; font-family: 'IBM Plex Mono', monospace; }
+.wrap { height: 100vh; display: grid; grid-template-rows: 38px minmax(0, 1fr) 150px 228px 5px; }
+.top { display: flex; justify-content: space-between; align-items: center; padding: 0 26px; border-bottom: 1px solid var(--rule);
+  font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--mute); }
+.top b { color: var(--bone); font-weight: 500; }
+.top .sig { color: var(--sig); }
+
+.hero { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 310px; border-bottom: 1px solid var(--rule); min-height: 0; }
+.stage { position: relative; min-width: 0; overflow: hidden; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.eyebrow { position: absolute; top: 18px; left: 26px; z-index: 3; font-size: 10.5px; letter-spacing: .2em; color: var(--mute); text-transform: uppercase; }
+.eyebrow i { display: inline-block; width: 7px; height: 7px; background: var(--sig); margin-right: 10px; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.price { position: absolute; left: 18px; bottom: 6px; z-index: 2; display: flex; align-items: flex-end; white-space: nowrap; font-family: 'Anton', sans-serif; line-height: .78; }
+.price .int { font-size: min(39vh, 350px); color: #fff; mix-blend-mode: difference; letter-spacing: -.005em; }
+.price .dec { font-size: min(12vh, 110px); color: var(--sig); margin: 0 0 .1em .08em; }
+.tickbar { position: absolute; left: 26px; right: 26px; bottom: 0; height: 3px; z-index: 3; transform-origin: left; transform: scaleX(0); }
+.tickbar.go { animation: bar .6s cubic-bezier(.2, .9, .2, 1) forwards; }
+@keyframes bar { from { transform: scaleX(0); opacity: 1; } 70% { transform: scaleX(1); opacity: 1; } to { transform: scaleX(1); opacity: 0; } }
+
+.side { border-left: 1px solid var(--rule); padding: 18px 24px; display: flex; flex-direction: column; min-height: 0; position: relative; overflow: hidden; }
+.side .lbl { font-size: 10.5px; letter-spacing: .2em; color: var(--mute); text-transform: uppercase; }
+.side .pct { font-family: 'Anton', sans-serif; font-size: 92px; line-height: .95; margin-top: 6px; }
+.side .abs { font-size: 15px; margin-top: 4px; }
+.kv { margin-top: 18px; border-top: 1px solid var(--rule); }
+.kv div { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 13px; }
+.kv span { color: var(--mute); letter-spacing: .15em; font-size: 10.5px; text-transform: uppercase; }
+.trades { margin-top: 14px; font-size: 11px; line-height: 1.75; color: var(--mute); flex: 1; overflow: hidden; }
+.trades div { display: flex; justify-content: space-between; }
+.trades div b { font-weight: 500; }
+.vert { position: absolute; right: -36px; bottom: 30px; transform: rotate(-90deg); transform-origin: right bottom; font-family: 'Anton'; font-size: 64px; color: transparent;
+  -webkit-text-stroke: 1px #2f2e2b; letter-spacing: .04em; pointer-events: none; }
+
+.strip { position: relative; border-bottom: 1px solid var(--rule); }
+.strip canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.strip .big { position: absolute; left: 22px; top: 8px; font-family: 'Anton'; font-size: 128px; line-height: 1; color: transparent; -webkit-text-stroke: 1px #4a4844; pointer-events: none; }
+.strip .cap { position: absolute; right: 26px; top: 12px; font-size: 10.5px; letter-spacing: .2em; color: var(--mute); text-transform: uppercase; }
+
+.stocks { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.col { border-right: 1px solid var(--rule); padding: 14px 18px 12px; display: grid; grid-template-rows: auto auto auto auto minmax(0, 1fr) auto; min-width: 0; position: relative; }
+.col:last-child { border-right: 0; }
+.col .no { display: flex; justify-content: space-between; font-size: 10.5px; letter-spacing: .18em; color: var(--mute); }
+.col .no b { color: var(--sig); font-weight: 600; }
+.col .no .open { color: var(--down); }
+.col .nm { font-family: 'Noto Sans TC'; font-weight: 900; font-size: 19px; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.col .nm small { font-family: 'IBM Plex Mono'; font-weight: 500; font-size: 11px; color: var(--mute); margin-left: 8px; letter-spacing: .1em; }
+.col .px { font-family: 'Anton'; font-size: 50px; line-height: 1.05; margin-top: 2px; letter-spacing: .005em; }
+.col .ch { font-size: 13px; font-weight: 600; }
+.col .ch span { color: var(--mute); font-weight: 400; margin-left: 8px; }
+.col canvas { width: 100%; height: 100%; min-height: 0; margin-top: 6px; }
+.col .rg { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; font-size: 10.5px; color: var(--mute); margin-top: 6px; letter-spacing: .1em; }
+.col .rg .bar { position: relative; height: 1px; background: #3a3936; }
+.col .rg .bar i { position: absolute; top: -4px; width: 2px; height: 9px; background: var(--bone); }
+.col .rg .bar em { position: absolute; top: -2px; height: 5px; background: var(--sig); }
+.col.flash::after { content: ''; position: absolute; inset: 0; background: var(--fc); opacity: 0; animation: fl .9s ease-out; pointer-events: none; }
+@keyframes fl { from { opacity: .16; } }
+
+.minute { position: relative; background: #151515; }
+.minute i { position: absolute; inset: 0 auto 0 0; background: var(--sig); width: 0; }
+.u { color: var(--up); } .d { color: var(--down); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span><b>N°001</b> — Bitcoin / Tether — <span class="sig">Live</span></span>
+    <span>Monolith · Market Edition</span>
+    <span>TPE <b id="tpe">--</b> &nbsp; NYC <b id="nyc">--</b> &nbsp; UTC <b id="utc">--</b></span>
+  </div>
+
+  <section class="hero">
+    <div class="stage">
+      <canvas id="c1m"></canvas>
+      <div class="eyebrow"><i></i>BTC/USDT · Last trade · 1-minute field</div>
+      <div class="price"><span class="int" id="int">--</span><span class="dec" id="dec"></span></div>
+      <div class="tickbar" id="tickbar"></div>
+    </div>
+    <div class="side">
+      <div class="lbl">24 hour change</div>
+      <div class="pct" id="pct">--</div>
+      <div class="abs" id="abs">--</div>
+      <div class="kv">
+        <div><span>High</span><b id="h">--</b></div>
+        <div><span>Low</span><b id="l">--</b></div>
+        <div><span>Amplitude</span><b id="amp">--</b></div>
+        <div><span>Turnover</span><b id="qv">--</b></div>
+      </div>
+      <div class="trades" id="trades"></div>
+      <div class="vert">BITCOIN</div>
+    </div>
+  </section>
+
+  <section class="strip">
+    <canvas id="c4h"></canvas>
+    <div class="big">4H</div>
+    <div class="cap">BTC · Four-hour structure · 120 periods</div>
+  </section>
+
+  <section class="stocks" id="stocks"></section>
+  <div class="minute"><i id="minute"></i></div>
+</div>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, fmtBig, pct } = Feed;
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const UP = css('--up'), DOWN = css('--down'), BONE = css('--bone');
+const $ = (id) => document.getElementById(id);
+const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
+const SLOTS = { TW: 54, US: 78 };
+Feed.start({ '1m': 90, '4h': 120 });
+
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s;
+  const [i, d] = s.split('.');
+  $('int').textContent = i;
+  $('dec').textContent = '.' + d;
+  const tb = $('tickbar');
+  tb.style.background = S.dir > 0 ? UP : DOWN;
+  tb.classList.remove('go'); void tb.offsetWidth; tb.classList.add('go');
+  document.title = s + ' · BTC';
+}
+
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('pct').textContent = pct(t.P); $('pct').className = 'pct ' + cls(t.P);
+  $('abs').textContent = `${t.p > 0 ? '+' : ''}${fmt(t.p)} USDT`; $('abs').className = 'abs ' + cls(t.p);
+  $('h').textContent = fmt(t.h); $('l').textContent = fmt(t.l);
+  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+  $('qv').textContent = '$' + fmtBig(t.q);
+});
+
+let lastTradeDraw = 0;
+function drawTrades() {
+  $('trades').innerHTML = S.trades.slice(0, 9).map((t) =>
+    `<div><span>${new Date(t.T).toLocaleTimeString('en-GB')}</span><b class="${t.m ? 'd' : 'u'}">${fmt(t.p)}</b><span>${t.q.toFixed(4)}</span></div>`).join('');
+}
+
+const cols = {};
+function buildCol(s, i) {
+  const el = document.createElement('div');
+  el.className = 'col';
+  el.innerHTML = `<div class="no"><b>0${i + 1}</b><span class="st">${s.market === 'TW' ? 'TWSE' : 'NYSE'}</span></div>
+    <div class="nm">${s.name}<small>${s.code}</small></div>
+    <div class="px">--</div><div class="ch">--</div><canvas></canvas>
+    <div class="rg"><div class="bar"><em></em><i></i></div><span class="amp">AMP --</span></div>`;
+  $('stocks').appendChild(el);
+  return { el, last: null, q: (s) => el.querySelector(s) };
+}
+Feed.on('markets', () => {
+  S.markets.forEach((s, i) => {
+    const c = cols[s.id] || (cols[s.id] = buildCol(s, i));
+    if (s.price == null) return;
+    if (c.last != null && c.last !== s.price) {
+      c.el.style.setProperty('--fc', s.price > c.last ? UP : DOWN);
+      c.el.classList.remove('flash'); void c.el.offsetWidth; c.el.classList.add('flash');
+    }
+    c.last = s.price;
+    c.q('.st').innerHTML = s.isOpen ? '<span class="open">● OPEN</span>' : (s.market === 'TW' ? 'TWSE' : 'NYSE') + ' · CLOSED';
+    c.q('.px').textContent = fmt(s.price, s.dec);
+    c.q('.px').className = 'px ' + cls(s.chg);
+    c.q('.ch').innerHTML = `<b class="${cls(s.chg)}">${pct(s.pct)}</b><span>${s.chg > 0 ? '+' : ''}${fmt(s.chg, s.dec)}</span>`;
+    c.q('.amp').textContent = `AMP ${s.amp.toFixed(2)}%`;
+    const span = s.rangeHi - s.rangeLo || 1;
+    const p0 = ((s.prevClose ?? s.price) - s.rangeLo) / span * 100;
+    const em = c.q('.bar em');
+    em.style.left = Math.min(p0, s.pos * 100) + '%'; em.style.width = Math.abs(s.pos * 100 - p0) + '%';
+    em.style.background = s.chg >= 0 ? UP : DOWN;
+    c.q('.bar i').style.left = `calc(${s.pos * 100}% - 1px)`;
+    Draw.spark(c.q('canvas'), s.bars, { mode: 'area', slots: SLOTS[s.market], base: s.prevClose, line: s.chg >= 0 ? UP : DOWN,
+      fill: s.chg >= 0 ? 'rgba(255,74,28,.12)' : 'rgba(61,220,151,.12)', lineWidth: 1.5, baseColor: 'rgba(239,235,226,.35)', dot: BONE });
+  });
+});
+
+function clocks() {
+  $('tpe').textContent = Feed.tzNow('Asia/Taipei').str;
+  $('nyc').textContent = Feed.tzNow('America/New_York').str;
+  $('utc').textContent = Feed.tzNow('UTC').str;
+}
+setInterval(clocks, 1000); clocks();
+
+let lastChart = 0;
+function frame(t) {
+  drawPrice();
+  if (t - lastChart > 200) {
+    lastChart = t;
+    Draw.candles($('c1m'), S.bars['1m'], { count: 90, pad: { t: 70, r: 14, b: 20, l: 14 }, up: UP, down: BONE, hollowDown: true, hollowFill: '#0a0a0a', body: 0.58,
+      grid: { color: '#1b1b1a', rows: 6, cols: 12 }, lastLine: { color: 'rgba(255,74,28,.7)', dash: [2, 4], full: true } });
+    Draw.candles($('c4h'), S.bars['4h'], { count: 120, pad: { t: 18, r: 16, b: 10, l: 210 }, up: UP, down: '#8d897f', body: 0.55,
+      grid: { color: '#1b1b1a', rows: 3 }, ema: [{ n: 25, color: 'rgba(239,235,226,.5)', dash: [1, 3] }] });
+    if (t - lastTradeDraw > 400) { lastTradeDraw = t; drawTrades(); }
+    $('minute').style.width = (new Date().getSeconds() + new Date().getMilliseconds() / 1000) / 60 * 100 + '%';
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

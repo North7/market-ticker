@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans+Condensed:wght@300;400;500&family=Noto+Sans+TC:wght@500&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #050505; --amb: #ffb000; --amb2: #ffcf66; --fg: #f0ece2; --mute: #77736a; --line: #1f1d1a; --hl: #11100d; --up: #ff5d4a; --down: #35d39a; --blue: #4ea1ff; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: 'IBM Plex Mono', 'Noto Sans TC', monospace; font-size: 12.5px; }
+.wrap { height: 100vh; display: grid; grid-template-rows: 30px minmax(0, 1fr) 254px 26px; }
+.cmd { display: flex; align-items: center; gap: 16px; padding: 0 16px; background: #0d0c0a; border-bottom: 1px solid var(--line); }
+.cmd .in { color: var(--amb); font-weight: 600; }
+.cmd .in::after { content: '▌'; margin-left: 4px; animation: bl 1s steps(2) infinite; }
+@keyframes bl { 50% { opacity: 0; } }
+.cmd .t { color: var(--mute); }
+.cmd .t b { color: var(--fg); font-weight: 500; }
+.cmd .sp { margin-left: auto; }
+.cmd .live { color: var(--down); }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 388px; min-height: 0; }
+.left { display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; border-right: 1px solid var(--line); }
+.quote { padding: 14px 20px 8px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; border-bottom: 1px solid var(--line); }
+.quote .id { color: var(--amb); font-weight: 600; letter-spacing: .04em; font-size: 13px; }
+.quote .id span { color: var(--mute); font-weight: 400; margin-left: 10px; }
+.big { font-family: 'IBM Plex Sans Condensed', sans-serif; font-weight: 300; font-size: min(20vh, 176px); line-height: .95; letter-spacing: -.02em; color: var(--amb2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.big small { font-size: .4em; color: var(--amb); }
+.big.tu { animation: tu .6s ease-out; } .big.td { animation: td .6s ease-out; }
+@keyframes tu { from { color: var(--up); } } @keyframes td { from { color: var(--down); } }
+.chg { text-align: right; padding-bottom: 14px; }
+.chg .p { font-family: 'IBM Plex Sans Condensed'; font-size: 44px; font-weight: 400; line-height: 1; }
+.chg .a { font-size: 14px; margin-top: 6px; }
+.chart { position: relative; min-height: 0; }
+.chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.chart .lb { position: absolute; left: 20px; top: 8px; color: var(--mute); z-index: 2; }
+.chart .lb b { color: var(--amb); font-weight: 500; margin-right: 12px; }
+.right { display: grid; grid-template-rows: auto minmax(0, 1fr) 150px; min-height: 0; }
+.sec { border-bottom: 1px solid var(--line); }
+.sec h4 { margin: 0; padding: 6px 14px; font-weight: 500; font-size: 11px; letter-spacing: .14em; color: #0a0a0a; background: var(--amb); display: flex; justify-content: space-between; }
+.kv { display: grid; grid-template-columns: 1fr 1fr; }
+.kv div { display: flex; justify-content: space-between; padding: 5px 14px; border-bottom: 1px solid var(--line); }
+.kv div:nth-child(odd) { border-right: 1px solid var(--line); }
+.kv span { color: var(--mute); }
+.tape { overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+.tape .rows { flex: 1; overflow: hidden; }
+.tape .r { display: grid; grid-template-columns: 74px 1fr 80px 18px; gap: 8px; padding: 2px 14px; font-size: 12px; animation: nr .5s ease-out; }
+.tape .r .q { text-align: right; color: var(--mute); }
+.tape .r.big2 { background: rgba(255, 176, 0, .1); }
+.tape .r.big2 .q { color: var(--amb); }
+@keyframes nr { from { background: rgba(255, 176, 0, .25); } }
+.h4 { position: relative; }
+.h4 canvas { position: absolute; left: 0; right: 0; top: 26px; bottom: 0; width: 100%; height: calc(100% - 26px); }
+.mon { border-top: 1px solid var(--amb); display: grid; grid-template-rows: 26px repeat(6, minmax(0, 1fr)); }
+.mon .tr { display: grid; grid-template-columns: 120px 150px 150px 110px 100px 120px 120px 220px minmax(0, 1fr); align-items: center; padding: 0 16px; border-bottom: 1px solid var(--line); gap: 10px; }
+.mon .tr.hd { color: #0a0a0a; background: var(--amb); font-size: 11px; letter-spacing: .1em; font-weight: 500; }
+.mon .tr:not(.hd):nth-child(odd) { background: var(--hl); }
+.mon .tk { color: var(--amb); font-weight: 600; }
+.mon .tk i { font-style: normal; color: var(--down); margin-left: 6px; font-size: 10px; }
+.mon .nm { font-family: 'Noto Sans TC'; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mon .n { text-align: right; font-variant-numeric: tabular-nums; }
+.mon .last { font-size: 15px; font-weight: 500; }
+.mon .rb { position: relative; height: 4px; background: #24211c; }
+.mon .rb em { position: absolute; top: 0; bottom: 0; }
+.mon .rb i { position: absolute; top: -4px; width: 2px; height: 12px; background: var(--fg); }
+.mon canvas { width: 100%; height: 30px; }
+.fkeys { display: flex; background: #0d0c0a; border-top: 1px solid var(--line); }
+.fkeys span { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--mute); border-right: 1px solid var(--line); font-size: 11px; }
+.fkeys span b { color: #0a0a0a; background: var(--amb); padding: 0 5px; font-weight: 600; }
+.u { color: var(--up); } .d { color: var(--down); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="cmd"><span class="in">XBTUSD &lt;CRYPTO&gt; GP</span><span class="t">BINANCE SPOT · <b>REAL-TIME</b></span><span class="t">LAT <b id="lat">—</b></span>
+    <span class="sp t">TPE <b id="tpe">—</b></span><span class="t">NYC <b id="nyc">—</b></span><span class="t">UTC <b id="utc">—</b></span><span class="live">● LIVE</span></div>
+  <div class="main">
+    <div class="left">
+      <div class="quote">
+        <div><div class="id">BTC/USDT <span>Bitcoin · Tether · Spot</span></div><div class="big" id="price">—</div></div>
+        <div class="chg"><div class="p" id="pct">—</div><div class="a" id="abs">—</div></div>
+      </div>
+      <div class="chart"><div class="lb"><b>1 MIN</b><span id="ohlc">—</span></div><canvas id="c1m"></canvas></div>
+    </div>
+    <div class="right">
+      <div class="sec"><h4><span>STATISTICS · 24H</span><span id="pos">—</span></h4>
+        <div class="kv"><div><span>OPEN</span><b id="o">—</b></div><div><span>HIGH</span><b id="h">—</b></div><div><span>LOW</span><b id="l">—</b></div><div><span>AMP</span><b id="amp">—</b></div>
+          <div><span>VOL</span><b id="v">—</b></div><div><span>TURN</span><b id="q">—</b></div></div></div>
+      <div class="sec tape"><h4><span>TIME &amp; SALES</span><span id="rate">—</span></h4><div class="rows" id="tape"></div></div>
+      <div class="h4"><h4 style="margin:0;padding:6px 14px;font-weight:500;font-size:11px;letter-spacing:.14em;color:#0a0a0a;background:var(--amb);display:flex;justify-content:space-between"><span>4 HOUR · 30D</span><span id="k4h">—</span></h4><canvas id="c4h"></canvas></div>
+    </div>
+  </div>
+  <div class="mon" id="mon">
+    <div class="tr hd"><span>TICKER</span><span>NAME</span><span class="n">LAST</span><span class="n">CHG</span><span class="n">%CHG</span><span class="n">HIGH</span><span class="n">LOW</span><span>DAY RANGE</span><span>INTRADAY</span></div>
+  </div>
+  <div class="fkeys"><span><b>F1</b>HELP</span><span><b>F2</b>BTC</span><span><b>F3</b>TWSE</span><span><b>F4</b>US EQ</span><span><b>F5</b>CHART</span><span><b>F6</b>TAPE</span><span><b>F7</b>NEWS</span><span><b>F8</b>ALERT</span><span><b>F9</b>MENU</span></div>
+</div>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, fmtBig, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const UP = '#ff5d4a', DOWN = '#35d39a', AMB = '#ffb000';
+const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
+Feed.start({ '1m': 160, '4h': 180 });
+
+let shown = '', shownNum = null;
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  const [i, d] = s.split('.');
+  const el = $('price');
+  el.innerHTML = `${i}<small>.${d}</small>`;
+  if (shownNum != null) { el.classList.remove('tu', 'td'); void el.offsetWidth; el.classList.add(S.price > shownNum ? 'tu' : 'td'); }
+  shown = s; shownNum = S.price;
+  document.title = s + ' · BTC';
+}
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('pct').textContent = pct(t.P); $('pct').className = 'p ' + cls(t.P);
+  $('abs').textContent = (t.p > 0 ? '+' : '') + fmt(t.p) + ' USDT'; $('abs').className = 'a ' + cls(t.p);
+  $('o').textContent = fmt(t.o); $('h').textContent = fmt(t.h); $('l').textContent = fmt(t.l);
+  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+  $('v').textContent = fmtBig(t.v) + ' BTC'; $('q').textContent = '$' + fmtBig(t.q);
+  if (S.price) $('pos').textContent = 'RANGE POS ' + ((S.price - t.l) / (t.h - t.l || 1) * 100).toFixed(1) + '%';
+});
+
+let pend = null;
+Feed.on('trade', (tr) => { if (!pend || tr.q > pend.q) pend = tr; const l = Date.now() - tr.T; if (l > -5000 && l < 60000) $('lat').textContent = Math.max(0, l) + 'ms'; });
+setInterval(() => {
+  if (!pend) return;
+  const tr = pend; pend = null;
+  const r = document.createElement('div');
+  r.className = 'r' + (tr.p * tr.q > 150000 ? ' big2' : '');
+  r.innerHTML = `<span style="color:var(--mute)">${new Date(tr.T).toLocaleTimeString('en-GB')}</span><span class="${tr.m ? 'd' : 'u'}">${fmt(tr.p)}</span><span class="q">${tr.q.toFixed(4)}</span><span class="${tr.m ? 'd' : 'u'}">${tr.m ? 'S' : 'B'}</span>`;
+  $('tape').prepend(r);
+  while ($('tape').children.length > 30) $('tape').lastChild.remove();
+  const n = S.ticks.filter((x) => x.T > Date.now() - 60000).length;
+  $('rate').textContent = (n / 60).toFixed(1) + ' T/S';
+}, 260);
+
+const rows = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s) => {
+    let r = rows[s.id];
+    if (!r) {
+      const el = document.createElement('div');
+      el.className = 'tr';
+      el.innerHTML = `<span class="tk"></span><span class="nm">${s.name}</span><span class="n last">—</span><span class="n c1">—</span><span class="n c2">—</span><span class="n hi">—</span><span class="n lo">—</span><div class="rb"><em></em><i></i></div><canvas></canvas>`;
+      $('mon').appendChild(el);
+      r = rows[s.id] = { el, q: (x) => el.querySelector(x) };
+    }
+    if (s.price == null) return;
+    r.q('.tk').innerHTML = `${s.code}${s.isOpen ? '<i>●</i>' : ''}`;
+    r.q('.last').textContent = fmt(s.price, s.dec);
+    r.q('.c1').textContent = (s.chg > 0 ? '+' : '') + fmt(s.chg, s.dec); r.q('.c1').className = 'n c1 ' + cls(s.chg);
+    r.q('.c2').textContent = pct(s.pct); r.q('.c2').className = 'n c2 ' + cls(s.chg);
+    r.q('.hi').textContent = fmt(s.high, s.dec); r.q('.lo').textContent = fmt(s.low, s.dec);
+    const span = s.rangeHi - s.rangeLo || 1, p0 = ((s.prevClose ?? s.price) - s.rangeLo) / span * 100;
+    const em = r.q('.rb em'); em.style.left = Math.min(p0, s.pos * 100) + '%'; em.style.width = Math.abs(s.pos * 100 - p0) + '%'; em.style.background = s.chg >= 0 ? UP : DOWN;
+    r.q('.rb i').style.left = s.pos * 100 + '%';
+    Draw.spark(r.q('canvas'), s.bars, { mode: 'line', slots: s.market === 'TW' ? 54 : 78, base: s.prevClose, line: AMB, lineWidth: 1.2, baseColor: 'rgba(240,236,226,.25)', baseDash: [2, 3], dot: '#fff', dotR: 2 });
+  });
+});
+
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; $('utc').textContent = Feed.tzNow('UTC').str; }
+setInterval(clocks, 1000); clocks();
+
+function charts() {
+  const r = Draw.candles($('c1m'), S.bars['1m'], { count: 160, pad: { t: 30, r: 74, b: 8, l: 14 }, up: UP, down: DOWN, body: 0.6,
+    grid: { color: 'rgba(255,176,0,.07)', rows: 5, cols: 10 }, volume: { up: 'rgba(255,93,74,.22)', down: 'rgba(53,211,154,.2)', h: 0.15 },
+    ema: [{ n: 9, color: 'rgba(255,176,0,.85)', width: 1.2 }, { n: 26, color: 'rgba(78,161,255,.8)', width: 1.2 }],
+    lastLine: { color: 'rgba(255,176,0,.7)', dash: [3, 3], full: true }, axis: { font: '11px "IBM Plex Mono"', color: '#77736a', ticks: 5, fmt: (v) => fmt(v, 0) } });
+  if (r) {
+    const ctx = $('c1m').getContext('2d');
+    ctx.fillStyle = AMB; ctx.fillRect(r.w - 72, r.last.y - 10, 72, 20);
+    ctx.fillStyle = '#0a0a0a'; ctx.font = '600 12px "IBM Plex Mono"'; ctx.textBaseline = 'middle'; ctx.fillText(fmt(r.last.c, 1), r.w - 68, r.last.y + 1);
+    const b = S.bars['1m'][S.bars['1m'].length - 1];
+    $('ohlc').innerHTML = `O ${fmt(b.o)}  H ${fmt(b.h)}  L ${fmt(b.l)}  C ${fmt(b.c)}  <span style="color:#ffb000">EMA9</span> <span style="color:#4ea1ff">EMA26</span>`;
+  }
+  const r4 = Draw.candles($('c4h'), S.bars['4h'], { count: 180, pad: { t: 6, r: 6, b: 6, l: 6 }, up: UP, down: DOWN, body: 0.7, ema: [{ n: 20, color: AMB }] });
+  if (r4) { const b = S.bars['4h'], lb = b[b.length - 1], v = (lb.c - lb.o) / lb.o * 100; $('k4h').textContent = 'BAR ' + pct(v); }
+}
+
+let last = 0;
+function frame(t) { drawPrice(); if (t - last > 200) { last = t; charts(); } requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

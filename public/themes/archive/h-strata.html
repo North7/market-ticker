@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strata</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@200;300;400&family=Geist+Mono:wght@400;500&family=Noto+Sans+TC:wght@500&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #0b0c0f; --fg: #e6e9ee; --mute: #5d636e; --line: #1c1f25; --hot: #ff7a1a; --up: #ff5a3c; --down: #4bd3a7; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: radial-gradient(ellipse at 50% 70%, #151820 0%, var(--bg) 65%); color: var(--fg); overflow: hidden; font-family: 'Unbounded', 'Noto Sans TC', sans-serif; }
+#cv { position: fixed; inset: 0; width: 100%; height: 100%; }
+.top { position: fixed; left: 34px; right: 34px; top: 22px; display: flex; gap: 26px; font-family: 'Geist Mono'; font-size: 10.5px; letter-spacing: .22em; color: var(--mute); text-transform: uppercase; z-index: 2; }
+.top b { color: var(--fg); font-weight: 400; }
+.top .sp { margin-left: auto; }
+.price { position: fixed; left: 28px; top: 44px; z-index: 2; font-weight: 200; font-size: min(21vh, 186px); line-height: 1; letter-spacing: -.05em; white-space: nowrap; }
+.price small { font-size: .36em; color: var(--hot); letter-spacing: -.03em; }
+.side { position: fixed; right: 36px; top: 58px; width: 300px; z-index: 2; text-align: right; }
+.side .pct { font-weight: 300; font-size: 46px; letter-spacing: -.03em; }
+.side .kv { font-family: 'Geist Mono'; font-size: 12px; color: var(--mute); margin-top: 8px; line-height: 1.8; }
+.side .kv b { color: var(--fg); font-weight: 400; margin-left: 6px; }
+.side canvas { width: 300px; height: 52px; margin-top: 10px; }
+.cap { position: fixed; left: 34px; font-family: 'Geist Mono'; font-size: 10.5px; letter-spacing: .2em; color: var(--mute); text-transform: uppercase; z-index: 2; }
+.stocks { position: fixed; left: 28px; right: 28px; bottom: 18px; height: 132px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; z-index: 2; }
+.st { border-top: 1px solid #2a2e36; padding-top: 10px; display: grid; grid-template-rows: auto auto minmax(0, 1fr); min-width: 0; }
+.st .nm { display: flex; justify-content: space-between; font-family: 'Noto Sans TC'; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.st .nm small { font-family: 'Geist Mono'; font-size: 10.5px; color: var(--mute); letter-spacing: .1em; }
+.st .nm small.on { color: var(--hot); }
+.st .px { font-weight: 300; font-size: 24px; letter-spacing: -.04em; margin-top: 4px; display: flex; justify-content: space-between; align-items: baseline; }
+.st .px em { font-family: 'Geist Mono'; font-style: normal; font-size: 12px; letter-spacing: 0; }
+.st canvas { width: 100%; height: 100%; min-height: 0; margin-top: 6px; }
+.u { color: var(--up); } .d { color: var(--down); }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="top"><span><b>Strata</b> · BTC / USDT · 720 minutes extruded</span><span class="sp">TPE <b id="tpe">--</b></span><span>NYC <b id="nyc">--</b></span></div>
+<div class="price" id="price">—</div>
+<div class="side">
+  <div class="pct" id="pct">—</div>
+  <div class="kv">24H HIGH<b id="h">—</b> · LOW<b id="l">—</b><br>AMP<b id="amp">—</b> · 4H BAR<b id="k4h">—</b></div>
+  <canvas id="c4h"></canvas>
+</div>
+<div class="cap" id="cap">—</div>
+<section class="stocks" id="stocks"></section>
+
+<script src="../feed.js"></script>
+<script src="../draw.js"></script>
+<script>
+const { S, fmt, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const HOT = '#ff7a1a';
+const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
+Feed.start({ '1m': 720, '4h': 90 });
+const ROWS = 12;
+
+function strata(t) {
+  const { ctx, w, h } = Draw.fit($('cv'));
+  const bars = S.bars['1m'];
+  if (!bars || bars.length < 120) return;
+  const rows = [];
+  for (const b of bars) {
+    const hr = Math.floor(b.t / 3600);
+    if (!rows.length || rows[rows.length - 1].hr !== hr) rows.push({ hr, b: new Array(60).fill(null) });
+    rows[rows.length - 1].b[new Date(b.t * 1000).getUTCMinutes()] = b;
+  }
+  const rs = rows.slice(-ROWS);
+  let hi = -Infinity, lo = Infinity;
+  for (const r of rs) for (const b of r.b) if (b) { hi = Math.max(hi, b.c); lo = Math.min(lo, b.c); }
+  const span = hi - lo || 1;
+
+  const dx = 13 + Math.sin(t / 5000) * 2.5, dy = 19;     // 緩慢的視差呼吸
+  const left = 70, right = w - 40;
+  const cw = (right - left - (ROWS - 1) * dx) / 60;
+  const bw = cw * 0.74, ddx = dx * 0.62, ddy = dy * 0.62;
+  const floorY = h - 196, Hmax = Math.min(250, floorY - (ROWS - 1) * dy - 270);
+  const nowMin = new Date().getUTCMinutes();
+
+  for (let r = 0; r < rs.length; r++) {
+    const d = rs.length - 1 - r;                    // 0 = 最前排
+    const ox = left + d * dx, oy = floorY - d * dy;
+    const front = d === 0, fade = 1 - d / (ROWS + 2);
+    // 地板線
+    ctx.strokeStyle = `rgba(230,233,238,${0.05 + 0.05 * fade})`; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(ox, oy + 0.5); ctx.lineTo(ox + 60 * cw, oy + 0.5); ctx.stroke();
+    ctx.fillStyle = `rgba(93,99,110,${0.5 + 0.5 * fade})`; ctx.font = '10px "Geist Mono"'; ctx.textAlign = 'right';
+    ctx.fillText(new Date(rs[r].hr * 3600e3).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), ox - 8, oy + 3);
+    for (let c = 0; c < 60; c++) {
+      const b = rs[r].b[c]; if (!b) continue;
+      const hgt = 3 + (b.c - lo) / span * Hmax;
+      const x = ox + c * cw, y = oy;
+      const isNow = front && c === nowMin;
+      const up = b.c >= b.o;
+      let topC, frontC, sideC;
+      if (isNow) { topC = '#ffb27a'; frontC = HOT; sideC = '#b8520c'; }
+      else {
+        const k = (0.35 + 0.65 * fade) * (front ? 1 : 0.85);
+        topC = up ? `rgba(244,226,212,${k})` : `rgba(206,216,228,${k})`;
+        frontC = `rgba(${front ? '58,62,72' : '40,44,52'},${0.9})`;
+        sideC = 'rgba(24,27,33,.95)';
+      }
+      // 正面
+      ctx.fillStyle = frontC; ctx.fillRect(x, y - hgt, bw, hgt);
+      // 右側
+      ctx.fillStyle = sideC; ctx.beginPath();
+      ctx.moveTo(x + bw, y); ctx.lineTo(x + bw + ddx, y - ddy); ctx.lineTo(x + bw + ddx, y - ddy - hgt); ctx.lineTo(x + bw, y - hgt); ctx.closePath(); ctx.fill();
+      // 頂面
+      ctx.fillStyle = topC; ctx.beginPath();
+      ctx.moveTo(x, y - hgt); ctx.lineTo(x + ddx, y - hgt - ddy); ctx.lineTo(x + bw + ddx, y - hgt - ddy); ctx.lineTo(x + bw, y - hgt); ctx.closePath(); ctx.fill();
+      if (isNow) {
+        const p = (Date.now() % 1400) / 1400;
+        ctx.save(); ctx.shadowBlur = 30; ctx.shadowColor = HOT; ctx.fillStyle = `rgba(255,122,26,${0.5 * (1 - p)})`;
+        ctx.fillRect(x - 2, y - hgt - 6 - p * 20, bw + 4, 3); ctx.restore();
+        ctx.strokeStyle = 'rgba(255,122,26,.55)'; ctx.setLineDash([2, 4]);
+        ctx.beginPath(); ctx.moveTo(x + bw / 2, y - hgt - 10); ctx.lineTo(x + bw / 2, 300); ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
+  }
+  // 前排分鐘刻度
+  ctx.fillStyle = '#5d636e'; ctx.font = '10px "Geist Mono"'; ctx.textAlign = 'center';
+  [0, 15, 30, 45].forEach((m) => ctx.fillText(':' + String(m).padStart(2, '0'), left + m * cw + bw / 2, floorY + 16));
+  $('cap').style.top = (floorY + 24) + 'px';
+  $('cap').textContent = `${rs.length} hours × 60 minutes · height = price ${fmt(lo, 0)} → ${fmt(hi, 0)} · front row = this hour`;
+}
+
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s;
+  const [i, d] = s.split('.');
+  $('price').innerHTML = `${i}<small>.${d}</small>`;
+  document.title = s + ' · BTC';
+}
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('pct').textContent = pct(t.P); $('pct').className = 'pct ' + cls(t.P);
+  $('h').textContent = fmt(t.h, 0); $('l').textContent = fmt(t.l, 0);
+  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+});
+
+const cards = {};
+Feed.on('markets', () => {
+  S.markets.forEach((s) => {
+    let c = cards[s.id];
+    if (!c) {
+      const el = document.createElement('div');
+      el.className = 'st';
+      el.innerHTML = `<div class="nm">${s.name.replace(' ETF', '')}<small>${s.code}</small></div><div class="px">—</div><canvas></canvas>`;
+      $('stocks').appendChild(el);
+      c = cards[s.id] = { el, q: (x) => el.querySelector(x) };
+    }
+    if (s.price == null) return;
+    c.q('.px').innerHTML = `${fmt(s.price, s.dec)}<em class="${cls(s.chg)}">${pct(s.pct)}</em>`;
+    const tag = c.q('.nm small'); tag.textContent = (s.isOpen ? '● ' : '') + s.code; tag.className = s.isOpen ? 'on' : '';
+    // 迷你柱：相對昨收，向上／向下長
+    const { ctx, w, h } = Draw.fit(c.q('canvas'));
+    const bars = s.bars || [], slots = s.market === 'TW' ? 54 : 78;
+    if (!bars.length || !s.prevClose) return;
+    const dev = Math.max(...bars.map((b) => Math.abs(b.c - s.prevClose)), 1e-9);
+    const mid = h / 2, cw = w / slots;
+    ctx.fillStyle = 'rgba(230,233,238,.12)'; ctx.fillRect(0, mid, w, 1);
+    bars.forEach((b, k) => {
+      const v = (b.c - s.prevClose) / dev * (mid - 3);
+      ctx.fillStyle = k === bars.length - 1 ? HOT : v >= 0 ? 'rgba(244,226,212,.75)' : 'rgba(206,216,228,.4)';
+      ctx.fillRect(k * cw, v >= 0 ? mid - v : mid + 1, Math.max(1, cw * 0.7), Math.abs(v));
+    });
+  });
+});
+
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; }
+setInterval(clocks, 1000); clocks();
+
+let last = 0, last4 = 0;
+function frame(t) {
+  drawPrice();
+  if (t - last > 90) { last = t; strata(t); }
+  if (t - last4 > 2000) {
+    last4 = t;
+    const r = Draw.candles($('c4h'), S.bars['4h'], { mode: 'area', count: 90, pad: { t: 4, r: 6, b: 2, l: 0 }, rightGap: 0, line: '#e6e9ee', lineWidth: 1, areaTop: 'rgba(230,233,238,.12)' });
+    if (r) {
+      const ctx = $('c4h').getContext('2d'); ctx.fillStyle = HOT; ctx.beginPath(); ctx.arc(r.last.x, r.last.y, 3.5, 0, Math.PI * 2); ctx.fill();
+      const b = S.bars['4h'], lb = b[b.length - 1], v = (lb.c - lb.o) / lb.o * 100;
+      $('k4h').textContent = pct(v);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

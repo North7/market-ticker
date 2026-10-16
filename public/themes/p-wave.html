@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: #000; color: #fff; overflow: hidden; font-family: 'Inter', 'Noto Sans TC', sans-serif; }
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+.lab { position: fixed; left: 40px; top: 40px; font-size: 17px; line-height: 1.3; z-index: 2; }
+.price { position: fixed; left: 36px; top: 96px; z-index: 2; font-weight: 500; font-size: min(19vh, 172px); line-height: .9; letter-spacing: -.045em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.price small { font-size: .4em; color: #9a9aa0; letter-spacing: -.02em; }
+.chg { position: fixed; left: 42px; top: calc(96px + min(19vh, 172px) + 18px); z-index: 2; display: flex; align-items: center; gap: 18px; font-size: 15px; color: #b5b5bb; }
+.chg .ring { display: inline-grid; place-items: center; height: 40px; padding: 0 16px; border: 1.5px solid #f5f35c; border-radius: 999px; color: #f5f35c; font-weight: 500; font-size: 17px; }
+.list { position: fixed; left: 42px; top: calc(96px + min(19vh, 172px) + 92px); z-index: 2; font-size: 13px; line-height: 1.55; color: #d6d6da; width: 330px; }
+.list .r { display: grid; grid-template-columns: 1fr auto auto; gap: 14px; padding: 5px 0; border-bottom: 1px solid #1c1c1f; }
+.list .r span { color: #8a8a90; }
+.list .r b { font-weight: 500; color: #fff; font-variant-numeric: tabular-nums; }
+.list .r i { font-style: normal; font-variant-numeric: tabular-nums; min-width: 58px; text-align: right; }
+.note { position: fixed; right: 40px; top: 40px; z-index: 2; font-size: 12.5px; line-height: 1.45; color: #b5b5bb; text-align: left; width: 230px; }
+.foot { position: fixed; left: 40px; right: 40px; bottom: 22px; z-index: 2; display: flex; justify-content: space-between; font-size: 12px; color: #d6d6da; }
+.foot span b { font-weight: 500; color: #fff; margin-left: 10px; }
+.foot .y { color: #f5f35c; }
+.u { color: #ff7a9a; } .d { color: #7aa2ff; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="lab">BTC / USDT<br>live market collection</div>
+<div class="price" id="price">—</div>
+<div class="chg"><span class="ring" id="pct">—</span><span id="hl">—</span></div>
+<div class="list" id="list"></div>
+<div class="note">The sphere bends with the last minute:<br>each bulge is a 5-second return,<br>fold depth is the 60-second range,<br>its tremor is the live trade rate.<br><br>Below, every wave is 2 seconds of trading —<br>up above the line, down below it,<br>flowing in from the right.</div>
+<div class="foot"><span>SPHERE —<b>5-sec returns · 60 s</b></span><span>WAVES —<b>2-sec returns · 120 s</b></span><span>TPE —<b id="tpe">—</b></span><span>NYC —<b id="nyc">—</b></span><span>24H AMP —<b class="y" id="amp">—</b></span><span>TRADES / S —<b id="tps">—</b></span></div>
+
+<script src="feed.js"></script>
+<script src="draw.js"></script>
+<script>
+const { S, fmt, pct } = Feed;
+const $ = (id) => document.getElementById(id);
+const cls = (v) => (v >= 0 ? 'u' : 'd');
+Feed.start({ '1m': 120, '4h': 60 });
+
+// ---- 點陣球：費氏球面取點，每個點預先算好對 12 個鼓包中心的權重
+const N = 5200, K = 12;
+const P = [], Wt = [];
+for (let i = 0; i < N; i++) {
+  const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), th = i * Math.PI * (3 - Math.sqrt(5));
+  const p = [Math.cos(th) * r, y, Math.sin(th) * r]; P.push(p);
+  const w = [];
+  for (let k = 0; k < K; k++) {
+    const lon = k / K * Math.PI * 2, lat = Math.sin(k * 1.7) * 0.55;
+    const c = [Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon)];
+    const dot = p[0] * c[0] + p[1] * c[1] + p[2] * c[2];
+    w.push(Math.exp(-(Math.acos(Math.max(-1, Math.min(1, dot))) ** 2) / 0.22));
+  }
+  Wt.push(w);
+}
+const amp = new Float64Array(K);   // 平滑後的鼓包幅度
+let tremor = 0.3, foldAmp = 0.05;   // 皺褶深度＝最近 60 秒價格區間（平靜時球面也平滑）
+
+// 秒級報酬：把最近的逐筆成交切成 sec 秒一桶，報酬＝這桶收盤 / 上一桶收盤 − 1
+function tickReturns(sec, n, now = Date.now()) {
+  const ms = sec * 1000, end = Math.floor(now / ms) * ms, start = end - n * ms;
+  const close = new Array(n + 1).fill(null);
+  let prev = null;
+  for (const x of S.ticks) {
+    if (x.T < start - ms) { prev = x.p; continue; }
+    const k = Math.floor((x.T - (start - ms)) / ms);
+    if (k >= 0 && k <= n) close[k] = x.p;
+  }
+  if (close[0] == null) close[0] = prev ?? (S.ticks[0] && S.ticks[0].p) ?? S.price;
+  for (let k = 1; k <= n; k++) if (close[k] == null) close[k] = close[k - 1];
+  const out = [];
+  for (let k = 1; k <= n; k++) out.push(close[k - 1] ? (close[k] - close[k - 1]) / close[k - 1] : 0);
+  return { r: out, end };
+}
+
+function sphere(ctx, w, h, t) {
+  const r12 = tickReturns(5, K).r, mx = Math.max(0.00004, ...r12.map(Math.abs));
+  for (let k = 0; k < K; k++) amp[k] += (r12[k] / mx - amp[k]) * 0.14;
+  const cx = w * 0.63, cy = h * 0.335, R = Math.min(h * 0.235, w * 0.18);
+  const ry = t * 0.12, rx = 0.35 + Math.sin(t * 0.07) * 0.12;
+  const cy1 = Math.cos(ry), sy1 = Math.sin(ry), cx1 = Math.cos(rx), sx1 = Math.sin(rx);
+  const pts = [];
+  for (let i = 0; i < N; i++) {
+    const p = P[i], wv = Wt[i];
+    let d = 0; for (let k = 0; k < K; k++) d += wv[k] * amp[k];
+    const n = Math.sin(p[0] * 3 + t * 0.9) * Math.sin(p[1] * 4 - t * 0.7) * Math.sin(p[2] * 3 + t * 0.5);
+    const fold = Math.sin(p[0] * 2.2 + p[1] * 1.3 + t * 0.35) * Math.cos(p[2] * 2.6 - t * 0.28);
+    const rr = 1 + d * 0.3 + fold * foldAmp + n * (0.02 + tremor * 0.07);
+    let x = p[0] * rr, y = p[1] * rr, z = p[2] * rr;
+    const x2 = x * cy1 + z * sy1, z2 = -x * sy1 + z * cy1;
+    const y3 = y * cx1 - z2 * sx1, z3 = y * sx1 + z2 * cx1;
+    const persp = 2.6 / (2.6 + z3);
+    pts.push([cx + x2 * R * persp, cy + y3 * R * persp, z3, d, y]);
+  }
+  pts.sort((a, b) => b[2] - a[2]);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (const [x, y, z, d, oy] of pts) {
+    const depth = (1 - z) / 2;                               // 0 背面 → 1 正面
+    const k = Math.max(0, Math.min(1, (oy + 1) / 2));         // 上藍下紫
+    // 上：天藍 (88,190,255) → 下：紫 (150,110,255) → 底緣：粉紫 (225,130,255)
+    const m = 1 - k, rC = m < 0.6 ? 88 + (150 - 88) * (m / 0.6) : 150 + (225 - 150) * ((m - 0.6) / 0.4);
+    const gC = m < 0.6 ? 190 - (190 - 110) * (m / 0.6) : 110 + 20 * ((m - 0.6) / 0.4);
+    const a = 0.28 + depth * 0.72;
+    ctx.fillStyle = `rgba(${Math.round(rC)},${Math.round(gC + Math.max(0, d) * 30)},255,${a})`;
+    const s = 1.1 + depth * 2.4;
+    ctx.fillRect(x - s / 2, y - s / 2, s, s);
+  }
+  ctx.restore();
+}
+
+// ---- 彩虹等高波峰：5 分鐘漲跌（參考 Waves .06）
+const LAYERS = ['#ffffff', '#ffc9dd', '#ff8fb1', '#ff5d6c', '#ff9f43', '#fff35c', '#ff6ad5', '#b45cff', '#5b5bff', '#2f3dff'];
+let waveMx = 0.0002;
+function waves(ctx, w, h) {
+  const SEC = 2, N = 60, now = Date.now();
+  const { r, end } = tickReturns(SEC, N, now);
+  const mx = Math.max(0.00003, ...r.map(Math.abs));
+  waveMx += (mx - waveMx) * 0.04;                      // 尺度平滑，不會忽大忽小
+  const frac = (now - end) / (SEC * 1000);             // 0..1，讓波形連續往左流
+  const base = h * 0.76, A = h * 0.125, sp = w / (N - 1.5), sig = sp * 0.42;
+  const xs = r.map((_, k) => sp * (k + 0.5 - frac));
+  const yAt = (x, f) => {
+    let v = 0;
+    for (let k = 0; k < N; k++) { const dx = x - xs[k]; if (dx > sig * 4 || dx < -sig * 4) continue; v += Math.max(-1.2, Math.min(1.2, r[k] / waveMx)) * Math.exp(-(dx * dx) / (2 * sig * sig)); }
+    return base - v * A * f;
+  };
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (let l = LAYERS.length - 1; l >= 1; l--) {
+    const f = l / (LAYERS.length - 1);
+    ctx.beginPath(); for (let x = 0; x <= w; x += 3) x ? ctx.lineTo(x, yAt(x, f)) : ctx.moveTo(x, yAt(x, f));
+    ctx.strokeStyle = LAYERS[l]; ctx.lineWidth = 3.4; ctx.stroke();
+  }
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.moveTo(0, base); ctx.lineTo(w, base); ctx.stroke();
+  // 最新的那個波峰在右端，加一點亮點
+  const lx = xs[N - 1], ly = yAt(lx, 1);
+  ctx.fillStyle = '#fff'; ctx.shadowBlur = 16; ctx.shadowColor = '#fff'; ctx.beginPath(); ctx.arc(lx, ly, 4, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+  ctx.fillStyle = '#6e6e74'; ctx.font = '11px Inter'; ctx.textAlign = 'center';
+  [[0, '−120s'], [15, '−90s'], [30, '−60s'], [45, '−30s']].forEach(([k, t]) => ctx.fillText(t, sp * (k + 0.5 - frac), base + A + 20));
+  ctx.textAlign = 'right'; ctx.fillText(`now · peak ±${(waveMx * 100).toFixed(3)}% / 2 s`, w - 40, base + A + 20);
+}
+
+function candles(ctx, w, h) {
+  const d = (S.bars['1m'] || []).slice(-120); if (d.length < 5) return;
+  const T = h * 0.855, B = h * 0.935, L = 40, R = w - 40;
+  let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
+  const X = (i) => L + (R - L) * (i + 0.5) / d.length, Y = (p) => T + (hi - p) / (hi - lo || 1) * (B - T), bw = (R - L) / d.length * 0.6;
+  d.forEach((b, i) => {
+    const col = b.c >= b.o ? '#ff7a9a' : '#7aa2ff'; ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(X(i), Y(b.h)); ctx.lineTo(X(i), Y(b.l)); ctx.stroke();
+    ctx.fillRect(X(i) - bw / 2, Y(Math.max(b.o, b.c)), bw, Math.max(1, Y(Math.min(b.o, b.c)) - Y(Math.max(b.o, b.c))));
+  });
+  ctx.fillStyle = '#8a8a90'; ctx.font = '11px Inter'; ctx.textAlign = 'left'; ctx.fillText(`${fmt(lo, 0)} — ${fmt(hi, 0)}`, L, T - 6);
+}
+
+let shown = '';
+function drawPrice() {
+  if (S.price == null) return;
+  const s = fmt(S.price);
+  if (s === shown) return;
+  shown = s;
+  const [i, d] = s.split('.');
+  $('price').innerHTML = `${i}<small>.${d}</small>`;
+  document.title = s + ' · BTC';
+}
+Feed.on('ticker', () => {
+  const t = S.ticker;
+  $('pct').textContent = pct(t.P);
+  $('hl').textContent = `high ${fmt(t.h, 0)} · low ${fmt(t.l, 0)}`;
+  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+});
+Feed.on('markets', () => {
+  $('list').innerHTML = S.markets.map((s) => `<div class="r"><span>${s.name.replace(' ETF', '')} · ${s.code}</span><b>${fmt(s.price, s.dec)}</b><i class="${cls(s.pct || 0)}">${pct(s.pct || 0)}</i></div>`).join('');
+});
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; }
+setInterval(clocks, 1000); clocks();
+
+let lastF = 0;
+function frame(now) {
+  drawPrice();
+  if (now - lastF > 33) {
+    lastF = now;
+    const t = now / 1000;
+    const n = S.ticks.filter((x) => x.T > Date.now() - 20000).length / 20;
+    tremor += (Math.min(1.5, n / 6) - tremor) * 0.03;
+    let hi60 = -Infinity, lo60 = Infinity; for (const x of S.ticks) { if (x.T < Date.now() - 60000) continue; hi60 = Math.max(hi60, x.p); lo60 = Math.min(lo60, x.p); }
+    const rng = isFinite(hi60) && S.price ? (hi60 - lo60) / S.price : 0;     // 60 秒區間（比例）
+    foldAmp += (Math.min(0.16, 0.02 + rng * 120) - foldAmp) * 0.03;
+    $('tps').textContent = n.toFixed(1);
+    const { ctx, w, h } = Draw.fit($('cv'));
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+    sphere(ctx, w, h, t);
+    waves(ctx, w, h);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
