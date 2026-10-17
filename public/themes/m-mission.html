@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
 <style>
-:root { --bg: #262725; --deep: #1c1d1b; --sage: #b9d4c2; --sage2: #a2c1ad; --orange: #f26a3d; --ink: #1c1d1b; --fg: #e6eee8; --mute: #858c86; --line: #3a3c39; --up: #5fd38d; --down: #f26a3d; }
+:root { --bg: #262725; --deep: #1c1d1b; --sage: #b9d4c2; --sage2: #a2c1ad; --orange: #f26a3d; --ink: #1c1d1b; --fg: #e6eee8; --mute: #858c86; --line: #3a3c39; --up: #b9d4c2; --down: #f26a3d; }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: 'Inter Tight', 'Noto Sans TC', sans-serif; }
@@ -228,12 +228,12 @@ Feed.on('markets', () => {
 
 // ---- 交互：1 分 K 視窗可查數據、點卡片看詳情、大單漣漪從價格發出；滑鼠帶動價格與儀表盒微移
 let geo1m = null;
-FX.theme({ bg: 'rgba(28,29,27,.95)', fg: '#e6eee8', mute: '#858c86', line: 'rgba(230,238,232,.55)', accent: '#f26a3d', up: '#5fd38d', down: '#f26a3d', sheet: '#262725', border: 'rgba(185,212,194,.12)', radius: '6px', font: "'IBM Plex Mono', 'Noto Sans TC', monospace" });
+FX.theme({ bg: 'rgba(28,29,27,.95)', fg: '#e6eee8', mute: '#858c86', line: 'rgba(230,238,232,.55)', accent: '#f26a3d', up: '#b9d4c2', down: '#f26a3d', sheet: '#262725', border: 'rgba(185,212,194,.12)', radius: '6px', font: "'IBM Plex Mono', 'Noto Sans TC', monospace" });
 FX.inspect('#c1m', FX.candleHit(() => geo1m, () => S.bars['1m'], { tf: '1m' }));
 FX.events({ anchor: '#price', ax: 0.45, ay: 0.55, glow: '#price', shake: '.hero' });
 
 function charts() {
-  const r = geo1m = Draw.candles($('c1m'), S.bars['1m'], { count: 80, headroom: 0.04, footroom: 0.04, pad: { t: 6, r: 70, b: 6, l: 6 }, up: '#5fd38d', down: '#f26a3d', body: 0.62,
+  const r = geo1m = Draw.candles($('c1m'), S.bars['1m'], { count: 80, headroom: 0.04, footroom: 0.04, pad: { t: 6, r: 70, b: 6, l: 6 }, up: '#b9d4c2', down: '#f26a3d', body: 0.62,
     grid: { color: 'rgba(185,212,194,.07)', rows: 4, cols: 12 }, ema: [{ n: 20, color: 'rgba(230,238,232,.7)', width: 1.3 }],
     lastLine: { color: 'rgba(242,106,61,.7)', dash: [3, 4], full: true }, axis: { font: '11px "IBM Plex Mono"', color: '#858c86', ticks: 4, fmt: (v) => fmt(v, 0) } });
   if (r) {

@@ -16,7 +16,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
 .price { position: fixed; left: 36px; top: 96px; z-index: 2; font-weight: 500; font-size: min(19vh, 172px); line-height: .9; letter-spacing: -.045em; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .price small { font-size: .4em; color: #9a9aa0; letter-spacing: -.02em; }
 .chg { position: fixed; left: 42px; top: calc(96px + min(19vh, 172px) + 18px); z-index: 2; display: flex; align-items: center; gap: 18px; font-size: 15px; color: #b5b5bb; }
-.chg .ring.up { border-color: #3ee08f; color: #3ee08f; } .chg .ring.dn { border-color: #ff5c7a; color: #ff5c7a; }
+.chg .ring.up { border-color: #7aa2ff; color: #7aa2ff; } .chg .ring.dn { border-color: #ff7a9a; color: #ff7a9a; }
 .chg .ring { display: inline-grid; place-items: center; height: 40px; padding: 0 16px; border: 1.5px solid #f5f35c; border-radius: 999px; color: #f5f35c; font-weight: 500; font-size: 17px; }
 .list { position: fixed; left: 42px; top: calc(96px + min(19vh, 172px) + 92px); z-index: 2; font-size: 13px; line-height: 1.55; color: #d6d6da; width: 330px; }
 .list .r { display: grid; grid-template-columns: 1fr auto auto; gap: 14px; padding: 5px 0; border-bottom: 1px solid #1c1c1f; }
@@ -32,7 +32,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
 .foot { position: fixed; left: 40px; right: 40px; bottom: 22px; z-index: 2; display: flex; justify-content: space-between; font-size: 12px; color: #d6d6da; }
 .foot span b { font-weight: 500; color: #fff; margin-left: 10px; }
 .foot .y { color: #f5f35c; }
-.u { color: #3ee08f; } .d { color: #ff5c7a; }
+.u { color: #7aa2ff; } .d { color: #ff7a9a; }
 .xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
 /* 直式：價格在上、球體置中、清單兩欄在球體下方、波形在底部 */
 @media (orientation: portrait) {
@@ -116,7 +116,7 @@ function tickReturns(sec, n, now = Date.now()) {
 
 // ---- 交互：滑過波形查每 2 秒報酬、滑過球體看最近 60 秒的 5 秒報酬；點清單看詳情；大單漣漪從價格發出；球體轉向游標
 let sphereGeo = null, waveGeo = null;
-FX.theme({ bg: 'rgba(18,18,22,.94)', fg: '#ffffff', mute: '#8a8a90', line: 'rgba(255,255,255,.5)', accent: '#f5f35c', up: '#3ee08f', down: '#ff5c7a', sheet: '#0d0d10', border: 'rgba(255,255,255,.08)', radius: '14px', font: "'Inter', 'Noto Sans TC', sans-serif" });
+FX.theme({ bg: 'rgba(18,18,22,.94)', fg: '#ffffff', mute: '#8a8a90', line: 'rgba(255,255,255,.5)', accent: '#f5f35c', up: '#7aa2ff', down: '#ff7a9a', sheet: '#0d0d10', border: 'rgba(255,255,255,.08)', radius: '14px', font: "'Inter', 'Noto Sans TC', sans-serif" });
 FX.inspect('#cv', (x, y) => {
   const w = waveGeo, g = sphereGeo;
   if (w && Math.abs(y - w.base) < w.A * 1.5) {
@@ -215,7 +215,7 @@ function candles(ctx, w, h) {
   let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
   const X = (i) => L + (R - L) * (i + 0.5) / d.length, Y = (p) => T + (hi - p) / (hi - lo || 1) * (B - T), bw = (R - L) / d.length * 0.6;
   d.forEach((b, i) => {
-    const col = b.c >= b.o ? '#3ee08f' : '#ff5c7a'; ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 1;
+    const col = b.c >= b.o ? '#7aa2ff' : '#ff7a9a'; ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(X(i), Y(b.h)); ctx.lineTo(X(i), Y(b.l)); ctx.stroke();
     ctx.fillRect(X(i) - bw / 2, Y(Math.max(b.o, b.c)), bw, Math.max(1, Y(Math.min(b.o, b.c)) - Y(Math.max(b.o, b.c))));
   });
