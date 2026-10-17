@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Signal</title>
-<script>if (new URLSearchParams(location.search).get('night') === '1') { document.documentElement.classList.add('night'); document.title = 'Signal Night'; }</script>
+<script>/* 先決定日夜，避免開頁閃一下 */ (() => { let m = 'auto'; try { m = localStorage.getItem('signal.scheme') || 'auto'; } catch { /* ignore */ } if (new URLSearchParams(location.search).get('night') === '1') m = 'dark'; document.documentElement.classList.toggle('night', m === 'dark' || (m === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)); })();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
@@ -17,6 +17,10 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 .top { display: flex; align-items: center; gap: 22px; white-space: nowrap; overflow: hidden; padding: 0 28px; font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); border-bottom: 1px solid var(--line); }
 .top b { color: var(--ink); font-weight: 500; }
 .top .sp { margin-left: auto; }
+.scheme { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 999px; }
+.scheme button { all: unset; cursor: pointer; padding: 2px 9px; border-radius: 999px; font: inherit; letter-spacing: .12em; color: var(--mute); transition: background .2s, color .2s; }
+.scheme button.on { background: var(--ink); color: var(--bg); }
+@media (hover: hover) { .scheme button:not(.on):hover { color: var(--ink); } }
 .top .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--btc); display: inline-block; margin-right: 8px; animation: blink 1.2s steps(2) infinite; }
 @keyframes blink { 50% { opacity: .2; } }
 
@@ -88,7 +92,8 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 <body>
 <div class="wrap">
   <div class="top"><span><span class="dot"></span><b>Signal</b> — BTC / USDT<span class="w1"> — Binance spot</span></span><span class="w1">1 col = 1 min · disc = 24H pos</span><span id="xtra" class="xtra"></span>
-    <span class="sp">TPE <b id="tpe">--</b></span><span class="w1">NYC <b id="nyc">--</b></span><span class="w1">UTC <b id="utc">--</b></span></div>
+    <span class="sp">TPE <b id="tpe">--</b></span><span class="w1">NYC <b id="nyc">--</b></span><span class="w1">UTC <b id="utc">--</b></span>
+    <span class="scheme" id="scheme" title="日夜配色"><button data-s="auto">Auto</button><button data-s="light">Day</button><button data-s="dark">Night</button></span></div>
   <section class="field" id="field">
     <canvas id="cv"></canvas>
     <div class="stat" id="stat"><div class="chg" id="pct">--</div><span>24H HIGH<b id="h">--</b></span><span>LOW<b id="l">--</b></span><span>AMP<b id="amp">--</b></span><span>VOL<b id="qv">--</b></span></div>
@@ -106,11 +111,26 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 <script>
 const { S, fmt, fmtBig, pct } = Feed;
 const $ = (id) => document.getElementById(id);
-const NIGHT = document.documentElement.classList.contains('night');
-const PAL = NIGHT
-  ? { ink: '#ece9e1', up: '#ff8a1f', off: 'rgba(255,255,255,.07)', offTop: 'rgba(255,255,255,.045)', discOff: 'rgba(40,16,0,.3)', discOffTop: 'rgba(40,16,0,.22)', discInk: '#1d0f02', discUp: '#fff6e8', discFlash: '#fff', wick: 'rgba(236,233,225,.35)', discWick: 'rgba(29,15,2,.5)', cardDot: 'rgba(255,255,255,.06)', grid: 'rgba(255,255,255,.08)' }
-  : { ink: '#171717', up: '#e2700c', off: 'rgba(0,0,0,.075)', offTop: 'rgba(0,0,0,.05)', discOff: 'rgba(255,255,255,.22)', discOffTop: 'rgba(255,255,255,.14)', discInk: '#171717', discUp: '#fff', discFlash: '#6b2f00', wick: 'rgba(23,23,23,.35)', discWick: 'rgba(23,23,23,.45)', cardDot: 'rgba(0,0,0,.06)', grid: 'rgba(0,0,0,.08)' };
-const BTC = '#f7931a', INK = PAL.ink, UPC = PAL.up;
+// ---- 日夜配色：AUTO 跟隨系統深色模式，DAY／NIGHT 手動固定（記在本機）
+const PALS = {
+  night: { ink: '#ece9e1', up: '#ff8a1f', off: 'rgba(255,255,255,.07)', offTop: 'rgba(255,255,255,.045)', discOff: 'rgba(40,16,0,.3)', discOffTop: 'rgba(40,16,0,.22)', discInk: '#1d0f02', discUp: '#fff6e8', discFlash: '#fff', wick: 'rgba(236,233,225,.35)', discWick: 'rgba(29,15,2,.5)', cardDot: 'rgba(255,255,255,.06)', grid: 'rgba(255,255,255,.08)' },
+  day: { ink: '#171717', up: '#e2700c', off: 'rgba(0,0,0,.075)', offTop: 'rgba(0,0,0,.05)', discOff: 'rgba(255,255,255,.22)', discOffTop: 'rgba(255,255,255,.14)', discInk: '#171717', discUp: '#fff', discFlash: '#6b2f00', wick: 'rgba(23,23,23,.35)', discWick: 'rgba(23,23,23,.45)', cardDot: 'rgba(0,0,0,.06)', grid: 'rgba(0,0,0,.08)' },
+};
+const BTC = '#f7931a', mq = matchMedia('(prefers-color-scheme: dark)');
+let SCHEME = (() => { try { return localStorage.getItem('signal.scheme') || 'auto'; } catch { return 'auto'; } })();
+if (new URLSearchParams(location.search).get('night') === '1') SCHEME = 'dark';
+let NIGHT, PAL, INK, UPC;
+function applyScheme() {
+  NIGHT = SCHEME === 'dark' || (SCHEME === 'auto' && mq.matches);
+  document.documentElement.classList.toggle('night', NIGHT);
+  PAL = NIGHT ? PALS.night : PALS.day; INK = PAL.ink; UPC = PAL.up;
+  document.querySelectorAll('#scheme button').forEach((b) => b.classList.toggle('on', b.dataset.s === SCHEME));
+  FX.theme({ bg: 'rgba(23,23,23,.94)', fg: '#f2f1ec', mute: '#a8a79f', line: NIGHT ? 'rgba(236,233,225,.55)' : 'rgba(23,23,23,.55)', accent: '#f7931a', up: '#f7931a', down: '#c9c8c0', sheet: '#1c1c1b', border: 'rgba(255,255,255,.09)', radius: '6px', font: "'Geist Mono', 'Noto Sans TC', monospace" });
+  if (Feed.S.markets.length) Feed.emit('markets');   // 小卡立即用新配色重畫
+}
+document.querySelectorAll('#scheme button').forEach((b) => (b.onclick = () => { SCHEME = b.dataset.s; try { localStorage.setItem('signal.scheme', SCHEME); } catch { /* ignore */ } applyScheme(); }));
+mq.addEventListener('change', () => { if (SCHEME === 'auto') applyScheme(); });
+applyScheme();
 const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
 Feed.start({ '1m': 120, '4h': 90 });
 Feed.mountExtras('#xtra');
@@ -290,7 +310,6 @@ setInterval(clocks, 1000); clocks();
 
 // ---- 交互：點陣 1 分 K 與 4H 線可查數據、點卡片看詳情、大單漣漪從價格發出、滑鼠帶動橘色圓盤
 let geo4h = null, fieldGeo = null;
-FX.theme({ bg: 'rgba(23,23,23,.94)', fg: '#f2f1ec', mute: '#a8a79f', line: NIGHT ? 'rgba(236,233,225,.55)' : 'rgba(23,23,23,.55)', accent: '#f7931a', up: '#f7931a', down: '#c9c8c0', sheet: '#1c1c1b', border: 'rgba(255,255,255,.09)', radius: '6px', font: "'Geist Mono', 'Noto Sans TC', monospace" });
 FX.inspect('#c4h', FX.candleHit(() => geo4h, () => S.bars['4h'], { tf: '4h' }));
 FX.inspect('#cv', (x, y) => {
   const g = fieldGeo; if (!g) return null;

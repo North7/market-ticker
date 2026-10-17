@@ -27,18 +27,17 @@ a.card:hover .frame { outline-color: #888; }
 </head>
 <body>
 <h1>Market Ticker — 主題總覽</h1>
-<p class="sub">每個都是即時資料。點擊縮圖單獨開啟；日常使用請開首頁，用 1–8 或 ← → 切換。</p>
+<p class="sub">每個都是即時資料。點擊縮圖單獨開啟；日常使用請開首頁，用 1–7 或 ← → 切換。</p>
 <div class="grid" id="grid"></div>
 <script>
 const C = [
-  ['1', 'b-signal.html', 'Signal', '點陣', 'BTC 橘 × 暖灰 LED 點陣；橘色圓盤隨 24H 區間位置升降。'],
-  ['2', 'b-signal.html?night=1', 'Signal Night', '點陣夜間', '同 Signal 的深色夜間版：暖黑底、亮墨點、發光橘色圓盤。'],
-  ['3', 'd-orbit.html', 'Orbit', '軌道', '外環 30 天 4H、內環 1 分 K、秒針掃描。'],
-  ['4', 'm-mission.html', 'Mission', '任務', '鼠尾草綠＋橘的任務控制台：貨櫃牌、交易時段甘特圖、螺栓窗框 K 線。'],
-  ['5', 'n-glyph.html', 'Glyph', '符號', '黑底螢光萊姆：K 線由 ◎ ▢ ✕ ＋ 符號矩陣排出，爆量分鐘是實心色塊。'],
-  ['6', 'o-glow.html', 'Glow', '發光', '深色便當格：萊姆價格卡、發光走勢、4H 收盤倒數、藍光成交額。'],
-  ['7', 'p-wave.html', 'Wave', '波形', '點陣球體隨每 5 秒漲跌鼓起凹陷；彩虹波峰是每 2 秒的漲跌，持續往左流。'],
-  ['8', 'r-glass.html', 'Glass', '玻璃', 'Liquid Glass＋visionOS 視窗：絲帶桌布色溫＝24H 漲跌、厚玻璃與游標反光、拖動查價、24H 區間環、4H 成交量。'],
+  ['1', 'b-signal.html', 'Signal', '點陣', 'BTC 橘 × 暖灰 LED 點陣；橘色圓盤隨 24H 區間位置升降；日夜配色自動或手動切換。'],
+  ['2', 'd-orbit.html', 'Orbit', '軌道', '外環 30 天 4H、內環 1 分 K、秒針掃描。'],
+  ['3', 'm-mission.html', 'Mission', '任務', '鼠尾草綠＋橘的任務控制台：貨櫃牌、交易時段甘特圖、螺栓窗框 K 線。'],
+  ['4', 'n-glyph.html', 'Glyph', '符號', '黑底螢光萊姆：K 線由 ◎ ▢ ✕ ＋ 符號矩陣排出，爆量分鐘是實心色塊。'],
+  ['5', 'o-glow.html', 'Glow', '發光', '深色便當格：萊姆價格卡、發光走勢、4H 收盤倒數、藍光成交額。'],
+  ['6', 'p-wave.html', 'Wave', '波形', '點陣球體隨每 5 秒漲跌鼓起凹陷；彩虹波峰是每 2 秒的漲跌，持續往左流。'],
+  ['7', 'r-glass.html', 'Glass', '玻璃', 'Liquid Glass＋visionOS 視窗：絲帶桌布色溫＝24H 漲跌、厚玻璃與游標反光、拖動查價、24H 區間環、4H 成交量。'],
 ];
 const grid = document.getElementById('grid');
 for (const [k, file, name, zh, desc] of C) {
