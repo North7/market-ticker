@@ -147,9 +147,18 @@
     const stop = (ms) => { clearTimeout(hideT); hideT = setTimeout(() => { active = false; ov.style.display = 'none'; tip.classList.remove('on'); }, ms); };
     el.addEventListener('mousemove', (e) => { if (!fromTouch()) at(e.clientX, e.clientY); });
     el.addEventListener('mouseleave', () => { if (!fromTouch()) stop(0); });
-    el.addEventListener('touchstart', (e) => at(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
-    el.addEventListener('touchmove', (e) => at(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
-    el.addEventListener('touchend', () => stop(2200), { passive: true });
+    // 觸控：點一下是叫選單、快速一揮是換主題，所以要按住 0.3 秒或慢慢拖才開始查數據
+    let holdT, t0 = 0, sx = 0, sy = 0, lx = 0, ly = 0, armed = false;
+    el.addEventListener('touchstart', (e) => {
+      const t = e.touches[0]; t0 = Date.now(); sx = lx = t.clientX; sy = ly = t.clientY; armed = false;
+      clearTimeout(holdT); holdT = setTimeout(() => { armed = true; at(lx, ly); }, 300);
+    }, { passive: true });
+    el.addEventListener('touchmove', (e) => {
+      const t = e.touches[0]; lx = t.clientX; ly = t.clientY;
+      if (!armed && Math.hypot(lx - sx, ly - sy) > 8 && Date.now() - t0 > 180) { armed = true; clearTimeout(holdT); }
+      if (armed) at(lx, ly);
+    }, { passive: true });
+    el.addEventListener('touchend', () => { clearTimeout(holdT); if (armed) stop(2200); armed = false; }, { passive: true });
     addEventListener('scroll', () => stop(0), { passive: true });
     return () => { active = false; clearTimeout(hideT); ov.remove(); tip.remove(); };
   };

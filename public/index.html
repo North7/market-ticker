@@ -61,7 +61,7 @@ body.idle, body.idle * { cursor: none !important; }
 <nav class="dock" id="dock"></nav>
 <button class="fsbtn" id="fsbtn" title="全螢幕（F）"><svg viewBox="0 0 24 24"><path id="fsIcon" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 <div class="toast" id="toast"></div>
-<div class="help" id="help">1–8 / ← → 切換主題<br>A 自動輪播 · F 全螢幕</div>
+<div class="help" id="help">1–7 / ← → 切換主題<br>A 自動輪播 · F 全螢幕</div>
 
 <script>
 const THEMES = [
@@ -72,7 +72,6 @@ const THEMES = [
   { id: 'glyph', file: 'themes/n-glyph.html', name: 'Glyph', zh: '符號' },
   { id: 'glow', file: 'themes/o-glow.html', name: 'Glow', zh: '發光' },
   { id: 'wave', file: 'themes/p-wave.html', name: 'Wave', zh: '波形' },
-  { id: 'vital', file: 'themes/q-vital.html', name: 'Vital', zh: '脈動' },
 ];
 const AUTO_MS = 10 * 60 * 1000;
 // 版本：部署時由 GitHub Actions 換成 v<commit 數> 與台北部署時間；本機執行保持原樣顯示 local
@@ -157,14 +156,19 @@ function wire(f) {
 // ---- 觸控：左右滑切換主題，點一下叫出選單
 // 圖表（.fx-zone）上拖動是查數據、詳情面板（.fx-back）裡的操作也不算換主題
 function touch(w) {
-  let x0, y0, t0;
-  w.addEventListener('touchstart', (e) => { if (e.target.closest && e.target.closest('.dock, .fx-zone, .fx-back')) { x0 = null; return; } const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); }, { passive: true });
+  let x0, y0, t0, zone;
+  w.addEventListener('touchstart', (e) => {
+    if (e.target.closest && e.target.closest('.dock, .fx-back')) { x0 = null; return; }
+    const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); zone = !!(e.target.closest && e.target.closest('.fx-zone'));
+  }, { passive: true });
   w.addEventListener('touchend', (e) => {
     if (x0 == null) return;
     const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
     lastTouch = Date.now();
-    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6 && Date.now() - t0 < 700) { go(idx + (dx < 0 ? 1 : -1)); wake(); }
-    else if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && Date.now() - t0 < 500 && !interactive(e.target)) toggleUi();   // 點一下：選單顯示／隱藏切換
+    const dt = Date.now() - t0;
+    // 換主題要「快速一揮」；在圖表上（.fx-zone）慢慢拖是查數據，所以那裡門檻更短
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6 && dt < (zone ? 350 : 700)) { go(idx + (dx < 0 ? 1 : -1)); wake(); }
+    else if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && dt < 300 && !interactive(e.target)) toggleUi();   // 點一下：選單顯示／隱藏切換
   }, { passive: true });
 }
 touch(window);
@@ -211,7 +215,7 @@ addEventListener('keydown', onKey);
 let idleT;
 // 點畫面切換選單；點到按鈕、選單本身時不切換
 let lastTouch = 0, quietUntil = 0;
-const interactive = (el) => !!(el && el.closest && el.closest('button, a, input, select, .seg, .dock, .fsbtn, [data-fx], .fx-zone, .fx-back'));
+const interactive = (el) => !!(el && el.closest && el.closest('button, a, input, select, .seg, .dock, .fsbtn, [data-fx], .fx-back'));   // 圖表區不算：點一下照樣切換選單
 function hideUi() {
   clearTimeout(idleT);
   dock.classList.remove('show'); $('help').classList.remove('show'); $('fsbtn').classList.remove('show'); document.body.classList.add('idle');
