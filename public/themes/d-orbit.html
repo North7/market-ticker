@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100;200;300;400;500&family=Geist+Mono:wght@300;400&family=Noto+Sans+TC:wght@300;500&display=swap" rel="stylesheet">
 <style>
-:root { --bg: #07080a; --fg: #eceae4; --mute: #5f6168; --up: #ff5a3c; --down: #4bd3a7; }
+:root { --bg: #07080a; --fg: #eceae4; --mute: #5f6168; --up: #4bd3a7; --down: #ff5a3c; }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body { background: radial-gradient(circle at 33% 50%, #12141a 0%, var(--bg) 60%); color: var(--fg); overflow: hidden; font-family: 'Geist', 'Noto Sans TC', sans-serif; }
@@ -72,7 +72,7 @@ body { background: radial-gradient(circle at 33% 50%, #12141a 0%, var(--bg) 60%)
 <script>
 const { S, fmt, pct } = Feed;
 const $ = (id) => document.getElementById(id);
-const UP = '#ff5a3c', DOWN = '#4bd3a7', FG = '#eceae4';
+const UP = '#4bd3a7', DOWN = '#ff5a3c', FG = '#eceae4';
 const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
 Feed.start({ '1m': 120, '4h': 180 });
 Feed.mountExtras('#xtra');
@@ -82,7 +82,7 @@ const ang = (i, n) => -Math.PI / 2 + TAU * GAP / 2 + (i / Math.max(1, n - 1)) * 
 
 // ---- 交互：滑過軌道依角度查那一根 K（內環 1 分、外環 4H）、點小軌道看詳情、大單漣漪從價格發出
 const orbitGeo = {};
-FX.theme({ bg: 'rgba(16,17,21,.94)', fg: '#eceae4', mute: '#8c8e95', line: 'rgba(236,234,228,.5)', accent: '#eceae4', up: '#ff5a3c', down: '#4bd3a7', sheet: '#101115', border: 'rgba(236,234,228,.1)', radius: '4px', font: "'Geist', 'Noto Sans TC', sans-serif" });
+FX.theme({ bg: 'rgba(16,17,21,.94)', fg: '#eceae4', mute: '#8c8e95', line: 'rgba(236,234,228,.5)', accent: '#eceae4', up: '#4bd3a7', down: '#ff5a3c', sheet: '#101115', border: 'rgba(236,234,228,.1)', radius: '4px', font: "'Geist', 'Noto Sans TC', sans-serif" });
 FX.inspect('#cv', (x, y) => {
   const g = orbitGeo; if (!g.R) return null;
   const dx = x - g.cx, dy = y - g.cy, r = Math.hypot(dx, dy);

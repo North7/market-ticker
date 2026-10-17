@@ -63,14 +63,14 @@ body { background: #1a1030; color: var(--label); overflow: hidden; font-family: 
 .ico { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: #fff; font-size: 11.5px; font-weight: 700; letter-spacing: -.02em;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(0,0,0,.15), 0 2px 6px rgba(0,0,0,.18); }
 .ico.btc { background: linear-gradient(160deg, #ffb347, #f7931a 55%, #e2700c); font-size: 17px; }
-.ico.tw { background: linear-gradient(160deg, #ff8a7a, #ff3b30 60%, #d12c10); }
+.ico.tw { background: linear-gradient(160deg, #6fe0e6, #30b0c7 60%, #1b7f92); }   /* 類別色避開紅綠，免得跟漲跌混淆 */
 .ico.us { background: linear-gradient(160deg, #6ab8ff, #0a84ff 60%, #0060d0); }
 .ico.cr { background: linear-gradient(160deg, #c69bff, #8e5cff 60%, #5e3be0); }
 .row .tk { min-width: 0; } .row .tk b { display: block; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .tk span { display: block; font-size: 12px; color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .rt { text-align: right; } .row .rt b { display: block; font-size: 14.5px; font-weight: 500; white-space: nowrap; }
 .pill { display: inline-block; margin-top: 3px; min-width: 58px; padding: 1px 7px; border-radius: 6px; font-size: 11.5px; font-weight: 600; text-align: right; white-space: nowrap; background: var(--tile); color: var(--label2); }
-.pill.u { background: var(--red); color: #fff; } .pill.d { background: var(--green); color: #fff; }
+.pill.u { background: var(--green); color: #fff; } .pill.d { background: var(--red); color: #fff; }
 .side .ft { padding: 10px 8px 0; font-size: 11px; color: var(--label2); line-height: 1.55; }
 
 /* 內容區 */
@@ -94,7 +94,7 @@ body { background: #1a1030; color: var(--label); overflow: hidden; font-family: 
 .price small { font-size: .4em; color: var(--label2); font-weight: 500; letter-spacing: -.01em; }
 .chg { font-size: clamp(14px, 2.2vh, 18px); font-weight: 600; white-space: nowrap; }
 .chg span { display: block; color: var(--label2); font-weight: 400; font-size: .82em; margin-top: 2px; }
-.u { color: var(--red); } .d { color: var(--green); }
+.u { color: var(--green); } .d { color: var(--red); }
 
 /* bento 磚 */
 .bento { min-height: 0; display: grid; grid-template-columns: minmax(0, 2.15fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 12px; }
@@ -254,7 +254,7 @@ function chart() {
   const pd = (hi - lo) * 0.1 || hi * 0.001; hi += pd; lo -= pd;
   const X = (i) => L + (R - L) * i / (d.length - 1), Y = (p) => T + (hi - p) / (hi - lo) * (B - T);
   geo = { X, Y, d, L, R, base };
-  const last = d[d.length - 1].c, col = last >= base ? css('--red') : css('--green');
+  const last = d[d.length - 1].c, col = last >= base ? css('--green') : css('--red');
   ctx.font = `500 11px ${css('--font')}`; ctx.lineWidth = 1;
   ctx.fillStyle = css('--label2'); ctx.textBaseline = 'top'; ctx.textAlign = 'left';
   ctx.font = `600 12.5px ${css('--font')}`; ctx.fillText(`BTC · ${RANGES[RANGE][2]}`, 16, 13); ctx.font = `500 11px ${css('--font')}`;
@@ -301,7 +301,7 @@ function ring(t) {
   const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25, ap = a0 + (a1 - a0) * p, ao = a0 + (a1 - a0) * po;
   ctx.lineCap = 'round'; ctx.lineWidth = lw;
   ctx.strokeStyle = dark() ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.07)'; ctx.beginPath(); ctx.arc(cx, cy, R, a0, a1); ctx.stroke();
-  const up = S.price >= tk.o, col = up ? css('--red') : css('--green');
+  const up = S.price >= tk.o, col = up ? css('--green') : css('--red');
   const g = ctx.createConicGradient ? ctx.createConicGradient(a0 - 0.2, cx, cy) : null;
   if (g) { g.addColorStop(0, css('--blue')); g.addColorStop(0.75, col); ctx.strokeStyle = g; } else ctx.strokeStyle = col;
   ctx.shadowColor = col; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(cx, cy, R, a0, ap); ctx.stroke(); ctx.shadowBlur = 0;
@@ -370,7 +370,7 @@ Feed.on('ticker', () => {
   $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
   $('rl').textContent = fmt(t.l, 0); $('rh').textContent = fmt(t.h, 0);
   warmthT = Math.max(0, Math.min(1, 0.5 + t.P / 6));   // ±3% 走到最暖／最冷
-  document.documentElement.style.setProperty('--mood', t.P >= 0 ? css('--red') : css('--green'));
+  document.documentElement.style.setProperty('--mood', t.P >= 0 ? css('--green') : css('--red'));
 });
 
 // ---------------------------------------------------------------- 側邊清單
@@ -403,8 +403,8 @@ setInterval(clocks, 1000); clocks();
 // ---------------------------------------------------------------- 交互共用層
 function fxTheme() {
   FX.theme(dark()
-    ? { bg: 'rgba(40,40,46,.86)', fg: '#ffffff', mute: 'rgba(235,235,245,.6)', line: 'rgba(235,235,245,.5)', accent: '#0A84FF', up: '#FF453A', down: '#30D158', sheet: '#1C1C1E', border: 'rgba(120,120,128,.24)', radius: '18px', shadow: '0 20px 50px rgba(0,0,0,.45)', font: 'var(--font)' }
-    : { bg: 'rgba(255,255,255,.92)', fg: '#000000', mute: 'rgba(60,60,67,.6)', line: 'rgba(60,60,67,.45)', accent: '#007AFF', up: '#FF3B30', down: '#34C759', sheet: '#FFFFFF', border: 'rgba(120,120,128,.16)', radius: '18px', shadow: '0 20px 50px rgba(30,40,70,.18)', font: 'var(--font)' });
+    ? { bg: 'rgba(40,40,46,.86)', fg: '#ffffff', mute: 'rgba(235,235,245,.6)', line: 'rgba(235,235,245,.5)', accent: '#0A84FF', up: '#30D158', down: '#FF453A', sheet: '#1C1C1E', border: 'rgba(120,120,128,.24)', radius: '18px', shadow: '0 20px 50px rgba(0,0,0,.45)', font: 'var(--font)' }
+    : { bg: 'rgba(255,255,255,.92)', fg: '#000000', mute: 'rgba(60,60,67,.6)', line: 'rgba(60,60,67,.45)', accent: '#007AFF', up: '#34C759', down: '#FF3B30', sheet: '#FFFFFF', border: 'rgba(120,120,128,.16)', radius: '18px', shadow: '0 20px 50px rgba(30,40,70,.18)', font: 'var(--font)' });
 }
 fxTheme(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change', fxTheme);
 FX.spotlight('.glass');

@@ -35,7 +35,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 .h4 { position: relative; }
 .foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; font-family: 'JetBrains Mono'; font-size: 10.5px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
 .foot b { font-family: 'Inter Tight'; font-weight: 700; font-size: 13px; color: var(--fg); letter-spacing: 0; }
-.u { color: var(--lime); } .d { color: #9a9aa0; }
+.u { color: var(--lime); } .d { color: #ff5a5a; }
 .xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
 .banner::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(460px circle at var(--mx, -999px) var(--my, -999px), rgba(210,255,31,.12), transparent 60%); }   /* 游標聚光 */
 
@@ -92,7 +92,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 <script>
 const { S, fmt, pct } = Feed;
 const $ = (id) => document.getElementById(id);
-const LIME = '#d2ff1f';
+const LIME = '#d2ff1f', RED = '#ff5a5a';
 const cls = (v) => (v >= 0 ? 'u' : 'd');
 Feed.start({ '1m': 200, '4h': 90 });
 Feed.on('mode', () => { if (Feed.mode === 'crypto') document.querySelector('.list .hd').textContent = 'SIGNALS'; });
@@ -116,7 +116,7 @@ function glyph(ctx, kind, x, y, s, col, a = 1) {
 
 // ---- 交互：符號矩陣與 4H 長條可查數據、點清單列看詳情、大單漣漪從價格發出；滑鼠在橫幅上帶出聚光
 let glyphGeo = null, geo4h = null;
-FX.theme({ bg: 'rgba(12,12,14,.95)', fg: '#f5f5f5', mute: '#8a8a90', line: 'rgba(210,255,31,.6)', accent: '#d2ff1f', up: '#d2ff1f', down: '#9a9aa0', sheet: '#0f0f11', border: 'rgba(210,255,31,.14)', radius: '14px', font: "'JetBrains Mono', 'Noto Sans TC', monospace" });
+FX.theme({ bg: 'rgba(12,12,14,.95)', fg: '#f5f5f5', mute: '#8a8a90', line: 'rgba(210,255,31,.6)', accent: '#d2ff1f', up: '#d2ff1f', down: '#ff5a5a', sheet: '#0f0f11', border: 'rgba(210,255,31,.14)', radius: '14px', font: "'JetBrains Mono', 'Noto Sans TC', monospace" });
 FX.inspect('#cv', (x) => {
   const g = glyphGeo; if (!g) return null;
   const c = Math.floor(x / g.G); if (c < 0 || c >= g.d.length) return null;
@@ -155,7 +155,7 @@ function matrix(t) {
     const x = c * G + G / 2, y = r * G + G / 2;
     const k = cell.get(r * 1000 + c);
     const b = d[c], hot = b.v >= vHot && r >= rows - Math.max(2, Math.round(b.v / vs[vs.length - 1] * rows * 0.32));
-    const col = hot ? '#000' : LIME;
+    const col = hot ? '#000' : b.c >= b.o ? LIME : RED;   // 漲綠（萊姆）跌紅
     if (k) glyph(ctx, k, x, y, G, col, c === d.length - 1 && Math.floor(t / 500) % 2 ? 0.35 : 1);
     else if (!hot) {
       // 背景只是方格紙：暗點，每 5 格稍亮，方便對位；不用資料符號，避免誤讀
@@ -192,11 +192,11 @@ function strip4h() {
   ctx.fillStyle = 'rgba(210,255,31,.25)'; ctx.fillRect(L, mid, Rr - L, 1);
   d.forEach((b, i) => {
     const v = ret[i] / mx * hh, x = L + i * bw;
-    ctx.fillStyle = v >= 0 ? LIME : '#8a8a90';
+    ctx.fillStyle = v >= 0 ? LIME : RED;
     ctx.fillRect(x + bw * 0.2, v >= 0 ? mid - v : mid + 1, Math.max(1.5, bw * 0.6), Math.max(1, Math.abs(v)));
   });
   const last = ret[ret.length - 1] * 100;
-  ctx.font = '600 11px "JetBrains Mono"'; ctx.fillStyle = last >= 0 ? LIME : '#9a9aa0'; ctx.textAlign = 'left';
+  ctx.font = '600 11px "JetBrains Mono"'; ctx.fillStyle = last >= 0 ? LIME : RED; ctx.textAlign = 'left';
   ctx.fillText(`${last >= 0 ? '+' : ''}${last.toFixed(2)}%`, Rr + 10, mid);
 }
 
@@ -213,7 +213,7 @@ function drawPrice() {
 }
 Feed.on('ticker', () => {
   const t = S.ticker;
-  $('pct').textContent = pct(t.P);
+  $('pct').textContent = pct(t.P); $('pct').style.color = t.P >= 0 ? LIME : RED;
   $('h').textContent = fmt(t.h, 0); $('l').textContent = fmt(t.l, 0);
   $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
   renderList();
