@@ -109,7 +109,8 @@
 
   // ---------------------------------------------------------------- 查數據：十字線＋提示框
   // hit(x, y, w, h) → null 或 { x, y, vline, hline, dot, color, title, rows: [[標籤, 值, 'up'|'down']] }
-  FX.inspect = (el, hit) => {
+  // o.onEnd：放開／移出時呼叫；o.linger：觸控放開後提示停留毫秒數；hit 回傳 tip:false 時不顯示提示框（主題自己畫）
+  FX.inspect = (el, hit, o = {}) => {
     if (typeof el === 'string') el = document.querySelector(el);
     if (!el) return;
     el.classList.add('fx-zone');
@@ -136,6 +137,7 @@
       }
       const html = `<b>${h.title || ''}</b>` + (h.rows || []).map(([k, v, c]) => `<div class="fx-r"><span>${k}</span><em class="${c ? 'fx-' + c : ''}" style="font-style:normal">${v}</em></div>`).join('');
       if (html !== lastHtml) { tip.innerHTML = html; lastHtml = html; }
+      if (h.tip === false) { tip.classList.remove('on'); raf = requestAnimationFrame(render); return; }
       tip.classList.add('on');
       const tw = tip.offsetWidth, th = tip.offsetHeight, ax = r.left + h.x, ay = r.top + h.y;
       let lx = ax + 14; if (lx + tw > innerWidth - 8) lx = ax - tw - 14; lx = Math.max(8, lx);
@@ -144,7 +146,7 @@
       raf = requestAnimationFrame(render);   // 按住時資料仍持續更新
     }
     const at = (cx, cy) => { const r = el.getBoundingClientRect(); px = cx - r.left; py = cy - r.top; active = true; clearTimeout(hideT); if (!raf) raf = requestAnimationFrame(render); };
-    const stop = (ms) => { clearTimeout(hideT); hideT = setTimeout(() => { active = false; ov.style.display = 'none'; tip.classList.remove('on'); }, ms); };
+    const stop = (ms) => { clearTimeout(hideT); hideT = setTimeout(() => { active = false; ov.style.display = 'none'; tip.classList.remove('on'); if (o.onEnd) o.onEnd(); }, ms); };
     el.addEventListener('mousemove', (e) => { if (!fromTouch()) at(e.clientX, e.clientY); });
     el.addEventListener('mouseleave', () => { if (!fromTouch()) stop(0); });
     // 觸控：點一下是叫選單、快速一揮是換主題，所以要按住 0.3 秒或慢慢拖才開始查數據
@@ -158,7 +160,7 @@
       if (!armed && Math.hypot(lx - sx, ly - sy) > 8 && Date.now() - t0 > 180) { armed = true; clearTimeout(holdT); }
       if (armed) at(lx, ly);
     }, { passive: true });
-    el.addEventListener('touchend', () => { clearTimeout(holdT); if (armed) stop(2200); armed = false; }, { passive: true });
+    el.addEventListener('touchend', () => { clearTimeout(holdT); if (armed) stop(o.linger ?? 2200); armed = false; }, { passive: true });
     addEventListener('scroll', () => stop(0), { passive: true });
     return () => { active = false; clearTimeout(hideT); ov.remove(); tip.remove(); };
   };

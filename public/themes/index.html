@@ -27,7 +27,7 @@ a.card:hover .frame { outline-color: #888; }
 </head>
 <body>
 <h1>Market Ticker — 主題總覽</h1>
-<p class="sub">每個都是即時資料。點擊縮圖單獨開啟；日常使用請開首頁，用 1–7 或 ← → 切換。</p>
+<p class="sub">每個都是即時資料。點擊縮圖單獨開啟；日常使用請開首頁，用 1–8 或 ← → 切換。</p>
 <div class="grid" id="grid"></div>
 <script>
 const C = [
@@ -38,6 +38,7 @@ const C = [
   ['5', 'n-glyph.html', 'Glyph', '符號', '黑底螢光萊姆：K 線由 ◎ ▢ ✕ ＋ 符號矩陣排出，爆量分鐘是實心色塊。'],
   ['6', 'o-glow.html', 'Glow', '發光', '深色便當格：萊姆價格卡、發光走勢、4H 收盤倒數、藍光成交額。'],
   ['7', 'p-wave.html', 'Wave', '波形', '點陣球體隨每 5 秒漲跌鼓起凹陷；彩虹波峰是每 2 秒的漲跌，持續往左流。'],
+  ['8', 'r-glass.html', 'Glass', '玻璃', '依 iOS 27／macOS 27 Liquid Glass 規範：玻璃側欄清單、股票 App 式拖動查價、膠囊範圍控制、跟隨系統淺深色。'],
 ];
 const grid = document.getElementById('grid');
 for (const [k, file, name, zh, desc] of C) {

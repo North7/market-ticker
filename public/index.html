@@ -61,7 +61,7 @@ body.idle, body.idle * { cursor: none !important; }
 <nav class="dock" id="dock"></nav>
 <button class="fsbtn" id="fsbtn" title="全螢幕（F）"><svg viewBox="0 0 24 24"><path id="fsIcon" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 <div class="toast" id="toast"></div>
-<div class="help" id="help">1–7 / ← → 切換主題<br>A 自動輪播 · F 全螢幕</div>
+<div class="help" id="help">1–8 / ← → 切換主題<br>A 自動輪播 · F 全螢幕</div>
 
 <script>
 const THEMES = [
@@ -72,6 +72,7 @@ const THEMES = [
   { id: 'glyph', file: 'themes/n-glyph.html', name: 'Glyph', zh: '符號' },
   { id: 'glow', file: 'themes/o-glow.html', name: 'Glow', zh: '發光' },
   { id: 'wave', file: 'themes/p-wave.html', name: 'Wave', zh: '波形' },
+  { id: 'glass', file: 'themes/r-glass.html', name: 'Glass', zh: '玻璃' },
 ];
 const AUTO_MS = 10 * 60 * 1000;
 // 版本：部署時由 GitHub Actions 換成 v<commit 數> 與台北部署時間；本機執行保持原樣顯示 local
