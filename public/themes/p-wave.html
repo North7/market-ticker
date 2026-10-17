@@ -26,6 +26,10 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 /* 主舞台：3D 盒子裡的成交地形 */
 .stage { position: relative; min-height: 0; }
 .stage { cursor: grab; } .stage.rot { cursor: grabbing; }
+.modes { position: absolute; right: 0; top: 10px; z-index: 3; display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--rule); border-radius: 999px; }
+.modes button { all: unset; cursor: pointer; padding: 3px 11px; border-radius: 999px; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--mute); transition: background .2s, color .2s; }
+.modes button.on { background: var(--fg); color: #000; }
+@media (hover: hover) { .modes button:not(.on):hover { color: var(--fg); } }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .px { position: absolute; left: 0; top: 10px; z-index: 2; pointer-events: none; }
 .px .big { font-weight: 200; font-size: clamp(48px, 11.5vh, 116px); line-height: .92; letter-spacing: -.035em; margin: 8px 0 10px; white-space: nowrap; }
@@ -84,6 +88,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 
   <section class="stage fx-lock" id="stage">
     <canvas id="cv"></canvas>
+    <div class="modes" id="modes"><button data-m="ridge">Ridge 山脊</button><button data-m="candle">Candles K 線</button></div>
     <div class="px">
       <span class="sc">Bitcoin · last trade</span>
       <div class="big" id="price">—</div>
@@ -133,8 +138,17 @@ function wireBox(ctx, P, alpha = 0.32) {
 }
 
 // ---------------------------------------------------------------- 主舞台：3D K 線空間（x＝時間 1 分 K × 60、y＝價格、z 深度＝成交量；可 360° 拖動旋轉）
-const NC = 60, VIEW0 = { yaw: 0.5, pitch: 0.24 };
-const view = { yaw: VIEW0.yaw, pitch: VIEW0.pitch, vy: 0, vp: 0, drag: null, idle: 0 };
+const NC = 60, VIEWS = { ridge: { yaw: 0.62, pitch: 0.58 }, candle: { yaw: 0.5, pitch: 0.24 } };
+// 兩種主圖：ridge＝山脊（山頂＝價格、厚度＝成交量）、candle＝3D K 線；記住上次選擇
+let MODE = (() => { try { return localStorage.getItem('wave.mode') || 'ridge'; } catch { return 'ridge'; } })();
+const MODE_TXT = { ridge: ['Price Ridge｜價格山脊', 'x 時間 · 山高＝價格 · 山厚＝成交量 ｜ 藍漲 粉跌 ｜ 拖動旋轉'], candle: ['Candle Space｜K 線空間', 'x 時間 · y 價格 · 深度＝成交量 ｜ 藍漲 粉跌 ｜ 拖動旋轉'] };
+function paintMode() {
+  document.querySelectorAll('#modes button').forEach((b) => b.classList.toggle('on', b.dataset.m === MODE));
+  document.querySelector('.hd .t').textContent = MODE_TXT[MODE][0]; document.querySelector('.note').textContent = MODE_TXT[MODE][1];
+}
+document.querySelectorAll('#modes button').forEach((b) => (b.onclick = () => { MODE = b.dataset.m; try { localStorage.setItem('wave.mode', MODE); } catch { /* ignore */ } view.idle = 0; paintMode(); }));   // 切換後轉到該模式的預設角度
+paintMode();
+const view = { yaw: 0.55, pitch: 0.4, vy: 0, vp: 0, drag: null, idle: 0 };
 // 真正的 3D 相機：繞 y 軸轉 yaw、再俯仰 pitch，透視投影
 function cam3(w, h, o) {
   const ca = Math.cos(o.yaw), sa = Math.sin(o.yaw), cb = Math.cos(o.pitch), sb = Math.sin(o.pitch), F = 4.2;
@@ -157,14 +171,15 @@ function stage(t) {
   if (!view.drag) {
     view.yaw += view.vy; view.pitch = Math.max(-0.35, Math.min(1.45, view.pitch + view.vp)); view.vy *= 0.94; view.vp *= 0.9;
     if (Date.now() - view.idle > 10000) {
-      let dy = ((VIEW0.yaw - view.yaw) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
-      view.yaw += dy * 0.03; view.pitch += (VIEW0.pitch - view.pitch) * 0.03;
+      const V0 = VIEWS[MODE]; let dy = ((V0.yaw - view.yaw) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+      view.yaw += dy * 0.03; view.pitch += (V0.pitch - view.pitch) * 0.03;
     }
   }
   const P = cam3(w, h, { yaw: view.yaw + FX.pointer.x * 0.06, pitch: view.pitch + FX.pointer.y * 0.03, cx: w * (port ? 0.5 : 0.56), cy: h * (port ? 0.72 : 0.62), s: Math.min(w * (port ? 0.33 : 0.3), h * (port ? 0.32 : 0.46)), hy: 1.1 });
   let lo = Infinity, hi = -Infinity, vmx = 0; for (const b of bars) { lo = Math.min(lo, b.l); hi = Math.max(hi, b.h); vmx = Math.max(vmx, b.v); }
   const pd = (hi - lo) * 0.08; lo -= pd; hi += pd;
-  const Y = (p) => (p - lo) / (hi - lo), n = bars.length, X = (i) => -1 + (i + 0.5) * 2 / NC + (NC - n) * 2 / NC, wx = 0.36 / NC * 2;
+  const BASE = MODE === 'ridge' ? 0.22 : 0, SPAN = MODE === 'ridge' ? 0.74 : 1;   // 山脊模式山腳墊高；背牆刻度、現價環都用同一個對應
+  const Y = (p) => BASE + SPAN * (p - lo) / (hi - lo), invY = (y) => lo + (hi - lo) * (y - BASE) / SPAN, n = bars.length, X = (i) => -1 + (i + 0.5) * 2 / NC + (NC - n) * 2 / NC, wx = 0.36 / NC * 2;
   // 盒子、地板格線、背牆價格線
   wireBox(ctx, P, 0.24);
   ctx.lineWidth = 0.6; ctx.strokeStyle = 'rgba(255,255,255,.06)';
@@ -173,33 +188,76 @@ function stage(t) {
   for (let k = 1; k <= 3; k++) {
     const y = k / 4, a = P(-1, y, -1), b = P(1, y, -1), c = P(1, y, 1);
     ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.stroke();
-    const e = b[0] > c[0] ? b : c; label(ctx, w, fmt(lo + (hi - lo) * y, 0), e[0] + 8, e[1]);
+    const e = b[0] > c[0] ? b : c; label(ctx, w, fmt(invY(y), 0), e[0] + 8, e[1]);
   }
-  // 每根 K：先算深度，由遠到近畫
-  const items = bars.map((b, i) => {
-    const x = X(i), yo = Y(b.o), yc = Y(b.c), y0 = Math.min(yo, yc), y1 = Math.max(Math.max(yo, yc), y0 + 0.004), dz = 0.03 + 0.42 * Math.pow(b.v / (vmx || 1), 0.8);
-    return { b, i, x, y0, y1, dz, depth: P(x, (y0 + y1) / 2, 0)[2] };
-  }).sort((a, b) => a.depth - b.depth);
   const pts = [];
-  for (const it of items) {
-    const { b, x, y0, y1, dz } = it, up = b.c >= b.o, col = up ? UP : DN, last = it.i === n - 1;
-    const v = [[x - wx, y0, -dz], [x + wx, y0, -dz], [x + wx, y0, dz], [x - wx, y0, dz], [x - wx, y1, -dz], [x + wx, y1, -dz], [x + wx, y1, dz], [x - wx, y1, dz]].map(([a, bb, c]) => P(a, bb, c));
-    const faces = [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [3, 2, 6, 7], [0, 3, 7, 4], [1, 2, 6, 5]];
-    const glow = last ? 0.5 + 0.5 * Math.sin(t * 4) : 0;
-    ctx.fillStyle = rgba(col, 0.035 + glow * 0.08);
-    for (const f of faces) { ctx.beginPath(); f.forEach((k, j) => (j ? ctx.lineTo(v[k][0], v[k][1]) : ctx.moveTo(v[k][0], v[k][1]))); ctx.closePath(); ctx.fill(); }
-    ctx.strokeStyle = rgba(mix(col, [255, 255, 255], glow * 0.5), 0.55 + glow * 0.4); ctx.lineWidth = last ? 1.2 : 0.8;
-    [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]].forEach(([a, c]) => { ctx.beginPath(); ctx.moveTo(v[a][0], v[a][1]); ctx.lineTo(v[c][0], v[c][1]); ctx.stroke(); });
-    const wl = P(x, Y(b.l), 0), wh = P(x, Y(b.h), 0);
-    ctx.strokeStyle = rgba(col, 0.75); ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(wl[0], wl[1]); ctx.lineTo(wh[0], wh[1]); ctx.stroke();
-    // 地板上的成交量投影（細線框）
-    const f0 = P(x - wx, 0, -dz), f1 = P(x + wx, 0, -dz), f2 = P(x + wx, 0, dz), f3 = P(x - wx, 0, dz);
-    ctx.strokeStyle = rgba(col, 0.14); ctx.beginPath(); ctx.moveTo(f0[0], f0[1]); ctx.lineTo(f1[0], f1[1]); ctx.lineTo(f2[0], f2[1]); ctx.lineTo(f3[0], f3[1]); ctx.closePath(); ctx.stroke();
-    pts.push({ i: it.i, b, p: P(x, Y(b.c), 0) });
+  if (MODE === 'ridge') {
+    // 山脊：山頂＝收盤價曲線，每一刻往前後展開的厚度＝該分鐘成交量
+    const SUB = 3, M = (n - 1) * SUB + 1, hgt = [], wid = [], dir = [];
+    for (let q = 0; q < M; q++) {
+      const f = q / SUB, i = Math.min(n - 2, Math.floor(f)), u = f - i, a = bars[i], b = bars[i + 1];
+      hgt.push(Y(a.c + (b.c - a.c) * u));
+      wid.push(0.28 + 0.72 * Math.pow(((a.v + (b.v - a.v) * u) / (vmx || 1)), 0.55));
+      dir.push(Math.min(n - 1, Math.round(f)));
+    }
+    for (let k = 0; k < 6; k++) for (let q = 1; q < M - 1; q++) wid[q] = (wid[q - 1] + wid[q] * 2 + wid[q + 1]) / 4;   // 厚度平滑，不會鋸齒
+    // 山坡用平滑過的高度（山頂稜線仍畫精確收盤價）
+    const hs = hgt.slice(); for (let k = 0; k < 4; k++) for (let q = 1; q < M - 1; q++) hs[q] = (hs[q - 1] + hs[q] * 2 + hs[q + 1]) / 4;
+    // 顏色用前後 5 分鐘的漲跌比例平滑，坡面讀成一段趨勢而不是條紋
+    const upS = bars.map((_, i) => { let u = 0, c = 0; for (let k = i - 2; k <= i + 2; k++) { if (k < 0 || k >= n) continue; u += bars[k].c >= bars[k].o ? 1 : 0; c++; } return u / c; });
+    const XQ = (q) => X(q / SUB), NZS = 18, zs = [...Array(NZS)].map((_, j) => -1 + 2 * j / (NZS - 1));
+    const sy = (q, z) => { const u = z / wid[q], g = Math.exp(-(u * u) / 0.5); return (hs[q] + (hgt[q] - hs[q]) * Math.pow(g, 6)) * g; };   // 越靠近山頂越貼近真實價格
+    // 依深度排序：遠的切片先畫
+    const order = zs.map((z, j) => ({ z, j, d: P(0, 0.5, z)[2] })).sort((a, b) => a.d - b.d);
+    ctx.lineWidth = 0.85;
+    for (const { z } of order) {
+      for (let q = 0; q < M - 1; q++) {
+        const g = (sy(q, z) / (hgt[q] || 1) + sy(q + 1, z) / (hgt[q + 1] || 1)) / 2;
+        if (g < 0.02) continue;
+        const col = mix(mix(DN, UP, upS[dir[q]]), [255, 255, 255], Math.pow(g, 3) * 0.5);
+        const a = P(XQ(q), sy(q, z), z), c = P(XQ(q + 1), sy(q + 1, z), z);
+        ctx.strokeStyle = rgba(col, 0.07 + 0.78 * Math.pow(g, 1.5)); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(c[0], c[1]); ctx.stroke();
+      }
+    }
+    // 橫切線：每 2 分鐘一條，看得出厚度
+    ctx.lineWidth = 0.5; ctx.strokeStyle = 'rgba(255,255,255,.1)';
+    for (let q = 0; q < M; q += SUB * 2) { ctx.beginPath(); zs.forEach((z, j) => { const p = P(XQ(q), sy(q, z), z); j ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.stroke(); }
+    // 山頂稜線＋每分鐘一個點
+    ctx.lineWidth = 1.3; ctx.strokeStyle = rgba(CREAM, 0.85); ctx.beginPath();
+    for (let q = 0; q < M; q++) { const p = P(XQ(q), hgt[q], 0); q ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }
+    ctx.stroke();
+    bars.forEach((b, i) => {
+      const p = P(X(i), Y(b.c), 0), last = i === n - 1;
+      ctx.fillStyle = last ? '#fff' : rgba(b.c >= b.o ? UP : DN, 0.95); ctx.beginPath(); ctx.arc(p[0], p[1], last ? 3.5 : 1.8, 0, 7); ctx.fill();
+      if (last) { const k = (t % 1.6) / 1.6; ctx.strokeStyle = `rgba(255,255,255,${1 - k})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(p[0], p[1], 4 + k * 14, 0, 7); ctx.stroke(); }
+      pts.push({ i, b, p });
+    });
+  } else {
+    // 每根 K：先算深度，由遠到近畫
+    const items = bars.map((b, i) => {
+      const x = X(i), yo = Y(b.o), yc = Y(b.c), y0 = Math.min(yo, yc), y1 = Math.max(Math.max(yo, yc), y0 + 0.004), dz = 0.03 + 0.42 * Math.pow(b.v / (vmx || 1), 0.8);
+      return { b, i, x, y0, y1, dz, depth: P(x, (y0 + y1) / 2, 0)[2] };
+    }).sort((a, b) => a.depth - b.depth);
+    for (const it of items) {
+      const { b, x, y0, y1, dz } = it, up = b.c >= b.o, col = up ? UP : DN, last = it.i === n - 1;
+      const v = [[x - wx, y0, -dz], [x + wx, y0, -dz], [x + wx, y0, dz], [x - wx, y0, dz], [x - wx, y1, -dz], [x + wx, y1, -dz], [x + wx, y1, dz], [x - wx, y1, dz]].map(([a, bb, c]) => P(a, bb, c));
+      const faces = [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [3, 2, 6, 7], [0, 3, 7, 4], [1, 2, 6, 5]];
+      const glow = last ? 0.5 + 0.5 * Math.sin(t * 4) : 0;
+      ctx.fillStyle = rgba(col, 0.035 + glow * 0.08);
+      for (const f of faces) { ctx.beginPath(); f.forEach((k, j) => (j ? ctx.lineTo(v[k][0], v[k][1]) : ctx.moveTo(v[k][0], v[k][1]))); ctx.closePath(); ctx.fill(); }
+      ctx.strokeStyle = rgba(mix(col, [255, 255, 255], glow * 0.5), 0.55 + glow * 0.4); ctx.lineWidth = last ? 1.2 : 0.8;
+      [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]].forEach(([a, c]) => { ctx.beginPath(); ctx.moveTo(v[a][0], v[a][1]); ctx.lineTo(v[c][0], v[c][1]); ctx.stroke(); });
+      const wl = P(x, Y(b.l), 0), wh = P(x, Y(b.h), 0);
+      ctx.strokeStyle = rgba(col, 0.75); ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(wl[0], wl[1]); ctx.lineTo(wh[0], wh[1]); ctx.stroke();
+      // 地板上的成交量投影（細線框）
+      const f0 = P(x - wx, 0, -dz), f1 = P(x + wx, 0, -dz), f2 = P(x + wx, 0, dz), f3 = P(x - wx, 0, dz);
+      ctx.strokeStyle = rgba(col, 0.14); ctx.beginPath(); ctx.moveTo(f0[0], f0[1]); ctx.lineTo(f1[0], f1[1]); ctx.lineTo(f2[0], f2[1]); ctx.lineTo(f3[0], f3[1]); ctx.closePath(); ctx.stroke();
+      pts.push({ i: it.i, b, p: P(x, Y(b.c), 0) });
+    }
+    // 收盤價連線（穿過每根 K 的中心）
+    ctx.strokeStyle = rgba(CREAM, 0.35); ctx.lineWidth = 0.8; ctx.beginPath();
+    bars.forEach((b, i) => { const p = P(X(i), Y(b.c), 0); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.stroke();
   }
-  // 收盤價連線（穿過每根 K 的中心）
-  ctx.strokeStyle = rgba(CREAM, 0.35); ctx.lineWidth = 0.8; ctx.beginPath();
-  bars.forEach((b, i) => { const p = P(X(i), Y(b.c), 0); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.stroke();
   // 現價：沿盒子四面一圈虛線
   if (S.price) {
     const y = Y(S.price), c = [[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]].map(([x, z]) => P(x, y, z));
@@ -226,6 +284,7 @@ function stage(t) {
   const el = $('stage');
   el.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.target.closest('button')) return;   // 點開關不算拖動
     view.drag = { x: e.clientX, y: e.clientY, yaw: view.yaw, pitch: view.pitch, lx: e.clientX, ly: e.clientY, t: performance.now(), moved: false, touch: e.pointerType !== 'mouse' };
     view.vy = view.vp = 0; view.idle = Date.now();
   });
