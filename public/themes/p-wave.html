@@ -2,72 +2,103 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Wave</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
+/* Wave：一張「成交地形」分析海報。
+   同一套語言貫穿全頁：細線網格／點雲、細線框的 3D 盒子、一種字體、細分隔線。
+   色彩：藍＝買／漲、粉＝賣／跌；米白 → 紅＝弱 → 強。 */
+:root { --bg: #000; --fg: #f2f2f4; --mute: #8a8a92; --dim: #4a4a52; --rule: rgba(255,255,255,.14); --up: #7aa2ff; --down: #ff7a9a; --cream: #efe3c2; --hot: #ff4a3d; }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-body { background: #000; color: #fff; overflow: hidden; font-family: 'Inter', 'Noto Sans TC', sans-serif; }
-canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
-.lab { position: fixed; left: 40px; top: 40px; font-size: 17px; line-height: 1.3; z-index: 2; }
-.price { position: fixed; left: 36px; top: 96px; z-index: 2; font-weight: 500; font-size: min(19vh, 172px); line-height: .9; letter-spacing: -.045em; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.price small { font-size: .4em; color: #9a9aa0; letter-spacing: -.02em; }
-.chg { position: fixed; left: 42px; top: calc(96px + min(19vh, 172px) + 18px); z-index: 2; display: flex; align-items: center; gap: 18px; font-size: 15px; color: #b5b5bb; }
-.chg .ring.up { border-color: #7aa2ff; color: #7aa2ff; } .chg .ring.dn { border-color: #ff7a9a; color: #ff7a9a; }
-.chg .ring { display: inline-grid; place-items: center; height: 40px; padding: 0 16px; border: 1.5px solid #f5f35c; border-radius: 999px; color: #f5f35c; font-weight: 500; font-size: 17px; }
-.list { position: fixed; left: 42px; top: calc(96px + min(19vh, 172px) + 92px); z-index: 2; font-size: 13px; line-height: 1.55; color: #d6d6da; width: 330px; }
-.list .r { display: grid; grid-template-columns: 1fr auto auto; gap: 14px; padding: 5px 0; border-bottom: 1px solid #1c1c1f; }
-.list .r span { color: #8a8a90; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.list .r b { font-weight: 500; color: #fff; font-variant-numeric: tabular-nums; }
-.list .r i { font-style: normal; font-variant-numeric: tabular-nums; min-width: 58px; text-align: right; }
-@media (max-height: 760px) {   /* 矮視窗：清單改兩欄，避免壓到波形 */
-  .list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; width: min(540px, 46vw); font-size: 12px; line-height: 1.4; }
-  .list .r { padding: 3px 0; gap: 10px; }
-  .list .r i { min-width: 48px; }
-}
-.note { position: fixed; right: 40px; top: 40px; z-index: 2; font-size: 12.5px; line-height: 1.45; color: #b5b5bb; text-align: left; width: 230px; }
-.foot { position: fixed; left: 40px; right: 40px; bottom: 22px; z-index: 2; display: flex; justify-content: space-between; font-size: 12px; color: #d6d6da; }
-.foot span b { font-weight: 500; color: #fff; margin-left: 10px; }
-.foot .y { color: #f5f35c; }
-.u { color: #7aa2ff; } .d { color: #ff7a9a; }
-.xtra { margin-left: 14px; opacity: .85; white-space: nowrap; }
-/* 直式：價格在上、球體置中、清單兩欄在球體下方、波形在底部 */
+body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: 'Inter', 'Noto Sans TC', sans-serif; font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased; }
+.sc { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--mute); font-weight: 400; }
+
+.wrap { height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) clamp(200px, 22vw, 290px); grid-template-rows: 40px minmax(0, 1fr) auto; column-gap: 30px; padding: 0 30px 14px; }
+.hd { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 18px; }
+.hd .t { font-size: 11px; letter-spacing: .32em; text-transform: uppercase; color: var(--fg); font-weight: 400; display: flex; align-items: center; gap: 18px; white-space: nowrap; }
+.hd .t::before, .hd .t::after { content: ''; width: clamp(30px, 10vw, 160px); height: 1px; background: var(--rule); }
+.hd .r { justify-self: end; } .hd .r b { color: var(--fg); font-weight: 400; margin-left: 8px; letter-spacing: .12em; }
+
+/* 主舞台：3D 盒子裡的成交地形 */
+.stage { position: relative; min-height: 0; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.px { position: absolute; left: 0; top: 10px; z-index: 2; pointer-events: none; }
+.px .big { font-weight: 200; font-size: clamp(48px, 11.5vh, 116px); line-height: .92; letter-spacing: -.035em; margin: 8px 0 10px; white-space: nowrap; }
+.px .big small { font-size: .4em; color: var(--mute); letter-spacing: -.01em; }
+.px .row { display: flex; align-items: center; gap: 16px; font-size: 12px; color: var(--mute); white-space: nowrap; }
+.px .row b { color: var(--fg); font-weight: 400; margin-left: 6px; }
+.pill { display: inline-block; padding: 4px 11px; border-radius: 999px; border: 1px solid currentColor; font-size: 12.5px; font-weight: 500; }
+.u { color: var(--up); } .d { color: var(--down); }
+.xtra { margin-top: 8px; font-size: 11px; color: var(--mute); letter-spacing: .04em; }
+
+/* 右側標本盒：同樣的細線盒＋直書標題＋漸層圖例 */
+.side { min-height: 0; display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 6px 0 4px; }
+.spec { position: relative; min-height: 0; padding-left: 22px; display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+.spec .cap { position: absolute; left: 0; top: 0; bottom: 26px; writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--mute); white-space: nowrap; overflow: hidden; }
+.spec .box { position: relative; min-height: 0; }
+.spec canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.leg { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); padding-top: 6px; }
+.leg i { height: 4px; border-radius: 1px; }
+.g-dir { background: linear-gradient(90deg, var(--down), #a98bff, var(--up)); }
+.g-int { background: linear-gradient(90deg, var(--cream), #f59a7a, var(--hot)); }
+
+/* 底部：指標列（同樣的細線與小型大寫） */
+.foot { grid-column: 1 / -1; border-top: 1px solid var(--rule); padding-top: 10px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)) auto; gap: 0 18px; align-items: end; }
+.mk { min-width: 0; }
+.mk .sc { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mk b { display: block; font-weight: 300; font-size: clamp(15px, 2.4vh, 20px); letter-spacing: -.01em; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mk span.c { font-size: 11px; }
+.note { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); text-align: right; white-space: nowrap; }
+
+/* 直式：舞台在上、標本盒三格並排、指標兩欄 */
 @media (orientation: portrait) {
-  .list { top: calc(43vh + min(30vw, 13vh) + 34px); display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; width: auto; right: 42px; }
-  .note { display: none; }
-  .foot { flex-wrap: wrap; gap: 4px 18px; justify-content: flex-start; }
-}
-@media (orientation: portrait) and (max-width: 640px) {
-  .lab { left: 16px; top: 16px; font-size: 13px; }
-  .price { left: 14px; top: 84px; font-size: min(19vh, 21vw); }
-  .chg { left: 16px; top: calc(84px + min(19vh, 21vw) + 10px); gap: 12px; font-size: 12px; }
-  .chg .ring { height: 32px; padding: 0 12px; font-size: 14px; }
-  .list { left: 16px; right: 16px; column-gap: 16px; font-size: 11px; line-height: 1.35; }
-  .list .r { gap: 6px; padding: 3px 0; grid-template-columns: minmax(0, 1fr) auto; }
-  .list .r i { display: none; }
-  .foot { left: 16px; right: 16px; bottom: 12px; font-size: 10px; gap: 2px 12px; }
-  .foot span b { margin-left: 5px; }
+  html, body { height: auto; } body { overflow-x: hidden; overflow-y: auto; }
+  .wrap { height: auto; min-height: 100vh; grid-template-columns: minmax(0, 1fr); grid-template-rows: 40px clamp(420px, 62vh, 720px) auto auto; padding: 0 16px 16px; }
+  .hd .t::before, .hd .t::after { display: none; } .hd { grid-template-columns: 1fr auto; } .hd .t { grid-column: 1; } .hd .l { display: none; }
+  .side { grid-template-rows: none; grid-template-columns: repeat(3, minmax(0, 1fr)); height: clamp(170px, 22vh, 260px); margin: 8px 0 14px; }
+  .spec { padding-left: 0; } .spec .cap { position: static; writing-mode: horizontal-tb; transform: none; text-align: left; font-size: 8.5px; letter-spacing: .12em; margin-bottom: 4px; }
+  .spec { grid-template-rows: auto minmax(0, 1fr) auto; }
+  .leg { font-size: 8.5px; gap: 4px; }
+  .foot { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 12px; } .note { grid-column: 1 / -1; text-align: left; white-space: normal; }
 }
 @media (orientation: landscape) and (max-height: 500px) {
-  .note, .list { display: none; }
-  .lab { top: 14px; left: 20px; font-size: 13px; }
-  .price { top: 64px; left: 18px; }
-  .chg { top: calc(64px + min(19vh, 172px) + 10px); left: 20px; }
-  .foot { bottom: 8px; left: 20px; right: 20px; font-size: 10px; }
+  .wrap { grid-template-rows: 30px minmax(0, 1fr) auto; padding: 0 18px 8px; column-gap: 18px; grid-template-columns: minmax(0, 1fr) 170px; }
+  .px .big { font-size: 48px; } .xtra { display: none; }
+  .foot { grid-template-columns: repeat(6, minmax(0, 1fr)); } .note { display: none; } .mk b { font-size: 14px; }
+  .leg span { display: none; }
 }
 </style>
 </head>
 <body>
-<canvas id="cv"></canvas>
-<div class="lab">BTC / USDT<br>live market collection<br><span id="xtra" class="xtra"></span></div>
-<div class="price" id="price">—</div>
-<div class="chg"><span class="ring" id="pct">—</span><span id="hl">—</span></div>
-<div class="list" id="list"></div>
-<div class="note">The sphere bends with the last minute:<br>each bulge is a 5-second return,<br>fold depth is the 60-second range,<br>its tremor is the live trade rate.<br><br>Below, every wave is 2 seconds of trading —<br>up above the line, down below it,<br>flowing in from the right.</div>
-<div class="foot"><span>SPHERE —<b>5-sec returns · 60 s</b></span><span>WAVES —<b>2-sec returns · 120 s</b></span><span>TPE —<b id="tpe">—</b></span><span>NYC —<b id="nyc">—</b></span><span>24H AMP —<b class="y" id="amp">—</b></span><span>TRADES / S —<b id="tps">—</b></span></div>
+<div class="wrap">
+  <header class="hd">
+    <span class="sc l">Live · Binance spot · BTC / USDT</span>
+    <span class="t">Trade Landscape｜成交地形</span>
+    <span class="sc r">TPE<b id="tpe">—</b></span>
+  </header>
+
+  <section class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="px">
+      <span class="sc">Bitcoin · last trade</span>
+      <div class="big" id="price">—</div>
+      <div class="row"><span class="pill" id="pct">—</span><span>H<b id="h">—</b></span><span>L<b id="l">—</b></span><span>AMP<b id="amp">—</b></span></div>
+      <div class="xtra" id="xtra"></div>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="spec" id="sp1"><span class="cap">Sphere · 5s returns · 60s</span><div class="box"><canvas id="cs"></canvas></div><div class="leg"><span>Down</span><i class="g-dir"></i><span>Up</span></div></div>
+    <div class="spec" id="sp2"><span class="cap">Layers · 10 min × 6 · 1h</span><div class="box"><canvas id="cl"></canvas></div><div class="leg"><span>Calm</span><i class="g-int"></i><span>Volatile</span></div></div>
+    <div class="spec" id="sp3"><span class="cap">Wave · 2s returns · 120s</span><div class="box"><canvas id="cw"></canvas></div><div class="leg"><span>Down</span><i class="g-dir"></i><span>Up</span></div></div>
+  </aside>
+
+  <footer class="foot" id="foot"><div class="note">x 時間 · z 價位 · y 成交量 ｜ 藍＝買 粉＝賣</div></footer>
+</div>
 
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
@@ -76,191 +107,264 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
 const { S, fmt, pct } = Feed;
 const $ = (id) => document.getElementById(id);
 const cls = (v) => (v >= 0 ? 'u' : 'd');
+const UP = [122, 162, 255], DN = [255, 122, 154], VI = [169, 139, 255], CREAM = [239, 227, 194], HOT = [255, 74, 61];
+const lerp = (a, b, t) => a + (b - a) * t;
+const mix = (a, b, t) => a.map((v, i) => Math.round(lerp(v, b[i], t)));
+const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const dirCol = (s) => (s < 0.5 ? mix(DN, VI, s * 2) : mix(VI, UP, (s - 0.5) * 2));   // 0＝賣 → 1＝買
 Feed.start({ '1m': 120, '4h': 60 });
-Feed.mountExtras('#xtra');
+const paintEth = () => { const t = Feed.mode === 'crypto' ? Feed.extrasText() : ''; $('xtra').textContent = t; $('xtra').style.display = t ? '' : 'none'; };
+Feed.on('extras', paintEth); Feed.on('mode', paintEth);
 
-// ---- 點陣球：費氏球面取點，每個點預先算好對 12 個鼓包中心的權重
-const N = 5200, K = 12;
-const P = [], Wt = [];
-for (let i = 0; i < N; i++) {
-  const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), th = i * Math.PI * (3 - Math.sqrt(5));
-  const p = [Math.cos(th) * r, y, Math.sin(th) * r]; P.push(p);
-  const w = [];
-  for (let k = 0; k < K; k++) {
-    const lon = k / K * Math.PI * 2, lat = Math.sin(k * 1.7) * 0.55;
-    const c = [Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon)];
-    const dot = p[0] * c[0] + p[1] * c[1] + p[2] * c[2];
-    w.push(Math.exp(-(Math.acos(Math.max(-1, Math.min(1, dot))) ** 2) / 0.22));
-  }
-  Wt.push(w);
+// ---------------------------------------------------------------- 3D 投影（同一套，主舞台與標本盒共用）
+function camera(w, h, o) {
+  const a = o.yaw, b = o.pitch, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+  return (x, y, z) => {   // x,z ∈ [-1,1]，y ∈ [0,1]（高度）
+    const xr = x * ca - z * sa, zr = x * sa + z * ca;
+    const d = zr * cb + y * o.hy * sb, p = o.f / (o.f - d * 0.6);
+    return [o.cx + xr * o.sx * p, o.cy - y * o.hy * cb * o.sy + zr * sb * o.sy * 0.55 * p, d];
+  };
 }
-const amp = new Float64Array(K);   // 平滑後的鼓包幅度
-let tremor = 0.3, foldAmp = 0.05;   // 皺褶深度＝最近 60 秒價格區間（平靜時球面也平滑）
+function wireBox(ctx, P, alpha = 0.32) {
+  const c = [[-1, 0, -1], [1, 0, -1], [1, 0, 1], [-1, 0, 1], [-1, 1, -1], [1, 1, -1], [1, 1, 1], [-1, 1, 1]].map(([x, y, z]) => P(x, y, z));
+  ctx.strokeStyle = `rgba(255,255,255,${alpha})`; ctx.lineWidth = 0.8;
+  [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]].forEach(([i, j]) => { ctx.beginPath(); ctx.moveTo(c[i][0], c[i][1]); ctx.lineTo(c[j][0], c[j][1]); ctx.stroke(); });
+}
 
-// 秒級報酬：把最近的逐筆成交切成 sec 秒一桶，報酬＝這桶收盤 / 上一桶收盤 − 1
+// ---------------------------------------------------------------- 主舞台：成交地形（x＝時間 2 秒一格、z＝價位、y＝成交量，顏色＝買賣比）
+const NX = 60, NZ = 30, BIN = 2000;
+const vol = new Float32Array(NX * NZ), buy = new Float32Array(NX * NZ), H = new Float32Array(NX * NZ), B = new Float32Array(NX * NZ);
+let lo = null, hi = null, vmax = 1, gridEnd = 0;
+function buildGrid() {
+  const now = Date.now(), end = Math.floor(now / BIN) * BIN + BIN, start = end - NX * BIN;
+  gridEnd = end;
+  const ticks = S.ticks.filter((x) => x.T >= start); if (ticks.length < 5) return;
+  let l = Infinity, h = -Infinity; for (const x of ticks) { l = Math.min(l, x.p); h = Math.max(h, x.p); }
+  const pad = Math.max((h - l) * 0.12, h * 0.00005); l -= pad; h += pad;
+  lo = lo == null ? l : lerp(lo, l, 0.25); hi = hi == null ? h : lerp(hi, h, 0.25);
+  vol.fill(0); buy.fill(0);
+  for (const x of ticks) {
+    const ix = Math.min(NX - 1, Math.floor((x.T - start) / BIN)), iz = Math.max(0, Math.min(NZ - 1, Math.floor((x.p - lo) / (hi - lo) * NZ)));
+    vol[ix * NZ + iz] += x.q; if (!x.m) buy[ix * NZ + iz] += x.q;
+  }
+  // 兩次 3×3 平滑：成交點變成山丘
+  let src = vol, sb = buy;
+  for (let pass = 0; pass < 2; pass++) {
+    const nv = new Float32Array(NX * NZ), nb = new Float32Array(NX * NZ);
+    for (let i = 0; i < NX; i++) for (let k = 0; k < NZ; k++) {
+      let s = 0, sbb = 0, ws = 0;
+      for (let di = -1; di <= 1; di++) for (let dk = -1; dk <= 1; dk++) {
+        const ii = i + di, kk = k + dk; if (ii < 0 || ii >= NX || kk < 0 || kk >= NZ) continue;
+        const wgt = (di ? 0.6 : 1) * (dk ? 0.6 : 1); s += src[ii * NZ + kk] * wgt; sbb += sb[ii * NZ + kk] * wgt; ws += wgt;
+      }
+      nv[i * NZ + k] = s / ws; nb[i * NZ + k] = sbb / ws;
+    }
+    src = nv; sb = nb;
+  }
+  // 對數尺度（以中位數為單位）：單筆巨單不會把其他成交壓成一片平地
+  const nz = []; let m = 0; for (let j = 0; j < src.length; j++) { if (src[j] > 1e-9) nz.push(src[j]); m = Math.max(m, src[j]); }
+  nz.sort((a, b) => a - b); const med = nz.length ? nz[Math.floor(nz.length / 2)] : 1;
+  vmax = lerp(vmax, Math.log1p(Math.max(m, 1e-9) / med), 0.3);
+  for (let j = 0; j < src.length; j++) { H[j] = Math.min(1, Math.log1p(src[j] / med) / (vmax || 1)); B[j] = src[j] > 1e-9 ? sb[j] / src[j] : 0.5; }
+}
+setInterval(buildGrid, 250);
+
+let stageGeo = null;
+function stage(t) {
+  const { ctx, w, h } = Draw.fit($('cv')); if (lo == null) return;
+  const port = h > w;
+  const P = camera(w, h, { yaw: 0.3 + FX.pointer.x * 0.1, pitch: 0.74 + FX.pointer.y * 0.04, cx: w * (port ? 0.5 : 0.52), cy: h * (port ? 0.86 : 0.7), sx: Math.min(w * (port ? 0.36 : 0.34), h * 0.62), sy: Math.min(w * 0.34, h * (port ? 0.4 : 0.56)), hy: 0.6, f: 3.2 });
+  wireBox(ctx, P, 0.26);
+  // 地板網格
+  ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 0.6;
+  for (let k = 0; k <= 10; k++) { const z = -1 + k / 5; const a = P(-1, 0, z), b = P(1, 0, z); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); const c = P(z, 0, -1), d = P(z, 0, 1); ctx.beginPath(); ctx.moveTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.stroke(); }
+  const frac = Math.max(0, Math.min(1, 1 - (gridEnd - Date.now()) / BIN));
+  const X = (i) => -1 + 2 * (i + 0.5 - frac) / NX, Z = (k) => 1 - 2 * (k + 0.5) / NZ;   // 高價在後（z 小）
+  const pts = new Array(NX * NZ);
+  for (let i = 0; i < NX; i++) for (let k = 0; k < NZ; k++) { const j = i * NZ + k; pts[j] = P(X(i), H[j] * 0.92, Z(k)); }
+  // 沿時間方向的線（後排先畫）
+  ctx.lineWidth = 0.9;
+  for (let k = NZ - 1; k >= 0; k--) {
+    for (let i = 0; i < NX - 1; i++) {
+      const a = i * NZ + k, b = (i + 1) * NZ + k, hh = (H[a] + H[b]) / 2;
+      if (X(i) < -1) continue;
+      const c = mix(dirCol((B[a] + B[b]) / 2), [255, 255, 255], Math.pow(hh, 1.6) * 0.65);
+      ctx.strokeStyle = rgba(c, 0.1 + 0.9 * Math.min(1, hh * 1.4));
+      ctx.beginPath(); ctx.moveTo(pts[a][0], pts[a][1]); ctx.lineTo(pts[b][0], pts[b][1]); ctx.stroke();
+    }
+  }
+  // 沿價位方向的細線（每 3 格一條，做出網格感）
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < NX; i += 3) {
+    if (X(i) < -1) continue;
+    ctx.beginPath(); for (let k = 0; k < NZ; k++) { const p = pts[i * NZ + k]; k ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }
+    ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.stroke();
+  }
+  // 點雲：高處的頂點
+  let peak = 0;
+  for (let j = 0; j < pts.length; j++) { if (H[j] > H[peak]) peak = j; if (H[j] < 0.12 || X(Math.floor(j / NZ)) < -1) continue; const c = mix(dirCol(B[j]), [255, 255, 255], H[j] * 0.7); ctx.fillStyle = rgba(c, 0.35 + H[j] * 0.65); const s = 0.8 + H[j] * 1.6; ctx.fillRect(pts[j][0] - s / 2, pts[j][1] - s / 2, s, s); }
+  // 現價線（地板上）
+  if (S.price && hi > lo) {
+    const zp = 1 - 2 * (S.price - lo) / (hi - lo), a = P(-1, 0, zp), b = P(1, 0, zp);
+    ctx.setLineDash([3, 4]); ctx.strokeStyle = rgba(CREAM, 0.7); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font = '10px Inter'; ctx.fillStyle = rgba(CREAM, 0.9); ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText('NOW ' + fmt(S.price, 1), b[0] - 4, b[1] - 5);
+  }
+  // 軸：前緣時間、右緣價位
+  ctx.font = '10px Inter'; ctx.fillStyle = '#6a6a72'; ctx.textBaseline = 'top'; ctx.textAlign = 'center';
+  [[-1, '−120s'], [-0.5, '−90s'], [0, '−60s'], [0.5, '−30s'], [1, 'now']].forEach(([x, s]) => { const p = P(x, 0, 1); ctx.fillText(s, p[0], p[1] + 8); });
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  const nowZ = S.price && hi > lo ? 1 - 2 * (S.price - lo) / (hi - lo) : 9;
+  [[lo, 1], [hi, -1]].forEach(([v, z]) => { if (Math.abs(z - nowZ) < 0.25) return; const p = P(1, 0, z); ctx.textAlign = 'right'; ctx.fillText(fmt(v, 0), p[0] - 6, p[1] - 8); });
+  // 註記：最大成交點的引線與標籤
+  const pi = Math.floor(peak / NZ), pk = peak % NZ, pp = pts[peak];
+  if (H[peak] > 0.2 && X(pi) >= -1) {
+    const pxB = document.querySelector('.px').getBoundingClientRect(), stB = $('stage').getBoundingClientRect(), avoidX = pxB.right - stB.left + 20, avoidY = pxB.bottom - stB.top + 24;
+    let lx = Math.min(w - 170, pp[0] + 50), ly = Math.max(26, pp[1] - 60);
+    if (lx < avoidX && ly < avoidY) { if (port) ly = avoidY; else lx = Math.max(lx, avoidX); }
+    ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(pp[0], pp[1]); ctx.lineTo(lx, ly); ctx.lineTo(lx + 150, ly); ctx.stroke();
+    ctx.beginPath(); ctx.arc(pp[0], pp[1], 3.5, 0, 7); ctx.stroke();
+    const ago = Math.round((NX - 1 - pi + frac) * BIN / 1000), price = lo + (hi - lo) * (pk + 0.5) / NZ;
+    ctx.textBaseline = 'bottom'; ctx.fillStyle = '#f2f2f4'; ctx.font = '500 11px Inter'; ctx.fillText(`PEAK · ${fmt(price, 0)}`, lx, ly - 4);
+    ctx.textBaseline = 'top'; ctx.fillStyle = '#8a8a92'; ctx.font = '10px Inter'; ctx.fillText(`${ago}s ago · buy ${Math.round(B[peak] * 100)}%`, lx, ly + 5);
+  }
+  stageGeo = { pts, X, frac };
+}
+
+// ---------------------------------------------------------------- 秒級報酬（球體、波形共用）
 function tickReturns(sec, n, now = Date.now()) {
   const ms = sec * 1000, end = Math.floor(now / ms) * ms, start = end - n * ms;
-  const close = new Array(n + 1).fill(null);
-  let prev = null;
-  for (const x of S.ticks) {
-    if (x.T < start - ms) { prev = x.p; continue; }
-    const k = Math.floor((x.T - (start - ms)) / ms);
-    if (k >= 0 && k <= n) close[k] = x.p;
-  }
+  const close = new Array(n + 1).fill(null); let prev = null;
+  for (const x of S.ticks) { if (x.T < start - ms) { prev = x.p; continue; } const k = Math.floor((x.T - (start - ms)) / ms); if (k >= 0 && k <= n) close[k] = x.p; }
   if (close[0] == null) close[0] = prev ?? (S.ticks[0] && S.ticks[0].p) ?? S.price;
   for (let k = 1; k <= n; k++) if (close[k] == null) close[k] = close[k - 1];
-  const out = [];
-  for (let k = 1; k <= n; k++) out.push(close[k - 1] ? (close[k] - close[k - 1]) / close[k - 1] : 0);
+  const out = []; for (let k = 1; k <= n; k++) out.push(close[k - 1] ? (close[k] - close[k - 1]) / close[k - 1] : 0);
   return { r: out, end };
 }
 
-// ---- 交互：滑過波形查每 2 秒報酬、滑過球體看最近 60 秒的 5 秒報酬；點清單看詳情；大單漣漪從價格發出；球體轉向游標
-let sphereGeo = null, waveGeo = null;
-FX.theme({ bg: 'rgba(18,18,22,.94)', fg: '#ffffff', mute: '#8a8a90', line: 'rgba(255,255,255,.5)', accent: '#f5f35c', up: '#7aa2ff', down: '#ff7a9a', sheet: '#0d0d10', border: 'rgba(255,255,255,.08)', radius: '14px', font: "'Inter', 'Noto Sans TC', sans-serif" });
-FX.inspect('#cv', (x, y) => {
-  const w = waveGeo, g = sphereGeo;
-  if (w && Math.abs(y - w.base) < w.A * 1.5) {
-    let k = 0; for (let i = 1; i < w.xs.length; i++) if (Math.abs(w.xs[i] - x) < Math.abs(w.xs[k] - x)) k = i;
-    const back = (w.xs.length - 1 - k) * 2, v = w.r[k] * 100;
-    return { x: w.xs[k], y: w.yAt(w.xs[k], 1), title: back ? `${back} 秒前 · 2 秒報酬` : '最新 2 秒', rows: [['報酬', FX.pct(v), v >= 0 ? 'up' : 'down']] };
-  }
-  if (g && Math.hypot(x - g.cx, y - g.cy) < g.R * 1.05) {
-    const v = g.r12.map((r) => r * 100), up = v.filter((r) => r > 0).length;
-    return { x: g.cx, y: g.cy - g.R, vline: false, dot: false, title: '球體 · 最近 60 秒（12 段 5 秒報酬）',
-      rows: [['上漲段', `${up} / 12`], ['最大漲', FX.pct(Math.max(...v)), 'up'], ['最大跌', FX.pct(Math.min(...v)), 'down'], ['每秒成交', $('tps').textContent + ' 筆']] };
-  }
-  return null;
-});
-FX.events({ anchor: '#price', ax: 0.4, ay: 0.55, glow: '#price', shake: '.chg' });
-
-function sphere(ctx, w, h, t) {
-  const r12 = tickReturns(5, K).r, mx = Math.max(0.00004, ...r12.map(Math.abs));
+// ---------------------------------------------------------------- 標本盒 1：點陣球（12 個鼓包＝最近 60 秒的 5 秒報酬）
+const SN = 2600, K = 12, SP = [], SW = [];
+for (let i = 0; i < SN; i++) {
+  const y = 1 - (i / (SN - 1)) * 2, r = Math.sqrt(1 - y * y), th = i * Math.PI * (3 - Math.sqrt(5)), p = [Math.cos(th) * r, y, Math.sin(th) * r]; SP.push(p);
+  const wv = []; for (let k = 0; k < K; k++) { const lon = k / K * Math.PI * 2, lat = Math.sin(k * 1.7) * 0.55, c = [Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon)]; const dot = p[0] * c[0] + p[1] * c[1] + p[2] * c[2]; wv.push(Math.exp(-(Math.acos(Math.max(-1, Math.min(1, dot))) ** 2) / 0.22)); }
+  SW.push(wv);
+}
+const amp = new Float64Array(K); let r12 = new Array(K).fill(0);
+function sphere(t) {
+  const { ctx, w, h } = Draw.fit($('cs'));
+  const P = camera(w, h, { yaw: 0.38, pitch: 0.5, cx: w / 2, cy: h * 0.8, sx: w * 0.34, sy: h * 0.58, hy: 1.25, f: 3.2 });
+  wireBox(ctx, P, 0.22);
+  r12 = tickReturns(5, K).r; const mx = Math.max(0.00004, ...r12.map(Math.abs));
   for (let k = 0; k < K; k++) amp[k] += (r12[k] / mx - amp[k]) * 0.14;
-  const port = h > w;   // 直式：球體置中，放在價格與清單之間
-  const R = port ? Math.min(w * 0.30, h * 0.12) : Math.min(h * 0.235, w * 0.18);
-  const cx = port ? w * (w < 640 ? 0.5 : 0.62) : w * 0.63;
-  let cy = h * 0.335;
-  if (port) {
-    const cb = document.querySelector('.chg').getBoundingClientRect().bottom;
-    cy = Math.max(h * 0.43, cb + R + 26);
-    const lt = Math.round(cy + R + 30) + 'px', ls = $('list').style; if (ls.top !== lt) ls.top = lt;
-  } else if ($('list').style.top) $('list').style.top = '';
-  const ry = t * 0.12 + FX.pointer.x * 0.6, rx = 0.35 + Math.sin(t * 0.07) * 0.12 + FX.pointer.y * 0.35;   // 視差：球體轉向游標
-  sphereGeo = { cx, cy, R, r12 };
-  const cy1 = Math.cos(ry), sy1 = Math.sin(ry), cx1 = Math.cos(rx), sx1 = Math.sin(rx);
-  const pts = [];
-  for (let i = 0; i < N; i++) {
-    const p = P[i], wv = Wt[i];
-    let d = 0; for (let k = 0; k < K; k++) d += wv[k] * amp[k];
-    const n = Math.sin(p[0] * 3 + t * 0.9) * Math.sin(p[1] * 4 - t * 0.7) * Math.sin(p[2] * 3 + t * 0.5);
-    const fold = Math.sin(p[0] * 2.2 + p[1] * 1.3 + t * 0.35) * Math.cos(p[2] * 2.6 - t * 0.28);
-    const rr = 1 + d * 0.3 + fold * foldAmp + n * (0.02 + tremor * 0.07);
-    let x = p[0] * rr, y = p[1] * rr, z = p[2] * rr;
-    const x2 = x * cy1 + z * sy1, z2 = -x * sy1 + z * cy1;
-    const y3 = y * cx1 - z2 * sx1, z3 = y * sx1 + z2 * cx1;
-    const persp = 2.6 / (2.6 + z3);
-    pts.push([cx + x2 * R * persp, cy + y3 * R * persp, z3, d, y]);
-  }
-  pts.sort((a, b) => b[2] - a[2]);
+  const cx = w / 2, cy = h * 0.47, R = Math.min(w * 0.26, h * 0.3), ry = t * 0.15 + FX.pointer.x * 0.5, rx = 0.35;
+  const c1 = Math.cos(ry), s1 = Math.sin(ry), c2 = Math.cos(rx), s2 = Math.sin(rx);
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  for (const [x, y, z, d, oy] of pts) {
-    const depth = (1 - z) / 2;                               // 0 背面 → 1 正面
-    const k = Math.max(0, Math.min(1, (oy + 1) / 2));         // 上藍下紫
-    // 上：天藍 (88,190,255) → 下：紫 (150,110,255) → 底緣：粉紫 (225,130,255)
-    const m = 1 - k, rC = m < 0.6 ? 88 + (150 - 88) * (m / 0.6) : 150 + (225 - 150) * ((m - 0.6) / 0.4);
-    const gC = m < 0.6 ? 190 - (190 - 110) * (m / 0.6) : 110 + 20 * ((m - 0.6) / 0.4);
-    const a = 0.28 + depth * 0.72;
-    ctx.fillStyle = `rgba(${Math.round(rC)},${Math.round(gC + Math.max(0, d) * 30)},255,${a})`;
-    const s = 1.1 + depth * 2.4;
-    ctx.fillRect(x - s / 2, y - s / 2, s, s);
+  for (let i = 0; i < SN; i++) {
+    const p = SP[i], wv = SW[i]; let d = 0; for (let k = 0; k < K; k++) d += wv[k] * amp[k];
+    const rr = 1 + d * 0.32 + Math.sin(p[0] * 3 + t) * Math.sin(p[1] * 4 - t * 0.7) * 0.03;
+    const x = p[0] * rr, y = p[1] * rr, z = p[2] * rr, x2 = x * c1 + z * s1, z2 = -x * s1 + z * c1, y3 = y * c2 - z2 * s2, z3 = y * s2 + z2 * c2;
+    const ps = 2.6 / (2.6 + z3), dep = (1 - z3) / 2, col = dirCol(Math.max(0, Math.min(1, 0.5 + d * 0.6)));
+    ctx.fillStyle = rgba(col, 0.2 + dep * 0.7); const s = 0.7 + dep * 1.4; ctx.fillRect(cx + x2 * R * ps - s / 2, cy + y3 * R * ps - s / 2, s, s);
   }
   ctx.restore();
 }
 
-// ---- 彩虹等高波峰：5 分鐘漲跌（參考 Waves .06）
-const LAYERS = ['#ffffff', '#ffc9dd', '#ff8fb1', '#ff5d6c', '#ff9f43', '#fff35c', '#ff6ad5', '#b45cff', '#5b5bff', '#2f3dff'];
-let waveMx = 0.0002;
-function waves(ctx, w, h) {
-  const SEC = 2, N = 60, now = Date.now();
-  const { r, end } = tickReturns(SEC, N, now);
-  const mx = Math.max(0.00003, ...r.map(Math.abs));
-  waveMx += (mx - waveMx) * 0.04;                      // 尺度平滑，不會忽大忽小
-  const frac = (now - end) / (SEC * 1000);             // 0..1，讓波形連續往左流
-  const port = h > w, base = h * (port ? 0.82 : 0.76), A = h * (port ? 0.06 : 0.125), sp = w / (N - 1.5), sig = sp * 0.42;
-  const xs = r.map((_, k) => sp * (k + 0.5 - frac));
-  const yAt = (x, f) => {
-    let v = 0;
-    for (let k = 0; k < N; k++) { const dx = x - xs[k]; if (dx > sig * 4 || dx < -sig * 4) continue; v += Math.max(-1.2, Math.min(1.2, r[k] / waveMx)) * Math.exp(-(dx * dx) / (2 * sig * sig)); }
-    return base - v * A * f;
-  };
-  waveGeo = { xs, r, base, A, yAt };
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  for (let l = LAYERS.length - 1; l >= 1; l--) {
-    const f = l / (LAYERS.length - 1);
-    ctx.beginPath(); for (let x = 0; x <= w; x += 3) x ? ctx.lineTo(x, yAt(x, f)) : ctx.moveTo(x, yAt(x, f));
-    ctx.strokeStyle = LAYERS[l]; ctx.lineWidth = 3.4; ctx.stroke();
-  }
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.moveTo(0, base); ctx.lineTo(w, base); ctx.stroke();
-  // 最新的那個波峰在右端，加一點亮點
-  const lx = xs[N - 1], ly = yAt(lx, 1);
-  ctx.fillStyle = '#fff'; ctx.shadowBlur = 16; ctx.shadowColor = '#fff'; ctx.beginPath(); ctx.arc(lx, ly, 4, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
-  ctx.fillStyle = '#6e6e74'; ctx.font = '11px Inter'; ctx.textAlign = 'center';
-  [[0, '−120s'], [15, '−90s'], [30, '−60s'], [45, '−30s']].forEach(([k, t]) => { const x = sp * (k + 0.5 - frac); if (x > 16 && x < w - 190) ctx.fillText(t, x, base + A + 20); });
-  ctx.textAlign = 'right'; ctx.fillText(`now · peak ±${(waveMx * 100).toFixed(3)}% / 2 s`, w - (w < 500 ? 14 : 40), base + A + 20);
-}
-
-function candles(ctx, w, h) {
-  const d = (S.bars['1m'] || []).slice(-120); if (d.length < 5) return;
-  const T = h * 0.855, B = h * 0.935, L = 40, R = w - 40;
-  let hi = -Infinity, lo = Infinity; for (const b of d) { hi = Math.max(hi, b.h); lo = Math.min(lo, b.l); }
-  const X = (i) => L + (R - L) * (i + 0.5) / d.length, Y = (p) => T + (hi - p) / (hi - lo || 1) * (B - T), bw = (R - L) / d.length * 0.6;
-  d.forEach((b, i) => {
-    const col = b.c >= b.o ? '#7aa2ff' : '#ff7a9a'; ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(X(i), Y(b.h)); ctx.lineTo(X(i), Y(b.l)); ctx.stroke();
-    ctx.fillRect(X(i) - bw / 2, Y(Math.max(b.o, b.c)), bw, Math.max(1, Y(Math.min(b.o, b.c)) - Y(Math.max(b.o, b.c))));
+// ---------------------------------------------------------------- 標本盒 2：一小時分 6 層（每層＝10 分鐘的價格路徑，顏色＝該段振幅）
+let layerGeo = null;
+function layers() {
+  const { ctx, w, h } = Draw.fit($('cl'));
+  const P = camera(w, h, { yaw: 0.38, pitch: 0.5, cx: w / 2, cy: h * 0.8, sx: w * 0.34, sy: h * 0.58, hy: 1.25, f: 3.2 });
+  wireBox(ctx, P, 0.22);
+  const bars = (S.bars['1m'] || []).slice(-60); if (bars.length < 60) return;
+  const seg = [...Array(6)].map((_, k) => bars.slice(k * 10, k * 10 + 10));
+  const amps = seg.map((s) => { let a = Infinity, b = -Infinity; for (const x of s) { a = Math.min(a, x.l); b = Math.max(b, x.h); } return (b - a) / a * 100; });
+  const amx = Math.max(...amps, 1e-6);
+  layerGeo = { seg, amps, ys: [] };
+  seg.forEach((s, k) => {
+    const y0 = 0.95 - k * 0.17, c = mix(CREAM, HOT, Math.pow(amps[k] / amx, 1.3));
+    let a = Infinity, b = -Infinity; for (const x of s) { a = Math.min(a, x.c); b = Math.max(b, x.c); }
+    const prof = (u) => { const f = u * (s.length - 1), i = Math.floor(f), t = f - i, v = s[i].c + ((s[Math.min(i + 1, s.length - 1)].c - s[i].c) * t); return (v - (a + b) / 2) / ((b - a) || 1); };
+    for (let zl = 0; zl < 7; zl++) {   // 7 條平行線疊成一片薄薄的曲面
+      const z = -1 + zl / 3, fall = 1 - Math.abs(z) * 0.35;
+      ctx.beginPath();
+      for (let q = 0; q <= 40; q++) { const u = q / 40, p = P(-1 + u * 2, y0 + prof(u) * 0.06 * fall, z); q ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }
+      ctx.strokeStyle = rgba(c, 0.25 + zl / 6 * 0.6); ctx.lineWidth = 0.8; ctx.stroke();
+    }
+    layerGeo.ys.push(P(0, y0, 1)[1]);
   });
-  ctx.fillStyle = '#8a8a90'; ctx.font = '11px Inter'; ctx.textAlign = 'left'; ctx.fillText(`${fmt(lo, 0)} — ${fmt(hi, 0)}`, L, T - 6);
 }
 
+// ---------------------------------------------------------------- 標本盒 3：2 秒報酬的細線帶（線越多越外圈）
+let waveMx = 0.0002, waveGeo = null;
+function wave() {
+  const { ctx, w, h } = Draw.fit($('cw'));
+  const P = camera(w, h, { yaw: 0.38, pitch: 0.5, cx: w / 2, cy: h * 0.8, sx: w * 0.34, sy: h * 0.58, hy: 1.25, f: 3.2 });
+  wireBox(ctx, P, 0.22);
+  const N = 60, now = Date.now(), { r, end } = tickReturns(2, N, now);
+  waveMx = lerp(waveMx, Math.max(0.00003, ...r.map(Math.abs)), 0.05);
+  const frac = (now - end) / 2000;
+  const val = (u) => { let v = 0; for (let k = 0; k < N; k++) { const dx = u - (k + 0.5 - frac) / N; v += Math.max(-1.2, Math.min(1.2, r[k] / waveMx)) * Math.exp(-(dx * dx) / (2 * 0.012 * 0.012)); } return v; };
+  const samples = []; for (let q = 0; q <= 90; q++) samples.push(val(q / 90));
+  const g = ctx.createLinearGradient(P(-1, 0.5, 1)[0], 0, P(1, 0.5, 1)[0], 0);
+  for (let k = 0; k < N; k += 2) g.addColorStop(Math.max(0, Math.min(1, (k + 0.5 - frac) / N)), rgba(r[k] >= 0 ? UP : DN, 0.85));
+  for (let j = 0; j < 18; j++) {
+    const z = -1 + j / 8.5, f = 0.25 + 0.75 * (1 - Math.abs(j - 8.5) / 8.5);
+    ctx.beginPath(); samples.forEach((v, q) => { const p = P(-1 + q / 45, 0.5 + v * 0.16 * f, z); q ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); });
+    ctx.strokeStyle = g; ctx.globalAlpha = 0.2 + f * 0.6; ctx.lineWidth = 0.7; ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  waveGeo = { r, frac, P, w };
+}
+
+// ---------------------------------------------------------------- 文字：價格、24H、指標列
 let shown = '';
 function drawPrice() {
-  if (S.price == null) return;
-  const s = fmt(S.price);
-  if (s === shown) return;
-  shown = s;
-  const [i, d] = s.split('.');
-  $('price').innerHTML = `${i}<small>.${d}</small>`;
-  document.title = s + ' · BTC';
+  if (S.price == null) return; const s = fmt(S.price); if (s === shown) return; shown = s;
+  const [i, d] = s.split('.'); $('price').innerHTML = `${i}<small>.${d}</small>`; document.title = s + ' · BTC';
 }
 Feed.on('ticker', () => {
-  const t = S.ticker;
-  $('pct').textContent = pct(t.P); $('pct').className = 'ring ' + (t.P >= 0 ? 'up' : 'dn');
-  $('hl').textContent = `high ${fmt(t.h, 0)} · low ${fmt(t.l, 0)}`;
-  $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
+  const t = S.ticker; $('pct').textContent = pct(t.P); $('pct').className = 'pill ' + cls(t.P);
+  $('h').textContent = fmt(t.h, 0); $('l').textContent = fmt(t.l, 0); $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
 });
+const mks = {};
 Feed.on('markets', () => {
-  $('list').innerHTML = S.markets.map((s) => `<div class="r" data-fx="${s.id}"><span>${s.name.replace(' ETF', '')} · ${s.code}</span><b>${Feed.val(s)}</b><i class="${cls(s.pct || 0)}">${Feed.chgTxt(s)}</i></div>`).join('');
+  S.markets.forEach((s) => {
+    let m = mks[s.id];
+    if (!m) { const el = document.createElement('div'); el.className = 'mk'; el.dataset.fx = s.id; el.innerHTML = `<span class="sc">${s.code} · ${s.name.replace(' ETF', '')}</span><b>—</b><span class="c">—</span>`; $('foot').insertBefore(el, document.querySelector('.note')); m = mks[s.id] = { el, q: (x) => el.querySelector(x) }; }
+    if (s.price == null) return;
+    m.q('b').textContent = Feed.val(s); m.q('.c').textContent = Feed.chgTxt(s); m.q('.c').className = 'c ' + cls(s.chg ?? 0);
+  });
 });
-function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; }
-setInterval(clocks, 1000); clocks();
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; } setInterval(clocks, 1000); clocks();
 
-let lastF = 0;
-function frame(now) {
+// ---------------------------------------------------------------- 交互：地形查格、標本盒查數據、點指標看詳情、大單漣漪
+FX.theme({ bg: 'rgba(10,10,12,.94)', fg: '#f2f2f4', mute: '#8a8a92', line: 'rgba(255,255,255,.45)', accent: '#efe3c2', up: '#7aa2ff', down: '#ff7a9a', sheet: '#08080a', border: 'rgba(255,255,255,.1)', radius: '2px', font: "'Inter', 'Noto Sans TC', sans-serif" });
+FX.inspect('#stage', (x, y) => {
+  const g = stageGeo; if (!g) return null;
+  let best = -1, bd = 400;
+  for (let j = 0; j < g.pts.length; j++) { const p = g.pts[j], dd = (p[0] - x) ** 2 + (p[1] - y) ** 2; if (dd < bd && g.X(Math.floor(j / NZ)) >= -1) { bd = dd; best = j; } }
+  if (best < 0) return null;
+  const i = Math.floor(best / NZ), k = best % NZ, ago = Math.round((NX - 1 - i + g.frac) * BIN / 1000), p0 = lo + (hi - lo) * k / NZ, p1 = lo + (hi - lo) * (k + 1) / NZ;
+  return { x: g.pts[best][0], y: g.pts[best][1], vline: false, title: `${ago} 秒前 · 2 秒`, rows: [['價位', `${fmt(p0, 0)}–${fmt(p1, 0)}`], ['相對量', Math.round(H[best] * 100) + '%'], ['買方', Math.round(B[best] * 100) + '%', B[best] >= 0.5 ? 'up' : 'down']] };
+});
+FX.inspect('#sp1 .box', () => ({ x: 0, y: 0, vline: false, dot: false, title: '球體 · 最近 60 秒（12 段 5 秒報酬）', rows: [['上漲段', `${r12.filter((v) => v > 0).length} / 12`], ['最大漲', FX.pct(Math.max(...r12) * 100), 'up'], ['最大跌', FX.pct(Math.min(...r12) * 100), 'down']] }));
+FX.inspect('#sp2 .box', (x, y) => {
+  const g = layerGeo; if (!g) return null;
+  let k = 0; g.ys.forEach((yy, i) => { if (Math.abs(yy - y) < Math.abs(g.ys[k] - y)) k = i; });
+  const s = g.seg[k], a = s[0].o, b = s[s.length - 1].c;
+  return { x, y: g.ys[k], vline: false, title: `${FX.time(s[0].t)}–${FX.time(s[s.length - 1].t + 60)} · 10 分`, rows: [['振幅', g.amps[k].toFixed(2) + '%'], ['漲跌', FX.pct((b / a - 1) * 100), b >= a ? 'up' : 'down']] };
+});
+FX.inspect('#sp3 .box', (x) => {
+  const g = waveGeo; if (!g) return null;
+  const x0 = g.P(-1, 0.5, 1)[0], x1 = g.P(1, 0.5, 1)[0], k = Math.max(0, Math.min(59, Math.round((x - x0) / (x1 - x0) * 60 - 0.5 + g.frac)));
+  const v = g.r[k] * 100, back = (59 - k) * 2;
+  return { x, y: 20, vline: true, dot: false, title: back ? `${back} 秒前 · 2 秒報酬` : '最新 2 秒', rows: [['報酬', FX.pct(v), v >= 0 ? 'up' : 'down']] };
+});
+FX.events({ anchor: '#price', ax: 0.4, ay: 0.55, glow: '#price', shake: '.px', ringWidth: 1, ringAlpha: 0.7 });
+
+let last = 0;
+function frame(t) {
   drawPrice();
-  if (now - lastF > 33) {
-    lastF = now;
-    const t = now / 1000;
-    const n = S.ticks.filter((x) => x.T > Date.now() - 20000).length / 20;
-    tremor += (Math.min(1.5, n / 6) - tremor) * 0.03;
-    let hi60 = -Infinity, lo60 = Infinity; for (const x of S.ticks) { if (x.T < Date.now() - 60000) continue; hi60 = Math.max(hi60, x.p); lo60 = Math.min(lo60, x.p); }
-    const rng = isFinite(hi60) && S.price ? (hi60 - lo60) / S.price : 0;     // 60 秒區間（比例）
-    foldAmp += (Math.min(0.16, 0.02 + rng * 120) - foldAmp) * 0.03;
-    $('tps').textContent = n.toFixed(1);
-    const { ctx, w, h } = Draw.fit($('cv'));
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
-    sphere(ctx, w, h, t);
-    waves(ctx, w, h);
-  }
+  if (t - last > 50) { last = t; stage(t / 1000); sphere(t / 1000); layers(); wave(); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
