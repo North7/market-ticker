@@ -22,6 +22,7 @@
   --red: #FF3B30; --green: #34C759; --blue: #007AFF; --orange: #FF9500;
   --win: rgba(255,255,255,.42); --win-edge: rgba(0,0,0,.10); --tile: rgba(255,255,255,.46); --tile-edge: rgba(255,255,255,.75);
   --side: rgba(255,255,255,.22); --hi: rgba(255,255,255,.95); --shadow: rgba(40,30,80,.28); --thumb: rgba(255,255,255,.95);
+  --ex-a: rgba(255,255,255,.42); --ex-b: rgba(255,255,255,.24); --ex-edge: rgba(70,60,120,.32); --bevel-hi: rgba(255,255,255,.9); --bevel-lo: rgba(0,0,0,.1); --sheen: rgba(255,255,255,.55); --shade: rgba(40,30,90,.14);
   --mood: #FF6A3D;
 }
 @media (prefers-color-scheme: dark) {
@@ -30,6 +31,7 @@
     --red: #FF453A; --green: #30D158; --blue: #0A84FF; --orange: #FF9F0A;
     --win: rgba(24,22,34,.34); --win-edge: rgba(0,0,0,.6); --tile: rgba(255,255,255,.07); --tile-edge: rgba(255,255,255,.16);
     --side: rgba(0,0,0,.14); --hi: rgba(255,255,255,.55); --shadow: rgba(0,0,0,.55); --thumb: rgba(255,255,255,.22);
+    --ex-a: rgba(255,255,255,.16); --ex-b: rgba(255,255,255,.08); --ex-edge: rgba(0,0,0,.75); --bevel-hi: rgba(255,255,255,.4); --bevel-lo: rgba(0,0,0,.35); --sheen: rgba(255,255,255,.16); --shade: rgba(0,0,0,.3);
   }
 }
 * { box-sizing: border-box; }
@@ -49,7 +51,21 @@ body { background: #1a1030; color: var(--label); overflow: hidden; font-family: 
   background: radial-gradient(520px circle at var(--mx, -999px) var(--my, -999px), rgba(255,255,255,.16), transparent 60%); mix-blend-mode: soft-light; }
 
 .win { position: fixed; z-index: 1; inset: 18px 20px 20px; border-radius: 34px; background: var(--win); display: grid; grid-template-columns: clamp(250px, 24vw, 320px) minmax(0, 1fr); overflow: hidden;
-  box-shadow: 0 0 0 .5px var(--win-edge), inset 0 1px 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(0,0,0,.08), 0 40px 90px -20px var(--shadow), 0 0 80px -30px var(--mood); }
+  box-shadow: 0 0 0 .5px var(--win-edge),
+    inset 0 1.5px 0 var(--bevel-hi), inset 1px 0 0 rgba(255,255,255,.14), inset 0 -1.5px 0 var(--bevel-lo), inset 0 26px 46px -30px var(--sheen), inset 0 -30px 46px -32px var(--shade),
+    calc(var(--dx) * 1) calc(var(--dy) * 1) 0 var(--ex-a), calc(var(--dx) * 2) calc(var(--dy) * 2) 0 var(--ex-a), calc(var(--dx) * 3) calc(var(--dy) * 3) 0 var(--ex-b),
+    calc(var(--dx) * 4) calc(var(--dy) * 4) 0 var(--ex-b), calc(var(--dx) * 5) calc(var(--dy) * 5) 0 var(--ex-b), calc(var(--dx) * 6) calc(var(--dy) * 6) 0 var(--ex-b),
+    calc(var(--dx) * 7) calc(var(--dy) * 7) 0 var(--ex-edge),
+    0 46px 90px -24px var(--shadow), 0 0 80px -30px var(--mood); }
+/* 厚玻璃：側面方向＝游標當光源（游標在哪，厚度就露在另一側）；.pane 是玻璃本體、.rim 是邊緣折射帶 */
+:root { --dx: calc(var(--fx-px, 0) * -0.55px); --dy: calc(1px - var(--fx-py, 0) * 0.3px); }
+.win.glass { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; z-index: 2; }
+.win.glass::before { inset: 8px; border-radius: 26px; padding: 1px; background: linear-gradient(160deg, var(--hi), transparent 30%, transparent 70%, color-mix(in srgb, var(--mood) 60%, transparent)); opacity: .7; }
+.pane { position: fixed; z-index: 1; inset: 26px 28px 28px; border-radius: 26px; background: var(--win); backdrop-filter: blur(44px) saturate(190%); -webkit-backdrop-filter: blur(44px) saturate(190%); }
+.rim { position: fixed; z-index: 1; inset: 18px 20px 20px; border-radius: 34px; padding: 8px; pointer-events: none;
+  backdrop-filter: blur(2.5px) saturate(240%) brightness(1.14) contrast(1.06); -webkit-backdrop-filter: blur(2.5px) saturate(240%) brightness(1.14) contrast(1.06);
+  background: linear-gradient(155deg, rgba(255,255,255,.42), rgba(255,255,255,.08) 28%, rgba(255,255,255,0) 52%, rgba(255,255,255,.06) 75%, color-mix(in srgb, var(--mood) 35%, rgba(255,255,255,.2)));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
 
 /* 側邊欄（Golden Gate：延伸到視窗邊緣） */
 .side { display: flex; flex-direction: column; min-height: 0; padding: 20px 12px 14px; background: var(--side); box-shadow: .5px 0 0 var(--sep); }
@@ -79,7 +95,7 @@ body { background: #1a1030; color: var(--label); overflow: hidden; font-family: 
 .top .t h1 { margin: 0; font: 700 clamp(22px, 3.6vh, 30px)/1.1 var(--display); }
 .top .t span { font-size: 13px; color: var(--label2); }
 /* 頂部膠囊導覽＝範圍切換（回彈滑塊） */
-.seg { position: relative; height: 40px; border-radius: 999px; padding: 4px; display: flex; background: var(--tile); box-shadow: inset 0 0 0 .5px var(--tile-edge), 0 6px 18px rgba(0,0,0,.08); }
+.seg { position: relative; height: 40px; border-radius: 999px; padding: 4px; display: flex; background: var(--tile); box-shadow: inset 0 0 0 .5px var(--tile-edge), inset 0 1.5px 0 var(--bevel-hi), inset 0 -1px 0 var(--bevel-lo), calc(var(--dx) * 1) calc(var(--dy) * 1) 0 var(--ex-a), calc(var(--dx) * 2) calc(var(--dy) * 2) 0 var(--ex-edge), 0 8px 20px rgba(0,0,0,.1); }
 .seg .thumb { position: absolute; top: 4px; bottom: 4px; left: 0; width: 0; border-radius: 999px; background: var(--thumb);
   box-shadow: 0 3px 10px rgba(0,0,0,.14), inset 0 1px 0 rgba(255,255,255,.7), inset 0 0 0 .5px rgba(255,255,255,.4);
   transition: transform .5s cubic-bezier(.3, 1.4, .45, 1), width .5s cubic-bezier(.3, 1.4, .45, 1); }
@@ -99,7 +115,9 @@ body { background: #1a1030; color: var(--label); overflow: hidden; font-family: 
 /* bento 磚 */
 .bento { min-height: 0; display: grid; grid-template-columns: minmax(0, 2.15fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 12px; }
 .tile { position: relative; border-radius: 22px; background: var(--tile); min-height: 0; overflow: hidden;
-  box-shadow: inset 0 0 0 .5px var(--tile-edge), inset 0 1px 0 rgba(255,255,255,.25), 0 10px 28px -8px rgba(0,0,0,.18); }
+  box-shadow: inset 0 0 0 .5px var(--tile-edge), inset 0 1.5px 0 var(--bevel-hi), inset 0 -1px 0 var(--bevel-lo), inset 0 16px 26px -20px var(--sheen),
+    calc(var(--dx) * 1) calc(var(--dy) * 1) 0 var(--ex-a), calc(var(--dx) * 2) calc(var(--dy) * 2) 0 var(--ex-b), calc(var(--dx) * 3) calc(var(--dy) * 3) 0 var(--ex-edge),
+    0 14px 30px -10px rgba(0,0,0,.22); }
 .tile .lab { position: absolute; left: 16px; top: 13px; z-index: 2; font-size: 12.5px; font-weight: 600; color: var(--label2); }
 .tile .lab em { font-style: normal; font-weight: 400; margin-left: 6px; }
 .chart { grid-row: 1; grid-column: 1; }
@@ -110,7 +128,7 @@ body { background: #1a1030; color: var(--label); overflow: hidden; font-family: 
 .ring .mid b small { font-size: .45em; color: var(--label2); }
 .ring .mid span { font-size: 12px; color: var(--label2); }
 .ring .ends { position: absolute; left: 14px; right: 14px; bottom: 12px; display: flex; justify-content: space-between; z-index: 2; }
-.chip { height: 28px; padding: 0 11px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--label2); background: var(--tile); box-shadow: inset 0 0 0 .5px var(--tile-edge); }
+.chip { height: 28px; padding: 0 11px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--label2); background: var(--tile); box-shadow: inset 0 0 0 .5px var(--tile-edge), inset 0 1px 0 var(--bevel-hi), calc(var(--dx) * 1) calc(var(--dy) * 1) 0 var(--ex-edge); }
 .chip b { color: var(--label); font-weight: 600; }
 .stats { grid-row: 2; grid-column: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .stat { padding: 13px 16px 14px; }
@@ -126,6 +144,9 @@ body { background: #1a1030; color: var(--label); overflow: hidden; font-family: 
   html, body { height: auto; } body { overflow-x: hidden; overflow-y: auto; }
   #wall { position: fixed; }
   .win { position: relative; inset: auto; margin: 10px; min-height: calc(100vh - 20px); grid-template-columns: minmax(0, 1fr); border-radius: 30px; overflow: visible; }
+  .win.glass { background: var(--win); backdrop-filter: blur(44px) saturate(190%); -webkit-backdrop-filter: blur(44px) saturate(190%); }
+  .win.glass::before { inset: 0; border-radius: inherit; }
+  .pane, .rim { display: none; }
   .content { order: 1; padding: 16px 14px 14px; }
   .side { order: 2; background: transparent; box-shadow: 0 -.5px 0 var(--sep); padding: 14px 6px 12px; }
   .side .hd { display: none; }
@@ -142,6 +163,7 @@ body { background: #1a1030; color: var(--label); overflow: hidden; font-family: 
 }
 @media (orientation: landscape) and (max-height: 500px) {
   .win { inset: 8px; border-radius: 24px; grid-template-columns: 210px minmax(0, 1fr); }
+  .rim { inset: 8px; border-radius: 24px; padding: 6px; } .pane { inset: 14px; border-radius: 18px; } .win.glass::before { inset: 6px; border-radius: 18px; }
   .side { padding: 10px 6px; } .side .hd, .side h2, .side .ft { display: none; }
   .row { min-height: 38px; grid-template-columns: 26px minmax(0, 1fr) auto; } .ico { width: 26px; height: 26px; font-size: 9px; border-radius: 7px; } .row .tk span { display: none; }
   .content { padding: 8px 12px 10px; gap: 4px; } .top .t, .clock { display: none; } .top { grid-template-columns: 1fr; } .seg { justify-self: center; height: 32px; } .seg button { line-height: 24px; }
@@ -152,6 +174,8 @@ body { background: #1a1030; color: var(--label); overflow: hidden; font-family: 
 </head>
 <body>
 <canvas id="wall" aria-hidden="true"></canvas>
+<div class="pane" aria-hidden="true"></div>
+<div class="rim" aria-hidden="true"></div>
 <div class="win glass" id="win">
   <aside class="side">
     <div class="hd"><span class="dots"><i></i><i></i><i></i></span></div>
