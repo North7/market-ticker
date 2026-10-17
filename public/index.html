@@ -156,10 +156,10 @@ function wire(f) {
 // ---- 觸控：左右滑切換主題，點一下叫出選單
 // 圖表（.fx-zone）上拖動是查數據、詳情面板（.fx-back）裡的操作也不算換主題
 function touch(w) {
-  let x0, y0, t0, zone;
+  let x0, y0, t0, zone, lock;
   w.addEventListener('touchstart', (e) => {
     if (e.target.closest && e.target.closest('.dock, .fx-back')) { x0 = null; return; }
-    const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); zone = !!(e.target.closest && e.target.closest('.fx-zone'));
+    const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); zone = !!(e.target.closest && e.target.closest('.fx-zone')); lock = !!(e.target.closest && e.target.closest('.fx-lock'));   // .fx-lock：可拖動旋轉的圖，不換主題
   }, { passive: true });
   w.addEventListener('touchend', (e) => {
     if (x0 == null) return;
@@ -167,7 +167,7 @@ function touch(w) {
     lastTouch = Date.now();
     const dt = Date.now() - t0;
     // 換主題要「快速一揮」；在圖表上（.fx-zone）慢慢拖是查數據，所以那裡門檻更短
-    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6 && dt < (zone ? 350 : 700)) { go(idx + (dx < 0 ? 1 : -1)); wake(); }
+    if (!lock && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6 && dt < (zone ? 350 : 700)) { go(idx + (dx < 0 ? 1 : -1)); wake(); }
     else if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && dt < 300 && !interactive(e.target)) toggleUi();   // 點一下：選單顯示／隱藏切換
   }, { passive: true });
 }
