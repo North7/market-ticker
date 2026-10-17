@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Signal</title>
+<script>if (new URLSearchParams(location.search).get('night') === '1') { document.documentElement.classList.add('night'); document.title = 'Signal Night'; }</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
@@ -27,6 +28,9 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 .stat span b { color: var(--ink); font-size: 15px; letter-spacing: 0; font-weight: 500; margin-left: 8px; }
 .lbl { position: absolute; font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .16em; color: var(--mute); text-transform: uppercase; z-index: 2; }
 .disc-lbl { color: rgba(23, 23, 23, .75); }
+/* 夜間版：暖黑底、亮墨點，圓盤像一顆發光的橘色太陽（?night=1） */
+:root.night { --bg: #0f0e0d; --ink: #ece9e1; --mute: #8b887f; --line: #2b2926; --up: #ff8a1f; --down: #ece9e1; }
+:root.night .disc-lbl { color: rgba(29, 15, 2, .8); }
 
 .bottom { display: grid; grid-template-columns: clamp(170px, 21vw, 300px) repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--ink); }
 .b4h { position: relative; border-right: 1px solid var(--line); padding: 14px 20px; }
@@ -102,7 +106,11 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 <script>
 const { S, fmt, fmtBig, pct } = Feed;
 const $ = (id) => document.getElementById(id);
-const BTC = '#f7931a', INK = '#171717', UPC = '#e2700c';
+const NIGHT = document.documentElement.classList.contains('night');
+const PAL = NIGHT
+  ? { ink: '#ece9e1', up: '#ff8a1f', off: 'rgba(255,255,255,.07)', offTop: 'rgba(255,255,255,.045)', discOff: 'rgba(40,16,0,.3)', discOffTop: 'rgba(40,16,0,.22)', discInk: '#1d0f02', discUp: '#fff6e8', discFlash: '#fff', wick: 'rgba(236,233,225,.35)', discWick: 'rgba(29,15,2,.5)', cardDot: 'rgba(255,255,255,.06)', grid: 'rgba(255,255,255,.08)' }
+  : { ink: '#171717', up: '#e2700c', off: 'rgba(0,0,0,.075)', offTop: 'rgba(0,0,0,.05)', discOff: 'rgba(255,255,255,.22)', discOffTop: 'rgba(255,255,255,.14)', discInk: '#171717', discUp: '#fff', discFlash: '#6b2f00', wick: 'rgba(23,23,23,.35)', discWick: 'rgba(23,23,23,.45)', cardDot: 'rgba(0,0,0,.06)', grid: 'rgba(0,0,0,.08)' };
+const BTC = '#f7931a', INK = PAL.ink, UPC = PAL.up;
 const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
 Feed.start({ '1m': 120, '4h': 90 });
 Feed.mountExtras('#xtra');
@@ -155,7 +163,14 @@ function draw(now) {
   const R = Math.min(h * 0.62, w * 0.46), cx = w * 0.8 + FX.pointer.x * 22;
   const target = h + R * 0.15 - pos * (h * 0.85) + FX.pointer.y * 14;   // 視差：圓盤跟著滑鼠微動
   discY = discY == null ? target : discY + (target - discY) * 0.06;
-  ctx.fillStyle = BTC;
+  if (NIGHT) {   // 夜間：外圍一圈暖光，圓盤本身上亮下深，像發光的太陽
+    const halo = ctx.createRadialGradient(cx, discY, R * 0.85, cx, discY, R * 1.55);
+    halo.addColorStop(0, 'rgba(247,147,26,.30)'); halo.addColorStop(1, 'rgba(247,147,26,0)');
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(cx, discY, R * 1.55, 0, Math.PI * 2); ctx.fill();
+    const sun = ctx.createLinearGradient(0, discY - R, 0, discY + R);
+    sun.addColorStop(0, '#ffb04a'); sun.addColorStop(0.45, BTC); sun.addColorStop(1, '#c75a06');
+    ctx.fillStyle = sun;
+  } else ctx.fillStyle = BTC;
   ctx.beginPath(); ctx.arc(cx, discY, R, 0, Math.PI * 2); ctx.fill();
   const lbl = $('lblDisc');
   lbl.style.left = (cx - 60) + 'px'; lbl.style.top = Math.max(8, discY - R + 20) + 'px';
@@ -195,11 +210,11 @@ function draw(now) {
       const inDisc = (x - cx) ** 2 + (y - discY) ** 2 < R * R;
       const k = lit.get(`${r},${c}`);
       let col;
-      if (!k) col = r < chartTop - 3 ? (inDisc ? 'rgba(255,255,255,.14)' : 'rgba(0,0,0,.05)') : (inDisc ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.075)');
-      else if (k === 'ink' || k === 'down') col = INK;
-      else if (k === 'up') col = inDisc ? '#fff' : UPC;
-      else if (k === 'flash') col = inDisc ? '#6b2f00' : BTC;
-      else col = inDisc ? 'rgba(23,23,23,.45)' : 'rgba(23,23,23,.35)';
+      if (!k) col = r < chartTop - 3 ? (inDisc ? PAL.discOffTop : PAL.offTop) : (inDisc ? PAL.discOff : PAL.off);
+      else if (k === 'ink' || k === 'down') col = inDisc ? PAL.discInk : INK;
+      else if (k === 'up') col = inDisc ? PAL.discUp : UPC;
+      else if (k === 'flash') col = inDisc ? PAL.discFlash : BTC;
+      else col = inDisc ? PAL.discWick : PAL.wick;
       ctx.fillStyle = col;
       if (k === 'ink' || k === 'flash') {
         // 價格字形：幾乎相連的圓角方塊，像素字更好讀
@@ -258,7 +273,7 @@ Feed.on('markets', () => {
     let hi = Math.max(s.prevClose ?? -Infinity, ...bars.map((b) => b.h)), lo = Math.min(s.prevClose ?? Infinity, ...bars.map((b) => b.l));
     const step = 4, rowsN = Math.floor(h / step), colsN = Math.floor(w / step);
     const Y = (p) => Math.round((hi - p) / (hi - lo || 1) * (rowsN - 1));
-    for (let x = 0; x < colsN; x++) for (let y = 0; y < rowsN; y++) { ctx.fillStyle = 'rgba(0,0,0,.06)'; ctx.fillRect(x * step, y * step, 2, 2); }
+    for (let x = 0; x < colsN; x++) for (let y = 0; y < rowsN; y++) { ctx.fillStyle = PAL.cardDot; ctx.fillRect(x * step, y * step, 2, 2); }
     const by = s.prevClose != null ? Y(s.prevClose) : null;
     bars.forEach((b, k) => {
       const x = Math.floor(k / slots * colsN);
@@ -275,7 +290,7 @@ setInterval(clocks, 1000); clocks();
 
 // ---- 交互：點陣 1 分 K 與 4H 線可查數據、點卡片看詳情、大單漣漪從價格發出、滑鼠帶動橘色圓盤
 let geo4h = null, fieldGeo = null;
-FX.theme({ bg: 'rgba(23,23,23,.94)', fg: '#f2f1ec', mute: '#a8a79f', line: 'rgba(23,23,23,.55)', accent: '#f7931a', up: '#f7931a', down: '#c9c8c0', sheet: '#1c1c1b', border: 'rgba(255,255,255,.09)', radius: '6px', font: "'Geist Mono', 'Noto Sans TC', monospace" });
+FX.theme({ bg: 'rgba(23,23,23,.94)', fg: '#f2f1ec', mute: '#a8a79f', line: NIGHT ? 'rgba(236,233,225,.55)' : 'rgba(23,23,23,.55)', accent: '#f7931a', up: '#f7931a', down: '#c9c8c0', sheet: '#1c1c1b', border: 'rgba(255,255,255,.09)', radius: '6px', font: "'Geist Mono', 'Noto Sans TC', monospace" });
 FX.inspect('#c4h', FX.candleHit(() => geo4h, () => S.bars['4h'], { tf: '4h' }));
 FX.inspect('#cv', (x, y) => {
   const g = fieldGeo; if (!g) return null;
@@ -294,7 +309,7 @@ function frame(t) {
     last = t;
     draw(t);
     const r = geo4h = Draw.candles($('c4h'), S.bars['4h'], { mode: 'line', count: 90, pad: { t: 6, r: 8, b: 6, l: 2 }, rightGap: 0, line: INK, lineWidth: 1.2,
-      grid: { color: 'rgba(0,0,0,.08)', rows: 3 } });
+      grid: { color: PAL.grid, rows: 3 } });
     if (r) {
       const ctx = $('c4h').getContext('2d');
       ctx.fillStyle = BTC; ctx.beginPath(); ctx.arc(r.last.x, r.last.y, 5, 0, Math.PI * 2); ctx.fill();

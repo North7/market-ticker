@@ -66,8 +66,8 @@ body.idle, body.idle * { cursor: none !important; }
 <script>
 const THEMES = [
   { id: 'signal', file: 'themes/b-signal.html', name: 'Signal', zh: '點陣' },
+  { id: 'night', file: 'themes/b-signal.html?night=1', name: 'Night', zh: '點陣夜間' },
   { id: 'orbit', file: 'themes/d-orbit.html', name: 'Orbit', zh: '軌道' },
-  { id: 'daybreak', file: 'themes/d-daybreak.html', name: 'Daybreak', zh: '破曉' },
   { id: 'mission', file: 'themes/m-mission.html', name: 'Mission', zh: '任務' },
   { id: 'glyph', file: 'themes/n-glyph.html', name: 'Glyph', zh: '符號' },
   { id: 'glow', file: 'themes/o-glow.html', name: 'Glow', zh: '發光' },
@@ -134,7 +134,7 @@ function go(i, silent) {
   paintDock();
   const old = [...stage.querySelectorAll('iframe')];
   const f = document.createElement('iframe');
-  f.src = DEPLOYED ? `${t.file}?v=${VERSION}` : t.file;
+  f.src = DEPLOYED ? `${t.file}${t.file.includes('?') ? '&' : '?'}v=${VERSION}` : t.file;
   f.title = t.name;
   f.onload = () => {
     wire(f);
