@@ -9,180 +9,178 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* Glass：依 iOS 27 / macOS 27（Golden Gate）的 Liquid Glass 規範
-   - 玻璃預設較不透明、模糊更強；邊緣有一圈暗色描邊＋較亮的鏡面高光
-   - 側邊欄延伸到視窗邊緣；控制項為浮在內容上的膠囊；捲動時頂部成為一致的工具列
-   - 同心圓角、大標題、SF Pro、系統色；跟隨系統淺色／深色；尊重「降低透明度」「增加對比」 */
+/* Glass：iOS 27／macOS 27（Golden Gate）Liquid Glass ＋ visionOS 視窗語言
+   - 桌布是流動的絲帶，色溫＝24H 漲跌（漲偏暖橘粉、跌偏冷藍綠），跟著游標微動
+   - 整個看板是一扇厚玻璃視窗：強模糊、亮邊高光、暗色描邊、柔和深陰影；游標所在處有一道鏡面反光；外框光暈色＝24H 方向
+   - 視窗內是 bento 磚：可拖動查價的主圖、24H 區間環形儀表、4H 成交量長條、三個大數字
+   - 跟隨系統淺色／深色；尊重降低透明度／增加對比／減少動態 */
 :root {
   color-scheme: light dark;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "PingFang TC", "Inter", "Noto Sans TC", sans-serif;
-  --display: -apple-system-headline, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", "PingFang TC", "Inter", sans-serif;
-  /* 淺色（系統色 Light） */
-  --wall: #dfe6f1; --label: #000; --label2: rgba(60,60,67,.6); --label3: rgba(60,60,67,.3); --sep: rgba(60,60,67,.18);
-  --fill: rgba(120,120,128,.16); --fill2: rgba(120,120,128,.24);
-  --red: #FF3B30; --green: #34C759; --blue: #007AFF; --indigo: #5856D6; --teal: #30B0C7;
-  --glass: rgba(255,255,255,.58); --glass-hi: rgba(255,255,255,.9); --glass-edge: rgba(0,0,0,.10); --glass-shadow: 0 10px 34px rgba(30,40,70,.14);
-  --thumb: rgba(255,255,255,.92);
+  --display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", "PingFang TC", "Inter", sans-serif;
+  --label: #0b0b0f; --label2: rgba(40,40,52,.62); --label3: rgba(40,40,52,.32); --sep: rgba(60,60,67,.16);
+  --red: #FF3B30; --green: #34C759; --blue: #007AFF; --orange: #FF9500;
+  --win: rgba(255,255,255,.42); --win-edge: rgba(0,0,0,.10); --tile: rgba(255,255,255,.46); --tile-edge: rgba(255,255,255,.75);
+  --side: rgba(255,255,255,.22); --hi: rgba(255,255,255,.95); --shadow: rgba(40,30,80,.28); --thumb: rgba(255,255,255,.95);
+  --mood: #FF6A3D;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --wall: #07080c; --label: #fff; --label2: rgba(235,235,245,.6); --label3: rgba(235,235,245,.3); --sep: rgba(84,84,88,.55);
-    --fill: rgba(120,120,128,.24); --fill2: rgba(120,120,128,.36);
-    --red: #FF453A; --green: #30D158; --blue: #0A84FF; --indigo: #5E5CE6; --teal: #40C8E0;
-    --glass: rgba(38,38,44,.56); --glass-hi: rgba(255,255,255,.42); --glass-edge: rgba(0,0,0,.55); --glass-shadow: 0 14px 40px rgba(0,0,0,.38);
-    --thumb: rgba(255,255,255,.2);
+    --label: #fff; --label2: rgba(235,235,245,.62); --label3: rgba(235,235,245,.3); --sep: rgba(255,255,255,.1);
+    --red: #FF453A; --green: #30D158; --blue: #0A84FF; --orange: #FF9F0A;
+    --win: rgba(24,22,34,.34); --win-edge: rgba(0,0,0,.6); --tile: rgba(255,255,255,.07); --tile-edge: rgba(255,255,255,.16);
+    --side: rgba(0,0,0,.14); --hi: rgba(255,255,255,.55); --shadow: rgba(0,0,0,.55); --thumb: rgba(255,255,255,.22);
   }
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-body { background: var(--wall); color: var(--label); overflow: hidden; font-family: var(--font); -webkit-font-smoothing: antialiased; font-feature-settings: "tnum" 1; }
+body { background: #1a1030; color: var(--label); overflow: hidden; font-family: var(--font); -webkit-font-smoothing: antialiased; font-feature-settings: "tnum" 1; }
 
-/* 桌布：三團柔光讓玻璃有東西可折射；第三團的顏色＝24H 漲跌（紅漲綠跌），越大越濃；跟著游標微動（視差） */
-.wall { position: fixed; inset: -10%; z-index: 0; pointer-events: none; }
-.wall i { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .85; translate: calc(var(--fx-px, 0) * var(--d)) calc(var(--fx-py, 0) * var(--d)); }
-.wall .b1 { --d: -26px; width: 62vmax; height: 62vmax; left: -12vmax; top: -18vmax; background: radial-gradient(circle, var(--blue), transparent 68%); animation: drift1 38s ease-in-out infinite alternate; }
-.wall .b2 { --d: 18px; width: 58vmax; height: 58vmax; right: -16vmax; top: 6vmax; background: radial-gradient(circle, var(--indigo), transparent 68%); animation: drift2 44s ease-in-out infinite alternate; }
-.wall .b3 { --d: -14px; width: 56vmax; height: 56vmax; left: 22vw; bottom: -30vmax; background: radial-gradient(circle, var(--mood, var(--teal)), transparent 68%); opacity: var(--mood-a, .5); transition: opacity 2s; animation: drift3 50s ease-in-out infinite alternate; }
-@keyframes drift1 { to { transform: translate(8vmax, 6vmax) scale(1.08); } }
-@keyframes drift2 { to { transform: translate(-6vmax, 8vmax) scale(.94); } }
-@keyframes drift3 { to { transform: translate(-10vmax, -4vmax) scale(1.06); } }
-@media (prefers-color-scheme: dark) { .wall i { opacity: .55; } }
+/* 絲帶桌布（canvas 低解析度繪製後放大＋模糊，省效能） */
+#wall { position: fixed; inset: -4%; width: 108%; height: 108%; z-index: 0; filter: blur(14px) saturate(1.15); translate: calc(var(--fx-px, 0) * -14px) calc(var(--fx-py, 0) * -10px); }
 
-/* Liquid Glass 材質 */
-.glass { position: relative; background: var(--glass); backdrop-filter: blur(34px) saturate(180%); -webkit-backdrop-filter: blur(34px) saturate(180%);
-  box-shadow: 0 0 0 .5px var(--glass-edge), var(--glass-shadow); }
-.glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
-  background: linear-gradient(150deg, var(--glass-hi), transparent 32%, transparent 68%, color-mix(in srgb, var(--glass-hi) 55%, transparent));
+/* 厚玻璃：模糊＋飽和、亮邊（上亮下暗）、暗色細描邊、深而柔的陰影 */
+.glass { position: relative; isolation: isolate; backdrop-filter: blur(44px) saturate(190%); -webkit-backdrop-filter: blur(44px) saturate(190%); }
+.glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.2px; pointer-events: none; z-index: 3;
+  background: linear-gradient(155deg, var(--hi) 0%, transparent 28%, transparent 62%, color-mix(in srgb, var(--mood) 70%, transparent) 100%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
-@media (prefers-reduced-transparency: reduce) {
-  .glass { backdrop-filter: none; -webkit-backdrop-filter: none; background: color-mix(in srgb, var(--wall) 30%, Canvas); }
-  .wall { display: none; }
-}
-@media (prefers-contrast: more) { :root { --glass-edge: rgba(0,0,0,.6); --sep: var(--label3); } .glass::before { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .wall i { animation: none; } }
+/* 游標鏡面反光 */
+.glass::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2;
+  background: radial-gradient(520px circle at var(--mx, -999px) var(--my, -999px), rgba(255,255,255,.16), transparent 60%); mix-blend-mode: soft-light; }
 
-.app { position: relative; z-index: 1; height: 100vh; display: grid; grid-template-columns: clamp(260px, 25vw, 340px) minmax(0, 1fr); }
+.win { position: fixed; z-index: 1; inset: 18px 20px 20px; border-radius: 34px; background: var(--win); display: grid; grid-template-columns: clamp(250px, 24vw, 320px) minmax(0, 1fr); overflow: hidden;
+  box-shadow: 0 0 0 .5px var(--win-edge), inset 0 1px 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(0,0,0,.08), 0 40px 90px -20px var(--shadow), 0 0 80px -30px var(--mood); }
 
-/* 側邊欄：延伸到視窗邊緣（Golden Gate），清單列為圓角選取樣式 */
-.side { display: flex; flex-direction: column; min-height: 0; padding: 22px 12px 14px; border-radius: 0; box-shadow: .5px 0 0 var(--sep); }
-.side .hd { padding: 0 10px 10px; }
-.side h2 { margin: 0; font: 700 26px/1.15 var(--display); letter-spacing: .01em; }
-.side .hd span { font-size: 13px; color: var(--label2); }
-.list { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; scrollbar-width: none; }
-.row { flex: 1; max-height: 86px; min-height: 56px; display: grid; grid-template-columns: minmax(0, 1fr) clamp(46px, 5vw, 70px) auto; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 12px; position: relative; }
-.row + .row::after { content: ''; position: absolute; left: 10px; right: 10px; top: 0; height: .5px; background: var(--sep); }
-.row.sel { background: var(--fill2); } .row.sel::after, .row.sel + .row::after { display: none; }
-.row .tk b { display: block; font-size: 16px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.row .tk span { display: block; font-size: 12.5px; color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.row canvas { width: 100%; height: 30px; }
-.row .rt { text-align: right; }
-.row .rt b { display: block; font-size: 15.5px; font-weight: 500; letter-spacing: -.01em; white-space: nowrap; }
-.pill { display: inline-block; margin-top: 3px; min-width: 64px; padding: 2px 7px; border-radius: 6px; font-size: 12.5px; font-weight: 600; color: #fff; text-align: right; background: var(--fill2); white-space: nowrap; }
+/* 側邊欄（Golden Gate：延伸到視窗邊緣） */
+.side { display: flex; flex-direction: column; min-height: 0; padding: 20px 12px 14px; background: var(--side); box-shadow: .5px 0 0 var(--sep); }
+.side .hd { display: flex; align-items: center; gap: 10px; padding: 0 8px 12px; }
+.side .hd .dots { display: flex; gap: 8px; } .side .hd .dots i { width: 12px; height: 12px; border-radius: 50%; background: var(--label3); }
+.side h2 { margin: 0 0 2px; padding: 0 8px; font: 700 13px/1 var(--font); color: var(--label2); letter-spacing: .02em; }
+.list { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 2px; overflow: auto; scrollbar-width: none; padding-top: 6px; }
+.row { flex: 1; max-height: 78px; min-height: 52px; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 6px 10px; border-radius: 14px; transition: background .2s; }
+.row.sel { background: var(--tile); box-shadow: inset 0 0 0 .5px var(--tile-edge), 0 4px 14px rgba(0,0,0,.08); }
+@media (hover: hover) { .row:not(.sel):hover { background: color-mix(in srgb, var(--tile) 60%, transparent); } }
+.ico { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: #fff; font-size: 11.5px; font-weight: 700; letter-spacing: -.02em;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(0,0,0,.15), 0 2px 6px rgba(0,0,0,.18); }
+.ico.btc { background: linear-gradient(160deg, #ffb347, #f7931a 55%, #e2700c); font-size: 17px; }
+.ico.tw { background: linear-gradient(160deg, #ff8a7a, #ff3b30 60%, #d12c10); }
+.ico.us { background: linear-gradient(160deg, #6ab8ff, #0a84ff 60%, #0060d0); }
+.ico.cr { background: linear-gradient(160deg, #c69bff, #8e5cff 60%, #5e3be0); }
+.row .tk { min-width: 0; } .row .tk b { display: block; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .tk span { display: block; font-size: 12px; color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .rt { text-align: right; } .row .rt b { display: block; font-size: 14.5px; font-weight: 500; white-space: nowrap; }
+.pill { display: inline-block; margin-top: 3px; min-width: 58px; padding: 1px 7px; border-radius: 6px; font-size: 11.5px; font-weight: 600; text-align: right; white-space: nowrap; background: var(--tile); color: var(--label2); }
 .pill.u { background: var(--red); color: #fff; } .pill.d { background: var(--green); color: #fff; }
-.side .ft { padding: 10px 10px 0; font-size: 11.5px; color: var(--label2); line-height: 1.5; }
+.side .ft { padding: 10px 8px 0; font-size: 11px; color: var(--label2); line-height: 1.55; }
 
-/* 主內容 */
-.main { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 10px; padding: 14px 24px 20px; }
-.bar { display: flex; align-items: center; gap: 10px; }
-.capsule { height: 36px; border-radius: 999px; display: flex; align-items: center; gap: 14px; padding: 0 16px; font-size: 13px; color: var(--label2); white-space: nowrap; }
-.capsule b { color: var(--label); font-weight: 500; }
-.live { display: inline-flex; align-items: center; gap: 6px; color: var(--label); font-weight: 500; }
-.live i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 25%, transparent); }
-.bar .sp { margin-left: auto; }
-/* 膠囊分段控制：選中的玻璃滑塊用回彈曲線移動 */
-.seg { position: relative; height: 36px; border-radius: 999px; padding: 3px; display: flex; }
-.seg .thumb { position: absolute; top: 3px; bottom: 3px; left: 0; width: 0; border-radius: 999px; background: var(--thumb); box-shadow: 0 2px 8px rgba(0,0,0,.12), inset 0 0 0 .5px rgba(255,255,255,.5);
-  transition: transform .45s cubic-bezier(.3, 1.35, .5, 1), width .45s cubic-bezier(.3, 1.35, .5, 1); }
-.seg button { all: unset; position: relative; z-index: 1; cursor: pointer; padding: 0 14px; line-height: 30px; font-size: 13px; font-weight: 600; color: var(--label2); border-radius: 999px; transition: color .2s; }
+/* 內容區 */
+.content { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 10px; padding: 18px 22px 20px; }
+.top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; }
+.top .t h1 { margin: 0; font: 700 clamp(22px, 3.6vh, 30px)/1.1 var(--display); }
+.top .t span { font-size: 13px; color: var(--label2); }
+/* 頂部膠囊導覽＝範圍切換（回彈滑塊） */
+.seg { position: relative; height: 40px; border-radius: 999px; padding: 4px; display: flex; background: var(--tile); box-shadow: inset 0 0 0 .5px var(--tile-edge), 0 6px 18px rgba(0,0,0,.08); }
+.seg .thumb { position: absolute; top: 4px; bottom: 4px; left: 0; width: 0; border-radius: 999px; background: var(--thumb);
+  box-shadow: 0 3px 10px rgba(0,0,0,.14), inset 0 1px 0 rgba(255,255,255,.7), inset 0 0 0 .5px rgba(255,255,255,.4);
+  transition: transform .5s cubic-bezier(.3, 1.4, .45, 1), width .5s cubic-bezier(.3, 1.4, .45, 1); }
+.seg button { all: unset; position: relative; z-index: 1; cursor: pointer; padding: 0 16px; line-height: 32px; font-size: 13.5px; font-weight: 600; color: var(--label2); transition: color .2s; }
 .seg button.on { color: var(--label); }
+.clock { justify-self: end; text-align: right; }
+.clock b { display: block; font: 600 clamp(20px, 3.4vh, 28px)/1 var(--display); letter-spacing: -.01em; }
+.clock span { font-size: 12px; color: var(--label2); }
 
-.hero { display: flex; flex-direction: column; gap: 2px; padding: 4px 4px 0; }
-.hero .t { display: flex; align-items: baseline; gap: 10px; }
-.hero h1 { margin: 0; font: 700 clamp(26px, 4.4vh, 38px)/1.1 var(--display); letter-spacing: .005em; }
-.hero .t span { font-size: 15px; color: var(--label2); }
-.price { font: 600 clamp(48px, 11.5vh, 112px)/1 var(--display); letter-spacing: -.035em; margin-top: 4px; white-space: nowrap; }
-.price small { font-size: .42em; color: var(--label2); letter-spacing: -.01em; font-weight: 500; }
-.chg { font-size: clamp(14px, 2.2vh, 18px); font-weight: 600; display: flex; gap: 8px; align-items: baseline; white-space: nowrap; }
-.chg span { color: var(--label2); font-weight: 400; }
+.hero { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+.price { font: 600 clamp(52px, 12vh, 120px)/.95 var(--display); letter-spacing: -.04em; white-space: nowrap; }
+.price small { font-size: .4em; color: var(--label2); font-weight: 500; letter-spacing: -.01em; }
+.chg { font-size: clamp(14px, 2.2vh, 18px); font-weight: 600; white-space: nowrap; }
+.chg span { display: block; color: var(--label2); font-weight: 400; font-size: .82em; margin-top: 2px; }
 .u { color: var(--red); } .d { color: var(--green); }
 
-.chart { position: relative; min-height: 0; }
-.chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* bento 磚 */
+.bento { min-height: 0; display: grid; grid-template-columns: minmax(0, 2.15fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 12px; }
+.tile { position: relative; border-radius: 22px; background: var(--tile); min-height: 0; overflow: hidden;
+  box-shadow: inset 0 0 0 .5px var(--tile-edge), inset 0 1px 0 rgba(255,255,255,.25), 0 10px 28px -8px rgba(0,0,0,.18); }
+.tile .lab { position: absolute; left: 16px; top: 13px; z-index: 2; font-size: 12.5px; font-weight: 600; color: var(--label2); }
+.tile .lab em { font-style: normal; font-weight: 400; margin-left: 6px; }
+.chart { grid-row: 1; grid-column: 1; }
+.chart canvas, .bars canvas, .ring canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.right { grid-row: 1 / 3; grid-column: 2; display: grid; grid-template-rows: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; min-height: 0; }
+.ring .mid { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-38%); text-align: center; z-index: 2; pointer-events: none; }
+.ring .mid b { display: block; font: 600 clamp(30px, 6vh, 52px)/1 var(--display); letter-spacing: -.03em; }
+.ring .mid b small { font-size: .45em; color: var(--label2); }
+.ring .mid span { font-size: 12px; color: var(--label2); }
+.ring .ends { position: absolute; left: 14px; right: 14px; bottom: 12px; display: flex; justify-content: space-between; z-index: 2; }
+.chip { height: 28px; padding: 0 11px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--label2); background: var(--tile); box-shadow: inset 0 0 0 .5px var(--tile-edge); }
+.chip b { color: var(--label); font-weight: 600; }
+.stats { grid-row: 2; grid-column: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.stat { padding: 13px 16px 14px; }
+.stat span { display: block; font-size: 12.5px; color: var(--label2); font-weight: 500; }
+.stat b { display: block; font: 600 clamp(20px, 3.6vh, 30px)/1.15 var(--display); letter-spacing: -.02em; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat b small { font-size: .55em; color: var(--label2); font-weight: 500; margin-left: 3px; }
 
-/* 數據表：插入式分組卡片（圓角與內距同心） */
-.stats { border-radius: 22px; padding: 12px 16px 12px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); column-gap: 14px; row-gap: 10px; }
-.stats .c { min-width: 0; }
-.stats .c span { display: block; font-size: 12px; color: var(--label2); }
-.stats .c b { display: block; font-size: 16px; font-weight: 600; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stats .c + .c { box-shadow: -.5px 0 0 var(--sep); padding-left: 14px; }
-.range { grid-column: 1 / -1; display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: 12px; font-size: 12.5px; color: var(--label2); border-top: .5px solid var(--sep); padding-top: 10px; }
-.range b { color: var(--label); font-weight: 600; }
-.track { position: relative; height: 6px; border-radius: 3px; background: var(--fill2); }
-.track i { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3), 0 0 0 .5px rgba(0,0,0,.1); transition: left .8s cubic-bezier(.3, 1.2, .5, 1); }
-.track em { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--label3); }
-.xtra { opacity: .9; }
+@media (prefers-reduced-transparency: reduce) { .glass { backdrop-filter: none; -webkit-backdrop-filter: none; } .win { background: color-mix(in srgb, Canvas 92%, transparent); } }
+@media (prefers-contrast: more) { :root { --win-edge: rgba(0,0,0,.7); --tile-edge: var(--label3); } }
 
-/* 直式（手機、iPad 直放）：單欄上下捲動；頂部工具列在內容捲到下方時變成一致的玻璃列 */
+/* 直式：視窗變成可捲動的單欄卡片堆疊 */
 @media (orientation: portrait) {
   html, body { height: auto; } body { overflow-x: hidden; overflow-y: auto; }
-  .app { height: auto; min-height: 100vh; grid-template-columns: minmax(0, 1fr); }
-  .main { order: 1; grid-template-rows: auto auto clamp(260px, 38vh, 440px) auto; padding: 0 16px 14px; }
-  .bar { position: sticky; top: 0; z-index: 5; margin: 0 -16px; padding: 10px 16px; transition: background .25s, box-shadow .25s; }
-  .bar.scrolled { background: var(--glass); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%); box-shadow: 0 .5px 0 var(--sep); }
-  .side { order: 2; margin: 0 16px 24px; border-radius: 26px; padding: 18px 8px 12px; box-shadow: 0 0 0 .5px var(--glass-edge), var(--glass-shadow); }
-  .row { flex: none; min-height: 64px; }
-  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .stats .c:nth-child(4) { box-shadow: none; padding-left: 0; }
-  .price { font-size: min(16vw, 104px); }
+  #wall { position: fixed; }
+  .win { position: relative; inset: auto; margin: 10px; min-height: calc(100vh - 20px); grid-template-columns: minmax(0, 1fr); border-radius: 30px; overflow: visible; }
+  .content { order: 1; padding: 16px 14px 14px; }
+  .side { order: 2; background: transparent; box-shadow: 0 -.5px 0 var(--sep); padding: 14px 6px 12px; }
+  .side .hd { display: none; }
+  .row { flex: none; min-height: 60px; }
+  .top { grid-template-columns: minmax(0, 1fr) auto; } .top .seg { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; } .seg button { flex: 1; text-align: center; padding: 0; }
+  .price { font-size: min(17vw, 110px); }
+  .bento { grid-template-columns: 1fr 1fr; grid-template-rows: clamp(250px, 34vh, 420px) clamp(190px, 24vh, 300px) auto; }
+  .chart { grid-column: 1 / -1; } .right { grid-column: 1 / -1; grid-row: 2; grid-template-rows: none; grid-template-columns: 1fr 1fr; } .stats { grid-column: 1 / -1; grid-row: 3; }
 }
 @media (orientation: portrait) and (max-width: 640px) {
-  .capsule { gap: 10px; padding: 0 12px; font-size: 12px; } .capsule .nyc { display: none; }
-  .seg button { padding: 0 9px; font-size: 12.5px; }
-  .bar { flex-wrap: wrap; row-gap: 8px; } .bar .sp { display: none; } .seg { margin-left: auto; }
-  .stats .c b { font-size: 14.5px; }
-  .range { grid-template-columns: auto minmax(0, 1fr) auto; } .range .lab { display: none; }
+  .win { margin: 8px; border-radius: 26px; }
+  .stat { padding: 11px 12px; } .stat b { font-size: 18px; }
+  .ring .ends .chip { height: 24px; padding: 0 8px; font-size: 11px; }
 }
-/* 手機橫放：側欄窄、隱藏數據表 */
 @media (orientation: landscape) and (max-height: 500px) {
-  .app { grid-template-columns: 230px minmax(0, 1fr); }
-  .side { padding: 12px 8px 8px; } .side .hd, .side .ft { display: none; }
-  .row { min-height: 40px; grid-template-columns: minmax(0, 1fr) auto; } .row canvas { display: none; } .row .tk span { display: none; }
-  .main { grid-template-rows: auto auto minmax(0, 1fr); padding: 8px 14px 10px; gap: 4px; }
-  .stats { display: none; } .hero .t { display: none; }
-  .price { font-size: 46px; }
+  .win { inset: 8px; border-radius: 24px; grid-template-columns: 210px minmax(0, 1fr); }
+  .side { padding: 10px 6px; } .side .hd, .side h2, .side .ft { display: none; }
+  .row { min-height: 38px; grid-template-columns: 26px minmax(0, 1fr) auto; } .ico { width: 26px; height: 26px; font-size: 9px; border-radius: 7px; } .row .tk span { display: none; }
+  .content { padding: 8px 12px 10px; gap: 4px; } .top .t, .clock { display: none; } .top { grid-template-columns: 1fr; } .seg { justify-self: center; height: 32px; } .seg button { line-height: 24px; }
+  .price { font-size: 44px; }
+  .bento { grid-template-rows: minmax(0, 1fr); } .stats { display: none; } .right { grid-row: 1; grid-template-rows: minmax(0, 1fr); } .bars { display: none; }
 }
 </style>
 </head>
 <body>
-<div class="wall" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
-<div class="app">
-  <aside class="side glass">
-    <div class="hd"><h2 id="sideT">市場</h2><span id="sideS">比特幣 · 台股 · 美股</span></div>
+<canvas id="wall" aria-hidden="true"></canvas>
+<div class="win glass" id="win">
+  <aside class="side">
+    <div class="hd"><span class="dots"><i></i><i></i><i></i></span></div>
+    <h2 id="sideT">市場</h2>
     <div class="list" id="list"></div>
-    <div class="ft"><span id="xtra" class="xtra"></span></div>
+    <div class="ft"><span id="xtra"></span><br>桌布色溫＝24H 漲跌：越暖漲越多、越冷跌越多</div>
   </aside>
-  <main class="main">
-    <header class="bar" id="bar">
-      <div class="capsule glass"><span class="live"><i></i>即時</span><span>台北 <b id="tpe">—</b></span><span class="nyc">紐約 <b id="nyc">—</b></span></div>
-      <span class="sp"></span>
-      <div class="seg glass" id="seg"><i class="thumb"></i><button data-r="1H">1H</button><button data-r="4H">4H</button><button data-r="1D">1D</button><button data-r="1W">1W</button><button data-r="1M">1M</button></div>
+  <section class="content">
+    <header class="top">
+      <div class="t"><h1>Bitcoin</h1><span>BTC-USDT · Binance 現貨</span></div>
+      <div class="seg" id="seg"><i class="thumb"></i><button data-r="1H">1H</button><button data-r="4H">4H</button><button data-r="1D">1D</button><button data-r="1W">1W</button><button data-r="1M">1M</button></div>
+      <div class="clock"><b id="tpe">—</b><span>台北 · 紐約 <span id="nyc">—</span></span></div>
     </header>
-    <section class="hero">
-      <div class="t"><h1>Bitcoin</h1><span>BTC-USDT · Binance</span></div>
-      <div class="price" id="price">—</div>
-      <div class="chg" id="chg">—</div>
-    </section>
-    <section class="chart" id="chartBox"><canvas id="cv"></canvas></section>
-    <section class="stats glass" id="stats">
-      <div class="c"><span>開盤</span><b id="o">—</b></div>
-      <div class="c"><span>最高</span><b id="h">—</b></div>
-      <div class="c"><span>最低</span><b id="l">—</b></div>
-      <div class="c"><span>成交量</span><b id="v">—</b></div>
-      <div class="c"><span>成交額</span><b id="q">—</b></div>
-      <div class="c"><span>振幅</span><b id="amp">—</b></div>
-      <div class="range"><span class="lab">24H 區間</span><b id="rl">—</b><div class="track"><em id="ro"></em><i id="rd"></i></div><b id="rh">—</b></div>
-    </section>
-  </main>
+    <div class="hero"><div class="price" id="price">—</div><div class="chg" id="chg">—</div></div>
+    <div class="bento">
+      <div class="tile chart" id="chartBox"><canvas id="cv"></canvas></div>
+      <div class="right">
+        <div class="tile ring"><span class="lab">24H 區間位置</span><canvas id="rg"></canvas>
+          <div class="mid"><b id="pos">—<small>%</small></b><span>距最低 <span id="fromL">—</span></span></div>
+          <div class="ends"><span class="chip">低 <b id="rl">—</b></span><span class="chip">高 <b id="rh">—</b></span></div></div>
+        <div class="tile bars" id="barsBox"><span class="lab">4H 成交量<em>近 2 天</em></span><canvas id="bv"></canvas></div>
+      </div>
+      <div class="stats">
+        <div class="tile stat"><span>24H 成交額</span><b id="q">—</b></div>
+        <div class="tile stat"><span>24H 振幅</span><b id="amp">—</b></div>
+        <div class="tile stat"><span>24H 開盤</span><b id="o">—</b></div>
+      </div>
+    </div>
+  </section>
 </div>
 
 <script src="feed.js?v=__VERSION__"></script>
@@ -194,15 +192,44 @@ const $ = (id) => document.getElementById(id);
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const cls = (v) => (v > 0 ? 'u' : v < 0 ? 'd' : '');
 const sign = (v) => (v > 0 ? '+' : v < 0 ? '−' : '');
+const dark = () => matchMedia('(prefers-color-scheme: dark)').matches;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 Feed.start({ '1m': 240, '5m': 288, '4h': 180 });
 Feed.mountExtras('#xtra');
 
-// 範圍：哪個週期的 K、幾根、標題文字
+// ---------------------------------------------------------------- 絲帶桌布：色溫＝24H 漲跌
+const WARM = ['#ffb35c', '#ff7a45', '#ff4f7b', '#c552d8', '#6f5cff', '#2f7bff'];
+const COOL = ['#7ef0d2', '#2fd3c7', '#24a8f0', '#3a6bff', '#6a4dff', '#2a2f9e'];
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const mix = (a, b, t) => { const x = hex(a), y = hex(b); return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(',')})`; };
+let warmth = 0.6, warmthT = 0.6;
+function wall(t) {
+  const cv = $('wall'), k = 1 / 3, W = Math.round(innerWidth * 1.08 * k), H = Math.round(innerHeight * 1.08 * k);
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const ctx = cv.getContext('2d');
+  warmth += (warmthT - warmth) * 0.02;
+  const pal = WARM.map((c, i) => mix(COOL[i], c, warmth)), dk = dark();
+  const g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, pal[0]); g.addColorStop(0.5, pal[3]); g.addColorStop(1, pal[5]);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // 五條流動的絲帶，每條在厚度方向有亮→色→暗的漸層，看起來像布料褶皺
+  for (let b = 0; b < 5; b++) {
+    const y0 = H * (0.08 + b * 0.2), amp = H * (0.12 + 0.04 * Math.sin(b)), f = (1.2 + b * 0.25) / W * Math.PI, ph = t * (0.05 + b * 0.012) + b * 1.7, th = H * 0.22;
+    const y = (x) => y0 + Math.sin(x * f + ph) * amp + Math.sin(x * f * 0.45 - ph * 0.7) * amp * 0.6;
+    ctx.beginPath(); ctx.moveTo(0, y(0));
+    for (let x = 0; x <= W; x += 6) ctx.lineTo(x, y(x));
+    for (let x = W; x >= 0; x -= 6) ctx.lineTo(x, y(x) + th);
+    ctx.closePath();
+    const gg = ctx.createLinearGradient(0, y0 - amp, 0, y0 + amp + th);
+    gg.addColorStop(0, 'rgba(255,255,255,0)'); gg.addColorStop(0.35, pal[(b + 1) % 6] + ''); gg.addColorStop(0.55, 'rgba(255,255,255,.55)'); gg.addColorStop(0.75, pal[(b + 2) % 6]); gg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 0.55; ctx.fillStyle = gg; ctx.fill(); ctx.globalAlpha = 1;
+  }
+  if (dk) { ctx.fillStyle = 'rgba(8,6,20,.3)'; ctx.fillRect(0, 0, W, H); }
+}
+
+// ---------------------------------------------------------------- 範圍切換
 const RANGES = { '1H': ['1m', 60, '過去 1 小時'], '4H': ['1m', 240, '過去 4 小時'], '1D': ['5m', 288, '過去 24 小時'], '1W': ['4h', 42, '過去 7 天'], '1M': ['4h', 180, '過去 30 天'] };
 const store = { get(k, d) { try { return localStorage.getItem('glass.' + k) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('glass.' + k, v); } catch { /* ignore */ } } };
 let RANGE = RANGES[store.get('range', '1D')] ? store.get('range', '1D') : '1D';
-
-// ---- 分段控制
 function paintSeg(animate) {
   const seg = $('seg'), btn = seg.querySelector(`[data-r="${RANGE}"]`), th = seg.querySelector('.thumb');
   seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === btn));
@@ -210,142 +237,186 @@ function paintSeg(animate) {
   th.style.width = btn.offsetWidth + 'px'; th.style.transform = `translateX(${btn.offsetLeft}px)`;
   if (!animate) requestAnimationFrame(() => (th.style.transition = ''));
 }
-$('seg').querySelectorAll('button').forEach((b) => (b.onclick = () => { RANGE = b.dataset.r; store.set('range', RANGE); paintSeg(true); paintHeader(); }));
+$('seg').querySelectorAll('button').forEach((b) => (b.onclick = () => { RANGE = b.dataset.r; store.set('range', RANGE); paintSeg(true); }));
 addEventListener('resize', () => paintSeg(false));
-document.fonts && document.fonts.ready.then(() => paintSeg(false));
+if (document.fonts) document.fonts.ready.then(() => paintSeg(false));
 paintSeg(false);
 
-// ---- 主圖（股票 App 風格：漲跌決定線色、範圍起點虛線、拖動時標題換成該點價格）
+// ---------------------------------------------------------------- 主圖：股票 App 式拖動查價
 let geo = null, scrub = null;
 const rangeBars = () => { const [tf, n] = RANGES[RANGE]; return (S.bars[tf] || []).slice(-n); };
 function chart() {
   const { ctx, w, h } = Draw.fit($('cv'));
   const d = rangeBars(); if (d.length < 2) return;
-  const sm = w < 500, L = 2, R = w - (sm ? 50 : 62), T = 14, B = h - 24;
+  const sm = w < 500, L = 14, R = w - (sm ? 54 : 66), T = 44, B = h - 28;
   const base = d[0].o;
   let hi = base, lo = base; for (const b of d) { hi = Math.max(hi, b.c); lo = Math.min(lo, b.c); }
   const pd = (hi - lo) * 0.1 || hi * 0.001; hi += pd; lo -= pd;
   const X = (i) => L + (R - L) * i / (d.length - 1), Y = (p) => T + (hi - p) / (hi - lo) * (B - T);
   geo = { X, Y, d, L, R, base };
   const last = d[d.length - 1].c, col = last >= base ? css('--red') : css('--green');
-  // 格線與右側刻度
-  ctx.font = `500 11px ${css('--font')}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.lineWidth = 1;
+  ctx.font = `500 11px ${css('--font')}`; ctx.lineWidth = 1;
+  ctx.fillStyle = css('--label2'); ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+  ctx.font = `600 12.5px ${css('--font')}`; ctx.fillText(`BTC · ${RANGES[RANGE][2]}`, 16, 13); ctx.font = `500 11px ${css('--font')}`;
+  ctx.textBaseline = 'middle';
   for (let k = 0; k <= 3; k++) {
     const p = hi - (hi - lo) * (k + 0.5) / 4, y = Math.round(Y(p)) + 0.5;
-    ctx.strokeStyle = css('--sep'); ctx.globalAlpha = 0.6; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(R, y); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.strokeStyle = css('--sep'); ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(R, y); ctx.stroke();
     ctx.fillStyle = css('--label2'); ctx.fillText(fmt(p, 0), R + 8, y);
   }
-  // 時間刻度：取 4 個點
-  const [tf] = RANGES[RANGE]; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = css('--label2');
-  for (let k = 1; k <= 3; k++) { const i = Math.round((d.length - 1) * k / 4); ctx.fillText(FX.time(d[i].t, tf === '4h' ? (RANGE === '1M' ? '1d' : '4h') : '1m'), X(i), B + 8); }
-  // 範圍起點虛線
+  const [tf] = RANGES[RANGE]; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let k = 1; k <= 3; k++) { const i = Math.round((d.length - 1) * k / 4); ctx.fillText(FX.time(d[i].t, tf === '4h' ? (RANGE === '1M' ? '1d' : '4h') : '1m'), X(i), B + 9); }
   const by = Math.round(Y(base)) + 0.5;
   ctx.strokeStyle = css('--label3'); ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(L, by); ctx.lineTo(R, by); ctx.stroke(); ctx.setLineDash([]);
-  // 線與漸層
   const line = () => { ctx.beginPath(); d.forEach((b, i) => (i ? ctx.lineTo(X(i), Y(b.c)) : ctx.moveTo(X(i), Y(b.c)))); };
   const upto = scrub != null ? scrub : d.length - 1;
   ctx.save(); line(); ctx.lineTo(X(d.length - 1), B); ctx.lineTo(X(0), B); ctx.closePath();
-  const g = ctx.createLinearGradient(0, T, 0, B); g.addColorStop(0, col + '40'); g.addColorStop(1, col + '00');
-  ctx.fillStyle = g; ctx.fill(); ctx.restore();
-  ctx.lineJoin = 'round'; ctx.lineWidth = 2;
-  if (scrub != null) {   // 拖動時：游標後面的線變淡（股票 App 的作法）
+  const g = ctx.createLinearGradient(0, T, 0, B); g.addColorStop(0, col + '55'); g.addColorStop(1, col + '00'); ctx.fillStyle = g; ctx.fill(); ctx.restore();
+  ctx.lineJoin = 'round'; ctx.lineWidth = 2.2; ctx.shadowColor = col; ctx.shadowBlur = 10;
+  if (scrub != null) {
     ctx.save(); ctx.beginPath(); ctx.rect(0, 0, X(upto), h); ctx.clip(); line(); ctx.strokeStyle = col; ctx.stroke(); ctx.restore();
-    ctx.save(); ctx.beginPath(); ctx.rect(X(upto), 0, w, h); ctx.clip(); line(); ctx.strokeStyle = col; ctx.globalAlpha = 0.3; ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(X(upto), 0, w, h); ctx.clip(); line(); ctx.strokeStyle = col; ctx.globalAlpha = 0.28; ctx.stroke(); ctx.restore();
+    ctx.shadowBlur = 0;
     const x = Math.round(X(upto)) + 0.5, y = Y(d[upto].c);
-    ctx.strokeStyle = css('--label'); ctx.globalAlpha = 0.5; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, T - 6); ctx.lineTo(x, B); ctx.stroke(); ctx.globalAlpha = 1;
-    ctx.fillStyle = col; ctx.strokeStyle = css('--wall'); ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = css('--label'); ctx.globalAlpha = 0.45; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, T - 8); ctx.lineTo(x, B); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill(); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 7); ctx.fill();
   } else {
-    line(); ctx.strokeStyle = col; ctx.stroke();
+    line(); ctx.strokeStyle = col; ctx.stroke(); ctx.shadowBlur = 0;
     const x = X(d.length - 1), y = Y(last), p = (Date.now() % 2000) / 2000;
-    ctx.fillStyle = col; ctx.globalAlpha = 0.25 * (1 - p); ctx.beginPath(); ctx.arc(x, y, 4 + p * 10, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
-    ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill();
+    ctx.fillStyle = col; ctx.globalAlpha = 0.28 * (1 - p); ctx.beginPath(); ctx.arc(x, y, 5 + p * 13, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 6, 0, 7); ctx.fill(); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill();
   }
 }
-// 拖動查價：滑鼠移入即時；觸控按住或慢慢拖（共用 fx.js 的手勢規則）
 FX.inspect('#chartBox', (x) => {
   const g = geo; if (!g) return null;
   scrub = Math.max(0, Math.min(g.d.length - 1, Math.round((x - g.L) / (g.R - g.L) * (g.d.length - 1))));
   return { x: g.X(scrub), y: g.Y(g.d[scrub].c), tip: false, vline: false, dot: false };
 }, { onEnd: () => { scrub = null; }, linger: 0 });
 
-// ---- 標題：價格與漲跌（拖動時換成該點）
+// ---------------------------------------------------------------- 24H 區間環形儀表（像恆溫器：弧＝區間、點＝現價、刻痕＝開盤）
+function ring(t) {
+  const { ctx, w, h } = Draw.fit($('rg')), tk = S.ticker; if (!tk || S.price == null) return;
+  const p = Math.max(0, Math.min(1, (S.price - tk.l) / (tk.h - tk.l || 1))), po = Math.max(0, Math.min(1, (tk.o - tk.l) / (tk.h - tk.l || 1)));
+  const cx = w / 2, cy = h * 0.54, R = Math.min(w * 0.36, h * 0.34), lw = Math.max(8, R * 0.13);
+  const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25, ap = a0 + (a1 - a0) * p, ao = a0 + (a1 - a0) * po;
+  ctx.lineCap = 'round'; ctx.lineWidth = lw;
+  ctx.strokeStyle = dark() ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.07)'; ctx.beginPath(); ctx.arc(cx, cy, R, a0, a1); ctx.stroke();
+  const up = S.price >= tk.o, col = up ? css('--red') : css('--green');
+  const g = ctx.createConicGradient ? ctx.createConicGradient(a0 - 0.2, cx, cy) : null;
+  if (g) { g.addColorStop(0, css('--blue')); g.addColorStop(0.75, col); ctx.strokeStyle = g; } else ctx.strokeStyle = col;
+  ctx.shadowColor = col; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(cx, cy, R, a0, ap); ctx.stroke(); ctx.shadowBlur = 0;
+  // 刻度
+  ctx.lineWidth = 1.5; ctx.strokeStyle = css('--label3');
+  for (let k = 0; k <= 30; k++) { const a = a0 + (a1 - a0) * k / 30, r1 = R + lw * 0.9, r2 = R + lw * (k % 5 ? 1.25 : 1.6); ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2); ctx.stroke(); }
+  // 開盤刻痕
+  ctx.strokeStyle = css('--label'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx + Math.cos(ao) * (R - lw * 0.9), cy + Math.sin(ao) * (R - lw * 0.9)); ctx.lineTo(cx + Math.cos(ao) * (R + lw * 0.9), cy + Math.sin(ao) * (R + lw * 0.9)); ctx.stroke();
+  // 現價把手
+  const ex = cx + Math.cos(ap) * R, ey = cy + Math.sin(ap) * R, beat = reduce ? 1 : 1 + 0.08 * Math.max(0, Math.sin(t / 1000 * 5)) ** 6;
+  ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(ex, ey, lw * 0.85 * beat, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+  ctx.fillStyle = col; ctx.beginPath(); ctx.arc(ex, ey, lw * 0.4, 0, 7); ctx.fill();
+  $('pos').innerHTML = `${Math.round(p * 100)}<small>%</small>`;
+  $('fromL').textContent = '+' + fmt(S.price - tk.l, 0);
+}
+
+// ---------------------------------------------------------------- 4H 成交量長條（最新一根高亮＋數值泡泡）
+let barGeo = null;
+function bars() {
+  const { ctx, w, h } = Draw.fit($('bv'));
+  const d = (S.bars['4h'] || []).slice(-12); if (d.length < 3) return;
+  const L = 16, R = w - 16, T = 54, B = h - 26, bw = (R - L) / d.length, mx = Math.max(...d.map((b) => b.v));
+  barGeo = { L, bw, d, T, B, mx };
+  d.forEach((b, i) => {
+    const last = i === d.length - 1, x = L + i * bw + bw * 0.18, ww = bw * 0.64, y = B - (B - T) * (b.v / mx);
+    ctx.fillStyle = last ? css('--blue') : (dark() ? 'rgba(255,255,255,.16)' : 'rgba(0,0,0,.09)');
+    if (last) { ctx.shadowColor = css('--blue'); ctx.shadowBlur = 12; }
+    ctx.beginPath(); ctx.roundRect(x, y, ww, B - y, Math.min(ww / 2, 8)); ctx.fill(); ctx.shadowBlur = 0;
+    if (i % 3 === 2 || last) { ctx.fillStyle = css('--label2'); ctx.font = `500 10.5px ${css('--font')}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(FX.time(b.t, '4h').split(' ')[1], x + ww / 2, B + 7); }
+    if (last) {   // 數值泡泡
+      const txt = fmt(b.v, 0) + ' BTC'; ctx.font = `600 11px ${css('--font')}`; const tw = ctx.measureText(txt).width + 14;
+      const bx = Math.min(R - tw, Math.max(L, x + ww / 2 - tw / 2)), byy = Math.max(T - 26, y - 26);
+      ctx.fillStyle = dark() ? 'rgba(255,255,255,.9)' : 'rgba(20,20,28,.88)'; ctx.beginPath(); ctx.roundRect(bx, byy, tw, 20, 10); ctx.fill();
+      ctx.fillStyle = dark() ? '#000' : '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(txt, bx + tw / 2, byy + 10.5);
+    }
+  });
+}
+FX.inspect('#barsBox', (x) => {
+  const g = barGeo; if (!g) return null;
+  const i = Math.floor((x - g.L) / g.bw); if (i < 0 || i >= g.d.length) return null;
+  const b = g.d[i];
+  return { x: g.L + i * g.bw + g.bw / 2, y: g.B - (g.B - g.T) * (b.v / g.mx), vline: false, title: FX.time(b.t, '4h') + ' · 4H', rows: [['成交量', fmt(b.v, 0) + ' BTC'], ['約', '$' + fmtBig(b.v * b.c)], ['漲跌', FX.pct((b.c / b.o - 1) * 100), b.c >= b.o ? 'up' : 'down']] };
+});
+
+// ---------------------------------------------------------------- 標題價格（拖動時換成該點）
 let shown = '';
-function paintHeader() {
-  const g = geo, d = rangeBars();
+function setPrice(s) { if (s === shown) return; shown = s; const [i, f] = s.split('.'); $('price').innerHTML = `${i}<small>.${f}</small>`; if (scrub == null) document.title = s + ' · BTC'; }
+function header() {
+  const g = geo;
   if (scrub != null && g && g.d[scrub]) {
     const b = g.d[scrub], diff = b.c - g.base, [tf] = RANGES[RANGE];
     setPrice(fmt(b.c));
-    $('chg').innerHTML = `<b class="${cls(diff)}">${sign(diff)}${fmt(Math.abs(diff))}（${pct(diff / g.base * 100)}）</b><span>${FX.time(b.t, tf === '4h' ? '4h' : tf === '5m' ? '4h' : '1m')}</span>`;
+    $('chg').innerHTML = `<b class="${cls(diff)}">${sign(diff)}${fmt(Math.abs(diff))}（${pct(diff / g.base * 100)}）</b><span>${FX.time(b.t, tf === '1m' ? '1m' : '4h')}</span>`;
     return;
   }
   if (S.price == null) return;
   setPrice(fmt(S.price));
-  if (!d.length) return;
+  const d = rangeBars(); if (!d.length) return;
   const base = d[0].o, diff = S.price - base;
   $('chg').innerHTML = `<b class="${cls(diff)}">${sign(diff)}${fmt(Math.abs(diff))}（${pct(diff / base * 100)}）</b><span>${RANGES[RANGE][2]}</span>`;
 }
-function setPrice(s) {
-  if (s === shown) return; shown = s;
-  const [i, f] = s.split('.'); $('price').innerHTML = `${i}<small>.${f}</small>`;
-  if (scrub == null) document.title = s + ' · BTC';
-}
 
-// ---- 數據表、24H 區間、桌布情緒色
 Feed.on('ticker', () => {
   const t = S.ticker;
-  $('o').textContent = fmt(t.o, 0); $('h').textContent = fmt(t.h, 0); $('l').textContent = fmt(t.l, 0);
-  $('v').textContent = fmtBig(t.v) + ' BTC'; $('q').textContent = '$' + fmtBig(t.q);
+  $('o').textContent = fmt(t.o, 0); $('q').innerHTML = '$' + fmtBig(t.q);
   $('amp').textContent = ((t.h - t.l) / t.o * 100).toFixed(2) + '%';
   $('rl').textContent = fmt(t.l, 0); $('rh').textContent = fmt(t.h, 0);
-  const pos = (v) => Math.max(0, Math.min(1, (v - t.l) / (t.h - t.l || 1))) * 100 + '%';
-  $('rd').style.left = pos(S.price ?? t.c); $('ro').style.left = pos(t.o);
-  const root = document.documentElement.style;
-  root.setProperty('--mood', t.P >= 0 ? css('--red') : css('--green'));
-  root.setProperty('--mood-a', Math.min(0.75, 0.25 + Math.abs(t.P) * 0.1).toFixed(2));
+  warmthT = Math.max(0, Math.min(1, 0.5 + t.P / 6));   // ±3% 走到最暖／最冷
+  document.documentElement.style.setProperty('--mood', t.P >= 0 ? css('--red') : css('--green'));
 });
 
-// ---- 清單（側邊欄）：BTC 在最上面且為選取狀態；其他列點開詳情
+// ---------------------------------------------------------------- 側邊清單
 const rows = {};
-Feed.on('mode', () => { if (Feed.mode === 'crypto') { $('sideT').textContent = '指標'; $('sideS').textContent = '鏈上與衍生品 · 即時'; } });
+const icoCls = (s) => (s.id === 'BTC' ? 'btc' : s.market === 'TW' ? 'tw' : s.market === 'US' ? 'us' : 'cr');
+const icoTxt = (s) => (s.id === 'BTC' ? '₿' : s.id === 'TAIEX' ? '加權' : s.icon || String(s.code).replace(/\s.*/, '').slice(0, 4));
+Feed.on('mode', () => { if (Feed.mode === 'crypto') $('sideT').textContent = '比特幣與指標'; else $('sideT').textContent = '比特幣 · 台股 · 美股'; });
 function renderList() {
-  const items = [{ id: 'BTC', code: 'BTC', name: 'Bitcoin', price: S.price, chg: S.ticker ? S.ticker.P : 0, pct: S.ticker ? S.ticker.P : 0, dec: 2, bars: (S.bars['5m'] || []).slice(-96), prevClose: S.ticker ? S.ticker.o : null, isOpen: true }, ...S.markets];
+  const items = [{ id: 'BTC', code: 'BTC', name: 'Bitcoin', price: S.price, chg: S.ticker ? S.ticker.P : 0, pct: S.ticker ? S.ticker.P : 0 }, ...S.markets];
   items.forEach((s) => {
     let r = rows[s.id];
     if (!r) {
       const el = document.createElement('div');
       el.className = 'row' + (s.id === 'BTC' ? ' sel' : '');
       if (s.id !== 'BTC') el.dataset.fx = s.id;
-      el.innerHTML = `<div class="tk"><b>${s.code}</b><span>${s.name}</span></div><canvas></canvas><div class="rt"><b>—</b><span class="pill">—</span></div>`;
+      el.innerHTML = `<span class="ico ${icoCls(s)}">${icoTxt(s)}</span><div class="tk"><b>${s.name}</b><span>${s.code}</span></div><div class="rt"><b>—</b><span class="pill">—</span></div>`;
       $('list').appendChild(el);
       r = rows[s.id] = { el, q: (x) => el.querySelector(x) };
     }
     if (s.price == null) return;
     r.q('.rt b').textContent = s.id === 'BTC' ? fmt(S.price) : Feed.val(s);
     const pl = r.q('.pill'); pl.textContent = s.id === 'BTC' ? pct(s.pct) : Feed.chgTxt(s); pl.className = 'pill ' + cls(s.chg);
-    const bars = s.bars || [];
-    if (bars.length) Draw.spark(r.q('canvas'), bars, { mode: 'line', slots: s.id === 'BTC' ? bars.length : Feed.slots(s), base: s.prevClose ?? undefined, line: (s.chg || 0) >= 0 ? css('--red') : css('--green'), lineWidth: 1.6, baseColor: css('--label3'), baseDash: [1.5, 2.5] });
   });
 }
-Feed.on('markets', renderList);
-setInterval(renderList, 5000);
+Feed.on('markets', renderList); setInterval(renderList, 3000);
 
-// ---- 時鐘、捲動時的工具列（直式）
-function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; $('nyc').textContent = Feed.tzNow('America/New_York').str; }
+function clocks() { const t = Feed.tzNow('Asia/Taipei'); $('tpe').textContent = `${t.hh}:${t.mm}`; const n = Feed.tzNow('America/New_York'); $('nyc').textContent = `${n.hh}:${n.mm}`; }
 setInterval(clocks, 1000); clocks();
-addEventListener('scroll', () => $('bar').classList.toggle('scrolled', scrollY > 4), { passive: true });
 
-// ---- 交互共用層：詳情面板與即時事件（大單漣漪、24H 新高低、爆倉）
+// ---------------------------------------------------------------- 交互共用層
 function fxTheme() {
-  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
-  FX.theme(dark
-    ? { bg: 'rgba(44,44,46,.86)', fg: '#ffffff', mute: 'rgba(235,235,245,.6)', line: 'rgba(235,235,245,.5)', accent: '#0A84FF', up: '#FF453A', down: '#30D158', sheet: '#1C1C1E', border: 'rgba(120,120,128,.24)', radius: '18px', shadow: '0 20px 50px rgba(0,0,0,.45)', font: 'var(--font)' }
-    : { bg: 'rgba(255,255,255,.9)', fg: '#000000', mute: 'rgba(60,60,67,.6)', line: 'rgba(60,60,67,.45)', accent: '#007AFF', up: '#FF3B30', down: '#34C759', sheet: '#FFFFFF', border: 'rgba(120,120,128,.16)', radius: '18px', shadow: '0 20px 50px rgba(30,40,70,.18)', font: 'var(--font)' });
+  FX.theme(dark()
+    ? { bg: 'rgba(40,40,46,.86)', fg: '#ffffff', mute: 'rgba(235,235,245,.6)', line: 'rgba(235,235,245,.5)', accent: '#0A84FF', up: '#FF453A', down: '#30D158', sheet: '#1C1C1E', border: 'rgba(120,120,128,.24)', radius: '18px', shadow: '0 20px 50px rgba(0,0,0,.45)', font: 'var(--font)' }
+    : { bg: 'rgba(255,255,255,.92)', fg: '#000000', mute: 'rgba(60,60,67,.6)', line: 'rgba(60,60,67,.45)', accent: '#007AFF', up: '#FF3B30', down: '#34C759', sheet: '#FFFFFF', border: 'rgba(120,120,128,.16)', radius: '18px', shadow: '0 20px 50px rgba(30,40,70,.18)', font: 'var(--font)' });
 }
-fxTheme(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { fxTheme(); renderList(); });
-FX.events({ anchor: '#price', ax: 0.35, ay: 0.55, glow: '#price', shake: '.hero', ringWidth: 1.5, ringAlpha: 0.55 });
+fxTheme(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change', fxTheme);
+FX.spotlight('.glass');
+FX.events({ anchor: '#price', ax: 0.4, ay: 0.55, glow: '#price', shake: '.hero', ringWidth: 1.5, ringAlpha: 0.6 });
 
-let last = 0;
-function frame(t) { paintHeader(); if (t - last > 100) { last = t; chart(); } requestAnimationFrame(frame); }
+let lastC = 0, lastW = 0;
+function frame(t) {
+  header();
+  if (t - lastC > 100) { lastC = t; chart(); ring(t); bars(); }
+  if (t - lastW > (reduce ? 2000 : 66)) { lastW = t; wall(t / 1000); }
+  requestAnimationFrame(frame);
+}
 requestAnimationFrame(frame);
 </script>
 </body>
