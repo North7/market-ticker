@@ -116,8 +116,8 @@ const { S, fmt, fmtBig, pct } = Feed;
 const $ = (id) => document.getElementById(id);
 // ---- 日夜配色：AUTO 跟隨系統深色模式，DAY／NIGHT 手動固定（記在本機）
 const PALS = {
-  night: { ink: '#ece9e1', up: '#ece9e1', down: '#ff8a1f', discDown: '#fff6e8', off: 'rgba(255,255,255,.07)', offTop: 'rgba(255,255,255,.045)', discOff: 'rgba(40,16,0,.3)', discOffTop: 'rgba(40,16,0,.22)', discInk: '#1d0f02', discUp: '#1d0f02', discFlash: '#fff', wick: 'rgba(236,233,225,.35)', discWick: 'rgba(29,15,2,.5)', cardDot: 'rgba(255,255,255,.06)', grid: 'rgba(255,255,255,.08)' },
-  day: { ink: '#171717', up: '#171717', down: '#e2700c', discDown: '#fff', off: 'rgba(0,0,0,.075)', offTop: 'rgba(0,0,0,.05)', discOff: 'rgba(255,255,255,.22)', discOffTop: 'rgba(255,255,255,.14)', discInk: '#171717', discUp: '#171717', discFlash: '#6b2f00', wick: 'rgba(23,23,23,.35)', discWick: 'rgba(23,23,23,.45)', cardDot: 'rgba(0,0,0,.06)', grid: 'rgba(0,0,0,.08)' },
+  night: { ink: '#ece9e1', up: '#ece9e1', down: '#ff8a1f', discDown: '#fff6e8', off: 'rgba(255,255,255,.07)', offTop: 'rgba(255,255,255,.045)', discOff: 'rgba(40,16,0,.3)', discOffTop: 'rgba(40,16,0,.22)', discInk: '#1d0f02', discUp: '#1d0f02', discFlash: '#fff', wick: 'rgba(236,233,225,.35)', discWick: 'rgba(29,15,2,.5)', cardDot: 'rgba(255,255,255,.06)', grid: 'rgba(255,255,255,.08)', scan: 'rgba(255,255,255,.15)' },
+  day: { ink: '#171717', up: '#171717', down: '#e2700c', discDown: '#fff', off: 'rgba(0,0,0,.075)', offTop: 'rgba(0,0,0,.05)', discOff: 'rgba(255,255,255,.22)', discOffTop: 'rgba(255,255,255,.14)', discInk: '#171717', discUp: '#171717', discFlash: '#6b2f00', wick: 'rgba(23,23,23,.35)', discWick: 'rgba(23,23,23,.45)', cardDot: 'rgba(0,0,0,.06)', grid: 'rgba(0,0,0,.08)', scan: 'rgba(0,0,0,.14)' },
 };
 const BTC = '#f7931a', mq = matchMedia('(prefers-color-scheme: dark)');
 let SCHEME = (() => { try { return localStorage.getItem('signal.scheme') || 'auto'; } catch { return 'auto'; } })();
@@ -176,6 +176,7 @@ function layoutPrice(s, lit, now) {
 }
 
 function draw(now) {
+  const scanC = ((now / 1000) % 11) / 11 * 140 - 20;   // 每 11 秒一道像螢幕刷新的掃描光
   const cv = $('cv');
   const { ctx, w, h } = Draw.fit(cv);
   P = Math.max(4, Math.min(16, Math.floor(w / 92), Math.floor(h / (h < 300 ? 34 : 26))));   // 手機橫放時價格縮小，留空間給 K 線   // 手機直放約 4px，大螢幕最多 16px
@@ -235,7 +236,7 @@ function draw(now) {
       const inDisc = (x - cx) ** 2 + (y - discY) ** 2 < R * R;
       const k = lit.get(`${r},${c}`);
       let col;
-      if (!k) col = r < chartTop - 3 ? (inDisc ? PAL.discOffTop : PAL.offTop) : (inDisc ? PAL.discOff : PAL.off);
+      if (!k) { col = r < chartTop - 3 ? (inDisc ? PAL.discOffTop : PAL.offTop) : (inDisc ? PAL.discOff : PAL.off); if (Math.abs(c - scanC) < 2.5) col = inDisc ? 'rgba(255,255,255,.4)' : PAL.scan; }   // 掃描光
       else if (k === 'ink') col = inDisc ? PAL.discInk : INK;
       else if (k === 'down') col = inDisc ? PAL.discDown : PAL.down;
       else if (k === 'up') col = inDisc ? PAL.discUp : UPC;
@@ -324,6 +325,8 @@ FX.inspect('#cv', (x, y) => {
   const b = g.data[k];
   return { x: g.ox + (k + 2) * g.P + g.P / 2, y: g.oy + g.rowOf(b.c) * g.P + g.P / 2, title: FX.time(b.t, '1m') + ' · 1 分', rows: FX.rows(b) };
 });
+FX.flow({ anchor: '#stat', alpha: 0.5 });
+FX.enter(['.top', '.field', '.b4h', '.col']);
 FX.events({ anchor: '#stat', at: () => { const g = fieldGeo, r = $('field').getBoundingClientRect(); return g ? [r.left + g.ox + g.P * 44, r.top + g.oy + g.P * 9] : null; },
   pillY: () => $('stat').getBoundingClientRect().bottom + 10, glow: '#stat', shake: '#stat' });
 

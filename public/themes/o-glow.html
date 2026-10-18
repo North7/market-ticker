@@ -232,6 +232,9 @@ FX.inspect('#c4h', (x) => {
   return { x: g.L + i * g.bw + g.bw * 0.5, y: g.y(b), title: FX.time(b.t, '4h') + ' · 4H', rows: FX.rows(b) };
 });
 FX.events({ anchor: '#price', ax: 0.4, ay: 0.55, glow: '#price', shake: '.price' });
+FX.flow({ anchor: '#price', alpha: 0.75, up: '#0b0c0a', down: '#d63a3a', blend: 'source-over', z: 3 });   // 萊姆卡上：買用墨色、賣用紅
+FX.glint('.c.price', { period: 13, alpha: 0.35 });
+FX.enter(['.c']);
 FX.spotlight('.c');
 
 function mainChart(t) {
@@ -349,7 +352,7 @@ function drawPrice() {
   if (s === shown) return;
   shown = s;
   const [i, d] = s.split('.');
-  $('price').innerHTML = `${i}<small>.${d}</small>`;
+  FX.price($('price'), s);
   $('val').innerHTML = `${s}<small>/ USDT</small>`;
   document.title = s + ' · BTC';
 }

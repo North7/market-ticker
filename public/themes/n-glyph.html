@@ -130,6 +130,9 @@ FX.inspect('#c4h', (x) => {
   return { x: g.L + i * g.bw + g.bw / 2, y: g.mid, title: FX.time(b.t, '4h') + ' · 4H', rows: FX.rows(b) };
 });
 FX.events({ anchor: '#price', ax: 0.45, ay: 0.55, glow: '#price', shake: '.banner' });
+FX.flow({ anchor: '#price', alpha: 0.6 });
+FX.glint('.banner', { period: 15, alpha: 0.1 });
+FX.enter(['.banner', '.mx', '.list', '.h4', '.foot']);
 FX.spotlight('.banner');
 
 function matrix(t) {
@@ -159,7 +162,8 @@ function matrix(t) {
     if (k) glyph(ctx, k, x, y, G, col, c === d.length - 1 && Math.floor(t / 500) % 2 ? 0.35 : 1);
     else if (!hot) {
       // 背景只是方格紙：暗點，每 5 格稍亮，方便對位；不用資料符號，避免誤讀
-      glyph(ctx, 'dot', x, y, G, LIME, (r % 5 === 0 || c % 5 === 0) ? 0.32 : 0.16);
+      const tw = 0.7 + 0.3 * Math.sin(t / 900 + r * 1.7 + c * 2.3);   // 背景點微微閃爍
+      glyph(ctx, 'dot', x, y, G, LIME, ((r % 5 === 0 || c % 5 === 0) ? 0.32 : 0.16) * tw);
     }
   }
   // 爆量說明：最大的那根標上量
@@ -207,7 +211,7 @@ function drawPrice() {
   if (s === shown) return;
   shown = s;
   const [i, d] = s.split('.');
-  $('price').innerHTML = `${i}<small>.${d}</small>`;
+  FX.price($('price'), s);
   document.title = s + ' · BTC';
   if (rows.BTC) rows.BTC.q('.rt b').textContent = s;   // 清單裡的 BTC 跟大字同步
 }

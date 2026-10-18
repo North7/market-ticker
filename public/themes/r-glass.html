@@ -372,7 +372,7 @@ FX.inspect('#barsBox', (x) => {
 
 // ---------------------------------------------------------------- 標題價格（拖動時換成該點）
 let shown = '';
-function setPrice(s) { if (s === shown) return; shown = s; const [i, f] = s.split('.'); $('price').innerHTML = `${i}<small>.${f}</small>`; if (scrub == null) document.title = s + ' · BTC'; }
+function setPrice(s) { if (s === shown) return; shown = s; FX.price($('price'), s); if (scrub == null) document.title = s + ' · BTC'; }
 function header() {
   const g = geo;
   if (scrub != null && g && g.d[scrub]) {
@@ -433,6 +433,9 @@ function fxTheme() {
 fxTheme(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change', fxTheme);
 FX.spotlight('.glass');
 FX.events({ anchor: '#price', ax: 0.4, ay: 0.55, glow: '#price', shake: '.hero', ringWidth: 1.5, ringAlpha: 0.6 });
+FX.flow({ anchor: '#price', alpha: 0.6 });
+FX.glint('.win', { period: 18, alpha: 0.12 });
+FX.enter(['.side .row', '.top', '.hero', '.chart', '.right .tile', '.stat']);
 
 let lastC = 0, lastW = 0;
 function frame(t) {

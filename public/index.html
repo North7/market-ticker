@@ -17,8 +17,11 @@
 html, body { margin: 0; height: 100%; background: #000; overflow: hidden; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
 body.idle, body.idle * { cursor: none !important; }
 #stage { position: fixed; inset: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); transition: transform 3s ease; }   /* 避開瀏海與圓角 */
-#stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; opacity: 0; transition: opacity .9s ease; background: transparent; }
-#stage iframe.on { opacity: 1; }
+/* 換主題：舊的微放大＋模糊淡出，新的從微縮＋模糊清晰浮現 */
+#stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; opacity: 0; background: transparent; transform: scale(1.02); filter: blur(10px);
+  transition: opacity .9s ease, transform 1.1s cubic-bezier(.2,.8,.2,1), filter .9s ease; }
+#stage iframe.on { opacity: 1; transform: none; filter: none; }
+@media (prefers-reduced-motion: reduce) { #stage iframe { transform: none; filter: none; } }
 
 .dock { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); max-width: calc(100vw - 20px); overflow-x: auto; scrollbar-width: none; transform: translate(-50%, 16px); opacity: 0; pointer-events: none; z-index: 10;
   display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 999px;
@@ -137,6 +140,7 @@ function go(i, silent) {
   f.title = t.name;
   f.onload = () => {
     wire(f);
+    if (document.hidden) [f, ...old].forEach((x) => (x.style.transition = 'none'));   // 背景分頁不會跑轉場，直接切換，避免停在模糊透明
     setTimeout(() => f.classList.add('on'), 30);   // 不用 rAF：視窗在背景時 rAF 會暫停，主題就一直是透明的
     old.forEach((o) => { o.classList.remove('on'); setTimeout(() => o.remove(), 1000); });
   };

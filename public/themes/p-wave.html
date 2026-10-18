@@ -172,8 +172,10 @@ function stage(t) {
   if (!view.drag) {
     view.yaw += view.vy; view.pitch = Math.max(-0.35, Math.min(1.45, view.pitch + view.vp)); view.vy *= 0.94; view.vp *= 0.9;
     if (Date.now() - view.idle > 10000) {
-      const V0 = VIEWS[MODE]; let dy = ((V0.yaw - view.yaw) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
-      view.yaw += dy * 0.03; view.pitch += (V0.pitch - view.pitch) * 0.03;
+      // 沒人操作時，鏡頭在預設角度附近緩慢環繞（長時間展示也一直在動）
+      const V0 = VIEWS[MODE], tt = Date.now() / 1000, ty = V0.yaw + Math.sin(tt * 0.06) * 0.42, tp = V0.pitch + Math.sin(tt * 0.043) * 0.08;
+      let dy = ((ty - view.yaw) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+      view.yaw += dy * 0.03; view.pitch += (tp - view.pitch) * 0.03;
     }
   }
   const P = cam3(w, h, { yaw: view.yaw + FX.pointer.x * 0.06, pitch: view.pitch + FX.pointer.y * 0.03, cx: w * (port ? 0.5 : 0.56), cy: h * (port ? 0.72 : 0.62), s: Math.min(w * (port ? 0.33 : 0.3), h * (port ? 0.32 : 0.46)), hy: 1.1 });
@@ -398,7 +400,7 @@ function wave() {
 let shown = '';
 function drawPrice() {
   if (S.price == null) return; const s = fmt(S.price); if (s === shown) return; shown = s;
-  const [i, d] = s.split('.'); $('price').innerHTML = `${i}<small>.${d}</small>`; document.title = s + ' · BTC';
+  FX.price($('price'), s); document.title = s + ' · BTC';
 }
 Feed.on('ticker', () => {
   const t = S.ticker; $('pct').textContent = pct(t.P); $('pct').className = 'pill ' + cls(t.P);
@@ -439,6 +441,8 @@ FX.inspect('#sp3 .box', (x) => {
   return { x, y: 20, vline: true, dot: false, title: back ? `${back} 秒前 · 2 秒報酬` : '最新 2 秒', rows: [['報酬', FX.pct(v), v >= 0 ? 'up' : 'down']] };
 });
 FX.events({ anchor: '#price', ax: 0.4, ay: 0.55, glow: '#price', shake: '.px', ringWidth: 1, ringAlpha: 0.7 });
+FX.flow({ anchor: '#price', alpha: 0.55 });
+FX.enter(['.hd', '.px', '.stage canvas', '.spec', '.foot']);
 
 let last = 0;
 function frame(t) {

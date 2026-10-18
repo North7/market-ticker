@@ -58,6 +58,10 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 .band .cell strong { font-weight: 800; font-size: 25px; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
 .band .cell small { font-family: 'IBM Plex Mono'; font-size: 10px; text-transform: uppercase; }
 .win canvas { position: absolute; left: 14px; right: 14px; top: 76px; bottom: 16px; width: calc(100% - 28px); height: calc(100% - 92px); }
+/* 雷達掃描線：每 7 秒掃過 K 線視窗一次 */
+.win .sweep { position: absolute; top: 70px; bottom: 10px; width: 120px; left: -140px; z-index: 1; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(242,106,61,.0) 30%, rgba(242,106,61,.13) 85%, rgba(242,106,61,.5) 100%); animation: sweep 7s linear infinite; }
+@keyframes sweep { to { left: 100%; } }
+@media (prefers-reduced-motion: reduce) { .win .sweep { display: none; } }
 .win .hz2 { position: absolute; left: 40%; right: 40%; bottom: 0; height: 6px; background: repeating-linear-gradient(-45deg, var(--orange) 0 6px, transparent 6px 12px); opacity: .7; }
 
 .tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
@@ -150,6 +154,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
       <div class="cell"><strong id="flow">—</strong><small>Buy share · 60s</small></div>
       <div class="cell" style="justify-self:end;border:0"><small id="ohlc">—</small></div></div>
     <canvas id="c1m"></canvas>
+    <i class="sweep"></i>
   </section>
   <section class="tiles" id="tiles"></section>
 </div>
@@ -193,7 +198,7 @@ function drawPrice() {
   if (s === shown) return;
   shown = s;
   const [i, d] = s.split('.');
-  $('price').innerHTML = `${i}<small>.${d}</small>`;
+  FX.price($('price'), s);
   document.title = s + ' · BTC';
 }
 Feed.on('ticker', () => {
@@ -232,6 +237,9 @@ let geo1m = null;
 FX.theme({ bg: 'rgba(28,29,27,.95)', fg: '#e6eee8', mute: '#858c86', line: 'rgba(230,238,232,.55)', accent: '#f26a3d', up: '#b9d4c2', down: '#f26a3d', sheet: '#262725', border: 'rgba(185,212,194,.12)', radius: '6px', font: "'IBM Plex Mono', 'Noto Sans TC', monospace" });
 FX.inspect('#c1m', FX.candleHit(() => geo1m, () => S.bars['1m'], { tf: '1m' }));
 FX.events({ anchor: '#price', ax: 0.45, ay: 0.55, glow: '#price', shake: '.hero' });
+FX.flow({ anchor: '#price', alpha: 0.6 });
+FX.glint('.hero .box', { period: 16, alpha: 0.22 });
+FX.enter(['.top', '.hero > *', '.tl', '.win', '.tiles']);
 
 function charts() {
   const r = geo1m = Draw.candles($('c1m'), S.bars['1m'], { count: 80, headroom: 0.04, footroom: 0.04, pad: { t: 6, r: 70, b: 6, l: 6 }, up: '#b9d4c2', down: '#f26a3d', body: 0.62,

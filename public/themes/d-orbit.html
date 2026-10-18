@@ -94,6 +94,8 @@ FX.inspect('#cv', (x, y) => {
   return { x: g.cx + Math.cos(a) * rr, y: g.cy + Math.sin(a) * rr, vline: false, title: ring === g.inn ? FX.time(b.t, '1m') + ' · 1 分 K' : FX.time(b.t, '4h') + ' · 4H', rows: FX.rows(b) };
 });
 FX.events({ anchor: '#price', ax: 0.5, ay: 0.55, glow: '#price', shake: '.price' });
+FX.flow({ anchor: '#price', alpha: 0.6 });
+FX.enter(['.corner', '.legend', '.price', '.chg', '.orbs']);
 
 function orbit() {
   const { ctx, w, h } = Draw.fit($('cv'));
@@ -205,7 +207,7 @@ function drawPrice() {
   if (s === shown) return;
   shown = s;
   const [i, d] = s.split('.');
-  $('price').innerHTML = `${i}<small>.${d}</small>`;
+  FX.price($('price'), s);
   document.title = s + ' · BTC';
 }
 Feed.on('ticker', () => {

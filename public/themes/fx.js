@@ -312,5 +312,117 @@
     });
   };
 
+  // ================================================================ 動效（長時間展示用：輕、連續、不閃爍；減少動態時關閉）
+  const mstyle = document.createElement('style');
+  mstyle.textContent = `
+.fx-ch { display: inline-block; }
+.fx-ch.up { animation: fxRollUp .55s cubic-bezier(.2,.8,.2,1); } .fx-ch.dn { animation: fxRollDn .55s cubic-bezier(.2,.8,.2,1); }
+@keyframes fxRollUp { 0% { transform: translateY(.42em); opacity: 0; color: var(--fx-up); } 55% { color: var(--fx-up); } 100% { transform: none; opacity: 1; } }
+@keyframes fxRollDn { 0% { transform: translateY(-.42em); opacity: 0; color: var(--fx-down); } 55% { color: var(--fx-down); } 100% { transform: none; opacity: 1; } }
+.fx-glint { position: absolute; inset: 0; pointer-events: none; z-index: 4; border-radius: inherit; overflow: hidden; }
+.fx-glint::before { content: ''; position: absolute; top: -50%; bottom: -50%; width: 38%; left: -60%; transform: rotate(18deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,var(--ga, .16)), transparent); animation: fxGlint var(--gp, 14s) ease-in-out infinite; animation-delay: var(--gd, 0s); }
+@keyframes fxGlint { 0% { left: -60%; } 16%, 100% { left: 130%; } }
+.fx-rip { position: absolute; border-radius: 50%; pointer-events: none; transform: scale(0); opacity: .35; background: currentColor; animation: fxRip .65s ease-out forwards; z-index: 5; }
+@keyframes fxRip { to { transform: scale(1); opacity: 0; } }
+.fx-tilt { transition: transform .35s cubic-bezier(.2,.8,.2,1); will-change: transform; }
+@media (prefers-reduced-motion: reduce) { .fx-ch.up, .fx-ch.dn, .fx-glint::before, .fx-rip { animation: none !important; } }`;
+  document.head.appendChild(mstyle);
+
+  // 價格數字滾動：只有變動的位數會從上／下滾入，並短暫染成漲／跌色（保留 <small> 小數的結構）
+  const rollState = new WeakMap();
+  FX.price = (el, text) => {
+    if (typeof el === 'string') el = document.querySelector(el);
+    if (!el) return;
+    const prev = rollState.get(el);
+    if (prev && prev.text === text) return;
+    const [ip, dp] = text.split('.');
+    const num = (t) => parseFloat(String(t).replace(/,/g, ''));
+    const dir = prev ? Math.sign(num(text) - num(prev.text)) : 0;
+    const chars = [...ip], decs = dp != null ? ['.', ...dp] : [];
+    if (!prev || prev.ip.length !== chars.length || prev.dec.length !== decs.length) {
+      el.innerHTML = chars.map((c) => `<span class="fx-ch">${c}</span>`).join('') + (decs.length ? `<small>${decs.map((c) => `<span class="fx-ch">${c}</span>`).join('')}</small>` : '');
+    } else if (!reduce && dir) {
+      const spans = el.querySelectorAll('.fx-ch'), all = [...chars, ...decs], old = [...prev.ip, ...prev.dec];
+      all.forEach((c, i) => { if (c !== old[i] && spans[i]) { const s = spans[i]; s.textContent = c; s.classList.remove('up', 'dn'); void s.offsetWidth; s.classList.add(dir > 0 ? 'up' : 'dn'); } });
+    } else {
+      const spans = el.querySelectorAll('.fx-ch'); [...chars, ...decs].forEach((c, i) => { if (spans[i]) spans[i].textContent = c; });
+    }
+    rollState.set(el, { text, ip: chars, dec: decs });
+  };
+
+  // 成交粒子：每筆成交從價格冒出一顆，買往上飄、賣往下沉，大小＝金額
+  FX.flow = (o = {}) => {
+    if (reduce) return;
+    const anchor = () => (typeof o.anchor === 'string' ? document.querySelector(o.anchor) : o.anchor);
+    const cv = document.createElement('canvas'); cv.className = 'fx-fxc'; cv.style.zIndex = o.z ?? 1; document.body.appendChild(cv);
+    const parts = []; let raf = 0, lastT = performance.now(), lastSpawn = 0;
+    const loop = (now) => {
+      raf = 0; const dt = Math.min(50, now - lastT); lastT = now;
+      const { ctx } = Draw.fit(cv); ctx.globalCompositeOperation = o.blend || 'lighter';
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const p = parts[i]; p.age += dt; if (p.age > p.life) { parts.splice(i, 1); continue; }
+        p.x += p.vx * dt / 16; p.y += p.vy * dt / 16; p.vy *= 0.995;
+        const k = p.age / p.life, a = (k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85) * (o.alpha ?? 0.55);
+        ctx.fillStyle = p.c; ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      if (parts.length && !document.hidden) raf = requestAnimationFrame(loop);
+    };
+    Feed.on('trade', (t) => {
+      if (document.hidden) return;
+      const now = performance.now(); if (now - lastSpawn < (o.gap ?? 40)) return;   // 每秒最多約 25 顆
+      const usd = t.p * t.q; if (usd < (o.min ?? 300) || parts.length > (o.max ?? 90)) return;
+      const a = anchor(); if (!a) return; lastSpawn = now;
+      const r = a.getBoundingClientRect(), buy = !t.m, size = Math.min(1, Math.log10(usd / 300) / 3.5);
+      parts.push({ x: r.left + r.width * (0.08 + Math.random() * 0.84), y: buy ? r.top + r.height * 0.15 : r.bottom - r.height * 0.1,
+        vx: (Math.random() - 0.5) * 0.25, vy: (buy ? -1 : 1) * (0.25 + Math.random() * 0.5 + size * 0.5), r: 1.1 + size * 3.2, age: 0, life: 1400 + Math.random() * 1600 + size * 1200,
+        c: buy ? (o.up || cssv('up')) : (o.down || cssv('down')) });
+      if (!raf) { lastT = performance.now(); raf = requestAnimationFrame(loop); }
+    });
+  };
+
+  // 卡片：滑鼠移過輕微 3D 傾斜、點擊漣漪（只對夠高的卡片，清單列不傾斜）
+  if (hoverable && !reduce) {
+    let cur = null;
+    document.addEventListener('mousemove', (e) => {
+      const el = e.target.closest && e.target.closest('[data-fx]');
+      if (cur && cur !== el) { cur.style.transform = ''; cur = null; }
+      if (!el || el.offsetHeight < 70 || fromTouch()) return;
+      const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+      el.classList.add('fx-tilt'); el.style.transform = `perspective(700px) rotateX(${(-y * 5).toFixed(2)}deg) rotateY(${(x * 6).toFixed(2)}deg) translateZ(0)`; cur = el;
+    });
+    document.addEventListener('mouseleave', () => { if (cur) { cur.style.transform = ''; cur = null; } });
+  }
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest && e.target.closest('[data-fx]'); if (!el || reduce) return;
+    if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+    const r = el.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2.2, s = document.createElement('span');
+    s.className = 'fx-rip'; Object.assign(s.style, { width: d + 'px', height: d + 'px', left: e.clientX - r.left - d / 2 + 'px', top: e.clientY - r.top - d / 2 + 'px' });
+    el.appendChild(s); setTimeout(() => s.remove(), 700);
+  });
+
+  // 進場：切換到這個主題時，主要區塊依序淡入上浮（分頁看不到時不播，避免卡在透明）
+  FX.enter = (sels, o = {}) => {
+    if (reduce || document.visibilityState !== 'visible' || !Element.prototype.animate) return;
+    const els = sels.flatMap((s) => [...document.querySelectorAll(s)]);
+    els.forEach((el, i) => {
+      const a = el.animate([{ opacity: 0, transform: 'translateY(14px)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }],
+        { duration: o.duration || 750, delay: (o.start || 60) + i * (o.step || 55), easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+      setTimeout(() => a.finish(), 4000);   // 保險：萬一動畫被暫停也一定會出現
+    });
+  };
+
+  // 光澤：一道柔和的斜光每隔一段時間掃過指定表面
+  FX.glint = (sel, o = {}) => {
+    if (reduce) return;
+    document.querySelectorAll(sel).forEach((el, i) => {
+      if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+      const g = document.createElement('div'); g.className = 'fx-glint';
+      g.style.setProperty('--gp', (o.period || 14) + 's'); g.style.setProperty('--gd', ((o.delay || 2) + i * 1.7) + 's'); g.style.setProperty('--ga', o.alpha ?? 0.16);
+      el.appendChild(g);
+    });
+  };
+
   window.FX = FX;
 })();
