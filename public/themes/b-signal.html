@@ -41,12 +41,12 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 
 .bottom { display: grid; grid-template-columns: clamp(170px, 21vw, 300px) repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--ink); }
 .b4h { position: relative; border-right: 1px solid var(--line); padding: 14px 20px; }
-.b4h canvas { position: absolute; left: 20px; right: 20px; top: var(--c4t, 98px); bottom: 14px; width: calc(100% - 40px); height: calc(100% - var(--c4t, 98px) - 14px); }
+.b4h canvas { position: absolute; left: 20px; right: 20px; top: var(--c4t, 112px); bottom: 12px; width: calc(100% - 40px); height: calc(100% - var(--c4t, 112px) - 12px); }
 /* 時鐘：大字時分＋閃爍的橘色冒號，下方日期 */
-.b4h .clk { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; white-space: nowrap; }
-.b4h .clk b { font-weight: 300; font-size: clamp(30px, 6vh, 46px); letter-spacing: -.03em; line-height: 1; color: var(--ink); }
+.b4h .clk { display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; }
+.b4h .clk b { font-weight: 300; font-size: clamp(28px, 5.4vh, 42px); letter-spacing: -.03em; line-height: 1; color: var(--ink); }
 .b4h .clk b i { font-style: normal; color: var(--btc); animation: blink 1s steps(2) infinite; }
-.b4h .clk span { font-family: 'Geist Mono'; font-size: 10.5px; letter-spacing: .12em; color: var(--mute); text-transform: uppercase; }
+.b4h .clk span { font-family: 'Geist Mono'; font-size: 10px; letter-spacing: .1em; color: var(--mute); text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
 .k { font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .16em; color: var(--mute); text-transform: uppercase; display: flex; justify-content: space-between; }
 .k b { color: var(--ink); font-weight: 500; }
 .col { position: relative; border-right: 1px solid var(--line); padding: 12px clamp(8px, 1.2vw, 18px) 10px; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr) auto; min-width: 0; }

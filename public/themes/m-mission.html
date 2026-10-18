@@ -13,7 +13,7 @@
 html, body { margin: 0; height: 100%; }
 body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: 'Inter Tight', 'Noto Sans TC', sans-serif; }
 .mono { font-family: 'IBM Plex Mono', monospace; }
-.wrap { height: 100vh; display: grid; grid-template-rows: 40px clamp(120px, 20vh, 182px) clamp(92px, 14.5vh, 132px) minmax(0, 1fr) clamp(80px, 12.5vh, 112px); gap: 12px; padding: 0 34px 22px; }
+.wrap { height: 100vh; display: grid; grid-template-rows: 40px clamp(120px, 20vh, 182px) clamp(92px, 14.5vh, 132px) minmax(0, 1fr) clamp(100px, 15vh, 128px); gap: 12px; padding: 0 34px 22px; }
 .top { display: flex; align-items: center; gap: 12px; font-family: 'IBM Plex Mono'; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; border-bottom: 2px solid var(--sage); }
 .top i { width: 16px; height: 16px; border-radius: 50%; background: var(--sage); display: grid; place-items: center; color: var(--ink); font-style: normal; font-size: 10px; }
 .top .sp { margin-left: auto; color: var(--sage); }
@@ -57,27 +57,28 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 .band .cell { display: flex; align-items: baseline; gap: 8px; padding: 0 22px; border-left: 2px solid var(--ink); height: 38px; flex-direction: column; justify-content: center; }
 .band .cell strong { font-weight: 800; font-size: 25px; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
 /* 任務時鐘：比其他欄位大一號，秒數小字 */
-.band .cell.clock strong { font-size: 34px; } .band .cell.clock strong em { font-style: normal; font-size: .5em; opacity: .65; margin-left: 1px; }
+.band .cell.clock strong { font-size: 25px; } .band .cell.clock strong em { font-style: normal; font-size: .55em; opacity: .65; margin-left: 1px; }
 .band .cell small { font-family: 'IBM Plex Mono'; font-size: 10px; text-transform: uppercase; }
 .win canvas { position: absolute; left: 14px; right: 14px; top: 76px; bottom: 16px; width: calc(100% - 28px); height: calc(100% - 92px); }
 .win .hz2 { position: absolute; left: 40%; right: 40%; bottom: 0; height: 6px; background: repeating-linear-gradient(-45deg, var(--orange) 0 6px, transparent 6px 12px); opacity: .7; }
 
 .tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
-.tile { border-radius: 6px; padding: 10px 14px; display: grid; grid-template-rows: auto auto 1fr auto; color: var(--ink); min-width: 0; position: relative; overflow: hidden; }
+.tile { border-radius: 6px; padding: 9px 12px; display: grid; grid-template-rows: auto auto 1fr auto; color: var(--ink); min-width: 0; position: relative; overflow: hidden; }
 .tile:nth-child(3n+1) { background: var(--orange); } .tile:nth-child(3n+2) { background: var(--sage); } .tile:nth-child(3n) { background: #3a3d39; color: var(--fg); }
-.tile .lab { font-family: 'IBM Plex Mono'; font-size: 10px; text-transform: uppercase; display: flex; justify-content: space-between; }
-.tile .nm { font-weight: 700; font-size: 17px; margin-top: 2px; white-space: nowrap; font-family: 'Inter Tight', 'Noto Sans TC'; }
-.tile .pc { font-weight: 800; font-size: clamp(22px, 3.4vh, 30px); letter-spacing: -.04em; line-height: 1; align-self: end; font-variant-numeric: tabular-nums; }
-.tile .px { font-family: 'IBM Plex Mono'; font-size: 12px; display: flex; justify-content: space-between; margin-top: 4px; }
-.tile canvas { position: absolute; right: 10px; top: 30px; width: 84px; height: 30px; opacity: .85; }
+.tile .lab { font-family: 'IBM Plex Mono'; font-size: 10px; text-transform: uppercase; display: flex; justify-content: space-between; gap: 8px; white-space: nowrap; }
+.tile .lab span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; } .tile .lab span:last-child { flex: none; }
+.tile .nm { font-weight: 700; font-size: 17px; margin-top: 2px; white-space: nowrap; font-family: 'Inter Tight', 'Noto Sans TC'; overflow: hidden; text-overflow: ellipsis; max-width: calc(100% - 92px); font-size: 15px; }   /* 右邊留給迷你圖 */
+.tile .pc { font-weight: 800; font-size: clamp(20px, 3.2vh, 28px); letter-spacing: -.04em; line-height: 1; align-self: end; font-variant-numeric: tabular-nums; }
+.tile .px { font-family: 'IBM Plex Mono'; font-size: 11px; display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; white-space: nowrap; overflow: hidden; } .tile .px > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tile canvas { position: absolute; right: 10px; top: 32px; width: 80px; height: 26px; opacity: .85; }
 @media (max-height: 720px) {
   .tl .note { display: none; }
   .tl .blk { height: 30px; top: 22px; font-size: 11px; } .tl .blk.btc { top: 58px; height: 20px; }
   .band { top: 14px; height: 46px; grid-template-columns: 150px repeat(3, auto) 1fr; }
-  .band b { font-size: 18px; } .band .cell { height: 34px; padding: 0 14px; } .band .cell strong { font-size: 21px; } .band .cell.clock strong { font-size: 28px; }
+  .band b { font-size: 18px; } .band .cell { height: 34px; padding: 0 14px; } .band .cell strong { font-size: 21px; } .band .cell.clock strong { font-size: 21px; }
   .win canvas { top: 66px; bottom: 16px; height: calc(100% - 82px); }
   .win::before, .win::after { display: none; }
-  .tile .pc { font-size: 24px; } .tile canvas { display: none; } .tile .nm { font-size: 14px; }
+  .tile .pc { font-size: 24px; } .tile canvas { display: none; } .tile .nm { font-size: 14px; max-width: none; }
 }
 @media (max-height: 640px) {
   .wrap { grid-template-rows: 40px clamp(120px, 23vh, 206px) minmax(0, 1fr) clamp(84px, 14vh, 128px); }
@@ -111,7 +112,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
   .tl .blk { font-size: 10.5px; padding: 0 6px; height: 28px; top: 22px; } .tl .blk.btc { top: 56px; height: 18px; font-size: 10px; }
   .tl .ph { font-size: 12px; }
   .band { top: 14px; height: 46px; grid-template-columns: auto repeat(3, auto); padding: 0 12px; }
-  .band b { font-size: 13px; } .band .cell { height: 34px; padding: 0 10px; } .band .cell strong { font-size: 18px; } .band .cell small { font-size: 8.5px; } .band .cell.clock strong { font-size: 22px; }
+  .band b { font-size: 13px; } .band .cell { height: 34px; padding: 0 10px; } .band .cell strong { font-size: 18px; } .band .cell small { font-size: 8.5px; } .band .cell.clock strong { font-size: 18px; }
   .band .cell:last-child { display: none; }
   .win { border-width: 4px; border-radius: 16px; }
   .win::before, .win::after { display: none; }
@@ -121,7 +122,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
   .tile .lab { display: none; }
   .tile .nm { font-size: 13px; overflow: hidden; text-overflow: ellipsis; } .tile .pc { font-size: 20px; margin-top: 6px; }
   .tile .px { font-size: 10px; white-space: nowrap; overflow: hidden; gap: 6px; } .tile .px > * { overflow: hidden; text-overflow: ellipsis; }
-  .tile canvas { display: none; }
+  .tile canvas { display: none; } .tile .nm { max-width: none; }
 }
 @media (orientation: landscape) and (max-height: 500px) {
   .wrap { grid-template-rows: 32px 92px minmax(0, 1fr) 82px; gap: 8px; padding: 0 18px 10px; }
