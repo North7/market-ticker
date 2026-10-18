@@ -41,12 +41,7 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 
 .bottom { display: grid; grid-template-columns: clamp(170px, 21vw, 300px) repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--ink); }
 .b4h { position: relative; border-right: 1px solid var(--line); padding: 14px 20px; }
-.b4h canvas { position: absolute; left: 20px; right: 20px; top: var(--c4t, 112px); bottom: 12px; width: calc(100% - 40px); height: calc(100% - var(--c4t, 112px) - 12px); }
-/* 時鐘：大字時分＋閃爍的橘色冒號，下方日期 */
-.b4h .clk { display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; }
-.b4h .clk b { font-weight: 300; font-size: clamp(28px, 5.4vh, 42px); letter-spacing: -.03em; line-height: 1; color: var(--ink); }
-.b4h .clk b i { font-style: normal; color: var(--btc); animation: blink 1s steps(2) infinite; }
-.b4h .clk span { font-family: 'Geist Mono'; font-size: 10px; letter-spacing: .1em; color: var(--mute); text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
+.b4h canvas { position: absolute; left: 20px; right: 20px; top: 40px; bottom: 16px; width: calc(100% - 40px); height: calc(100% - 56px); }
 .k { font-family: 'Geist Mono'; font-size: 11px; letter-spacing: .16em; color: var(--mute); text-transform: uppercase; display: flex; justify-content: space-between; }
 .k b { color: var(--ink); font-weight: 500; }
 .col { position: relative; border-right: 1px solid var(--line); padding: 12px clamp(8px, 1.2vw, 18px) 10px; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr) auto; min-width: 0; }
@@ -74,9 +69,7 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
   .wrap { height: 100%; grid-template-rows: auto minmax(0, 1fr) auto; }
   .top { flex-wrap: wrap; row-gap: 2px; padding: 9px 16px; }
   .bottom { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .b4h { grid-column: 1 / -1; height: clamp(96px, 13vh, 150px); border-right: 0; border-bottom: 1px solid var(--line); --c4t: 40px; }
-  .b4h canvas { right: 150px; width: calc(100% - 170px); }
-  .b4h .clk { position: absolute; right: 16px; top: 12px; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .b4h { grid-column: 1 / -1; height: clamp(96px, 13vh, 150px); border-right: 0; border-bottom: 1px solid var(--line); }
   .col { height: clamp(128px, 15vh, 180px); }
 }
 @media (orientation: portrait) and (max-width: 640px) {
@@ -96,7 +89,6 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
   .wrap { grid-template-rows: 28px minmax(0, 1fr) 118px; }
   .top { font-size: 10px; }
   .col .nm { display: none; }
-  .b4h { --c4t: 62px; padding: 8px 14px; } .b4h .clk b { font-size: 26px; } .b4h .clk span { display: none; }
 }
 </style>
 </head>
@@ -112,7 +104,7 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
     <div class="lbl disc-lbl" id="lblDisc">24H position</div>
   </section>
   <section class="bottom" id="bottom">
-    <div class="b4h"><div class="clk"><b id="ck">--<i>:</i>--</b><span id="cdt">—</span></div><div class="k">BTC · 4H <b id="k4h">--</b></div><canvas id="c4h"></canvas></div>
+    <div class="b4h"><div class="k">BTC · 4H <b id="k4h">--</b></div><canvas id="c4h"></canvas></div>
   </section>
 </div>
 
@@ -319,7 +311,7 @@ Feed.on('markets', () => {
   });
 });
 
-function clocks() { const t = Feed.tzNow('Asia/Taipei'); $('tpe').textContent = t.str; $('ck').innerHTML = `${t.hh}<i>:</i>${t.mm}`; $('cdt').textContent = `TPE · ${t.date}`; }
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; }
 setInterval(clocks, 1000); clocks();
 
 // ---- 交互：點陣 1 分 K 與 4H 線可查數據、點卡片看詳情、大單漣漪從價格發出、滑鼠帶動橘色圓盤

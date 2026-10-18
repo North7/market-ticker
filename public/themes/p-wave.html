@@ -26,10 +26,6 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 /* 主舞台：3D 盒子裡的成交地形 */
 .stage { position: relative; min-height: 0; }
 .stage { cursor: grab; } .stage.rot { cursor: grabbing; }
-/* 舞台右上的大字時鐘（細體，跟價格同一個字重） */
-.wclk { position: absolute; right: 0; top: 46px; z-index: 2; text-align: right; pointer-events: none; }
-.wclk b { display: block; font-weight: 200; font-size: clamp(38px, 8.5vh, 82px); letter-spacing: -.03em; line-height: .95; }
-.wclk span { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--mute); }
 .modes { position: absolute; right: 0; top: 10px; z-index: 3; display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--rule); border-radius: 999px; }
 .modes button { all: unset; cursor: pointer; padding: 3px 11px; border-radius: 999px; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--mute); transition: background .2s, color .2s; }
 .modes button.on { background: var(--fg); color: #000; }
@@ -68,7 +64,6 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 @media (orientation: portrait) {
   html, body { height: auto; } body { overflow-x: hidden; overflow-y: auto; }
   .wrap { height: auto; min-height: 100vh; grid-template-columns: minmax(0, 1fr); grid-template-rows: 40px clamp(420px, 62vh, 720px) auto auto; padding: 0 16px 16px; }
-  .wclk { display: none; } .hd .r b { font-size: 16px; font-weight: 300; letter-spacing: .04em; }   /* 直式：時鐘放大到頂部列 */
   .hd .t::before, .hd .t::after { display: none; } .hd { grid-template-columns: 1fr auto; } .hd .t { grid-column: 1; } .hd .l { display: none; }
   .side { grid-template-rows: none; grid-template-columns: repeat(3, minmax(0, 1fr)); height: clamp(170px, 22vh, 260px); margin: 8px 0 14px; }
   .spec { padding-left: 0; } .spec .cap { position: static; writing-mode: horizontal-tb; transform: none; text-align: left; font-size: 8.5px; letter-spacing: .12em; margin-bottom: 4px; }
@@ -94,7 +89,6 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 
   <section class="stage fx-lock" id="stage">
     <canvas id="cv"></canvas>
-    <div class="wclk"><b id="wck">--:--</b><span id="wcd">—</span></div>
     <div class="modes" id="modes"><button data-m="ridge">Ridge 山脊</button><button data-m="candle">Candles K 線</button></div>
     <div class="px">
       <span class="sc">Bitcoin · last trade</span>
@@ -419,7 +413,7 @@ Feed.on('markets', () => {
     m.q('b').textContent = Feed.val(s); m.q('.c').textContent = Feed.chgTxt(s); m.q('.c').className = 'c ' + cls(s.chg ?? 0);
   });
 });
-function clocks() { const t = Feed.tzNow('Asia/Taipei'); $('tpe').textContent = t.str; $('wck').textContent = `${t.hh}:${t.mm}`; $('wcd').textContent = `TPE · ${t.date}`; } setInterval(clocks, 1000); clocks();
+function clocks() { $('tpe').textContent = Feed.tzNow('Asia/Taipei').str; } setInterval(clocks, 1000); clocks();
 
 // ---------------------------------------------------------------- 交互：地形查格、標本盒查數據、點指標看詳情、大單漣漪
 FX.theme({ bg: 'rgba(10,10,12,.94)', fg: '#f2f2f4', mute: '#8a8a92', line: 'rgba(255,255,255,.45)', accent: '#efe3c2', up: '#7aa2ff', down: '#ff7a9a', sheet: '#08080a', border: 'rgba(255,255,255,.1)', radius: '2px', font: "'Inter', 'Noto Sans TC', sans-serif" });
