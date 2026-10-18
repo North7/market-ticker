@@ -268,9 +268,10 @@
   const venue = (s) => s.venue ?? (s.market === 'TW' ? 'TWSE' : 'NYSE');
 
   function tzNow(tz) {
-    const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', weekday: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', weekday: 'short', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
       .formatToParts(new Date()).map((x) => [x.type, x.value]));
-    return { wd: p.weekday, hh: p.hour, mm: p.minute, ss: p.second, str: `${p.hour}:${p.minute}:${p.second}` };
+    const zh = { Sun: '日', Mon: '一', Tue: '二', Wed: '三', Thu: '四', Fri: '五', Sat: '六' }[p.weekday];
+    return { wd: p.weekday, wdZh: zh, mo: p.month, dd: p.day, hh: p.hour, mm: p.minute, ss: p.second, str: `${p.hour}:${p.minute}:${p.second}`, date: `${+p.month}/${+p.day}（${zh}）` };
   }
 
   window.Feed = {

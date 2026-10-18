@@ -187,7 +187,7 @@ body { background: #1a1030; color: var(--label); overflow: hidden; font-family: 
     <header class="top">
       <div class="t"><h1>Bitcoin</h1><span>BTC-USDT · Binance 現貨</span></div>
       <div class="seg" id="seg"><i class="thumb"></i><button data-r="1H">1H</button><button data-r="4H">4H</button><button data-r="1D">1D</button><button data-r="1W">1W</button><button data-r="1M">1M</button></div>
-      <div class="clock"><b id="tpe">—</b><span>台北 · 紐約 <span id="nyc">—</span></span></div>
+      <div class="clock"><b id="tpe">—</b><span>台北 <span id="tpd">—</span> · 紐約 <span id="nyc">—</span></span></div>
     </header>
     <div class="hero"><div class="price" id="price">—</div><div class="chg" id="chg">—</div></div>
     <div class="bento">
@@ -421,7 +421,7 @@ function renderList() {
 }
 Feed.on('markets', renderList); setInterval(renderList, 3000);
 
-function clocks() { const t = Feed.tzNow('Asia/Taipei'); $('tpe').textContent = `${t.hh}:${t.mm}`; const n = Feed.tzNow('America/New_York'); $('nyc').textContent = `${n.hh}:${n.mm}`; }
+function clocks() { const t = Feed.tzNow('Asia/Taipei'); $('tpe').textContent = `${t.hh}:${t.mm}`; $('tpd').textContent = t.date; const n = Feed.tzNow('America/New_York'); $('nyc').textContent = `${n.hh}:${n.mm}`; }
 setInterval(clocks, 1000); clocks();
 
 // ---------------------------------------------------------------- 交互共用層

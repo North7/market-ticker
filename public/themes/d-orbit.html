@@ -137,7 +137,7 @@ function orbit() {
     ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R + 8, sa - 1.2, sa); ctx.closePath(); ctx.fill();
   }
   ctx.strokeStyle = 'rgba(236,234,228,.5)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(cx + Math.cos(sa) * R * 0.2, cy + Math.sin(sa) * R * 0.2); ctx.lineTo(cx + Math.cos(sa) * (R + 30), cy + Math.sin(sa) * (R + 30)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + Math.cos(sa) * R * 0.33, cy + Math.sin(sa) * R * 0.33); ctx.lineTo(cx + Math.cos(sa) * (R + 30), cy + Math.sin(sa) * (R + 30)); ctx.stroke();
 
   // 外環：30 天 4H 收盤，半徑＝價格
   const b4 = S.bars['4h'];
@@ -193,9 +193,14 @@ function orbit() {
   // 中心：現在的縫與標記
   ctx.fillStyle = 'rgba(236,234,228,.85)'; ctx.font = '10px "Geist Mono"'; ctx.textAlign = 'center';
   ctx.fillText('NOW', cx, cy - R - 40);
-  ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, TAU); ctx.fill();
+  // 軌道中心＝時鐘：時分大字、秒針就是外圈的掃描線
+  const tn = Feed.tzNow('Asia/Taipei'), fs = Math.max(20, R * 0.16);
+  ctx.fillStyle = '#eceae4'; ctx.textBaseline = 'middle'; ctx.font = `200 ${fs}px Geist`;
+  ctx.fillText(`${tn.hh}:${tn.mm}`, cx, cy - fs * 0.12);
+  ctx.fillStyle = 'rgba(236,234,228,.5)'; ctx.font = `${Math.max(9, R * 0.04)}px "Geist Mono"`;
+  ctx.fillText(`TPE · ${tn.date}`, cx, cy + fs * 0.62); ctx.textBaseline = 'alphabetic';
   ctx.strokeStyle = 'rgba(236,234,228,.25)'; ctx.setLineDash([2, 4]);
-  ctx.beginPath(); ctx.moveTo(cx, cy - R * 0.3); ctx.lineTo(cx, cy - R - 32); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(cx, cy - R * 0.33); ctx.lineTo(cx, cy - R - 32); ctx.stroke(); ctx.setLineDash([]);
 }
 
 let shown = '';

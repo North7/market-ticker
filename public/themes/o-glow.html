@@ -47,7 +47,11 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
 .chg .num span { font-size: 11px; color: var(--mute); }
 
 /* 倒數 */
-.cd { padding: 20px 22px; display: flex; flex-direction: column; }
+.cd { padding: 18px 22px; display: flex; flex-direction: column; }
+/* 卡片上方是現在時間，下方是 4H 收盤倒數 */
+.cd .now { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; white-space: nowrap; }
+.cd .now b { font-weight: 600; font-size: clamp(24px, 5vh, 40px); letter-spacing: -.03em; line-height: 1; }
+.cd .now span { font-size: 12px; color: var(--mute); overflow: hidden; text-overflow: ellipsis; }
 .cd .box { margin-top: 12px; flex: 1; border-radius: 20px; background: radial-gradient(ellipse at 30% 0%, rgba(198,244,58,.12), transparent 60%), radial-gradient(ellipse at 90% 100%, rgba(198,244,58,.08), transparent 60%), rgba(255,255,255,.03); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .cd .box small { font-size: 11.5px; color: var(--mute); }
 .cd .digits { display: flex; gap: 14px; margin: 6px 0 4px; }
@@ -122,7 +126,7 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
   .chg { grid-column: 1; grid-row: 2; } .cd { grid-column: 2; grid-row: 2; padding: 12px 12px; }
   .chg .lab { left: 14px; top: 12px; font-size: 10.5px; } .chg .pill { display: none; }
   .chg .num { bottom: 12px; } .chg .num b { font-size: 26px; } .chg .num small { font-size: 10px; } .chg .num span { display: none; }
-  .cd .k { font-size: 10.5px; } .cd .box { margin-top: 6px; border-radius: 14px; } .cd .box small, .cd .box .o { font-size: 10px; }
+  .cd .now b { font-size: 22px; } .cd .now span { font-size: 9.5px; } .cd .box { margin-top: 6px; border-radius: 14px; } .cd .box small, .cd .box .o { font-size: 10px; }
   .cd .digits { gap: 6px; } .cd .digits b { font-size: 22px; } .cd .digits span { font-size: 9px; }
   .main { grid-row: 3; } .stocks { grid-row: 5; }
   .main .hd { left: 14px; right: 12px; top: 12px; gap: 6px; } .main .hd h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; } .main .hd h3 { font-size: 14px; }
@@ -143,7 +147,7 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
   .grid { grid-template-rows: 30vh minmax(0, 1fr) 28vh; gap: 8px; padding: 8px; }
   .c { border-radius: 18px; }
   .price { padding: 10px 16px; } .price .top .pill { height: 24px; font-size: 10.5px; } .price .top #clk { display: none; } .price .arrow { width: 26px; height: 26px; font-size: 13px; }
-  .cd { padding: 10px; } .cd .digits b { font-size: 20px; } .cd .box small, .cd .box .o { display: none; }
+  .cd { padding: 10px; } .cd .digits b { font-size: 20px; } .cd .box small, .cd .box .o, .cd .now span { display: none; } .cd .now b { font-size: 20px; }
   .chg .num { bottom: 8px; } .chg .num b { font-size: 24px; } .chg .num small, .chg .pill { display: none; }
   .turn .num { bottom: 10px; } .turn .num b { font-size: 22px; } .turn .num span { font-size: 13px; } .turn .pills { display: none; }
   .stocks .hd { display: none; } .stocks { padding: 8px; grid-template-rows: repeat(2, minmax(0, 1fr)); }
@@ -158,7 +162,7 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
   </div>
   <div class="c chg"><canvas id="cchg"></canvas><span class="lab">Last 60 min · dot = high</span><span class="pill">24H</span>
     <div class="num"><small>Change vs 24h open</small><b id="pct">—</b><span id="amp">—</span></div></div>
-  <div class="c cd"><span class="k">Next 4H candle closes in</span>
+  <div class="c cd"><div class="now"><b id="nowT">--:--</b><span id="nowD">—</span></div>
     <div class="box"><small id="cdDay">—</small><div class="digits"><div><b id="hh">—</b><span>Hour</span></div><div><b id="mm">—</b><span>Mins</span></div><div><b id="ss">—</b><span>Sec</span></div></div><div class="o" id="cdO">—</div></div></div>
   <div class="c main"><canvas id="c1m"></canvas>
     <div class="hd"><h3 id="mainTitle">BTC · 1 minute</h3><span class="sp"></span><div class="seg" id="segMode"><button data-v="line">Line</button><button data-v="candle">Candles</button></div><div class="seg" id="segRange"><button data-v="60">1H</button><button data-v="180">3H</button></div></div>
@@ -335,9 +339,9 @@ function bars4h() {
 function countdown() {
   const now = Date.now(), next = Math.ceil(now / 14400000) * 14400000, s = Math.floor((next - now) / 1000);
   $('hh').textContent = String(Math.floor(s / 3600)).padStart(2, '0'); $('mm').textContent = String(Math.floor(s / 60) % 60).padStart(2, '0'); $('ss').textContent = String(s % 60).padStart(2, '0');
-  $('cdDay').textContent = new Date(next).toLocaleString('en-US', { timeZone: 'Asia/Taipei', weekday: 'long', hour: '2-digit', minute: '2-digit', hour12: false }) + ' TPE';
+  $('cdDay').textContent = '4H closes in · ' + new Date(next).toLocaleString('en-US', { timeZone: 'Asia/Taipei', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
   const b = S.bars['4h']; if (b && b.length) { const lb = b[b.length - 1]; $('cdO').textContent = `O ${fmt(lb.o, 0)} → ${fmt(lb.c, 0)}  ${pct((lb.c - lb.o) / lb.o * 100)}`; }
-  $('clk').textContent = 'TPE ' + Feed.tzNow('Asia/Taipei').str;
+  const tn = Feed.tzNow('Asia/Taipei'); $('clk').textContent = 'TPE ' + tn.str; $('nowT').textContent = `${tn.hh}:${tn.mm}`; $('nowD').textContent = `TPE · ${tn.date}`;
 }
 setInterval(countdown, 1000); countdown();
 

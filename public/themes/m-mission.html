@@ -56,6 +56,8 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 .band b { font-weight: 800; font-size: 21px; line-height: .95; letter-spacing: -.02em; }
 .band .cell { display: flex; align-items: baseline; gap: 8px; padding: 0 22px; border-left: 2px solid var(--ink); height: 38px; flex-direction: column; justify-content: center; }
 .band .cell strong { font-weight: 800; font-size: 25px; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+/* 任務時鐘：比其他欄位大一號，秒數小字 */
+.band .cell.clock strong { font-size: 34px; } .band .cell.clock strong em { font-style: normal; font-size: .5em; opacity: .65; margin-left: 1px; }
 .band .cell small { font-family: 'IBM Plex Mono'; font-size: 10px; text-transform: uppercase; }
 .win canvas { position: absolute; left: 14px; right: 14px; top: 76px; bottom: 16px; width: calc(100% - 28px); height: calc(100% - 92px); }
 .win .hz2 { position: absolute; left: 40%; right: 40%; bottom: 0; height: 6px; background: repeating-linear-gradient(-45deg, var(--orange) 0 6px, transparent 6px 12px); opacity: .7; }
@@ -72,7 +74,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
   .tl .note { display: none; }
   .tl .blk { height: 30px; top: 22px; font-size: 11px; } .tl .blk.btc { top: 58px; height: 20px; }
   .band { top: 14px; height: 46px; grid-template-columns: 150px repeat(3, auto) 1fr; }
-  .band b { font-size: 18px; } .band .cell { height: 34px; padding: 0 14px; } .band .cell strong { font-size: 21px; }
+  .band b { font-size: 18px; } .band .cell { height: 34px; padding: 0 14px; } .band .cell strong { font-size: 21px; } .band .cell.clock strong { font-size: 28px; }
   .win canvas { top: 66px; bottom: 16px; height: calc(100% - 82px); }
   .win::before, .win::after { display: none; }
   .tile .pc { font-size: 24px; } .tile canvas { display: none; } .tile .nm { font-size: 14px; }
@@ -109,7 +111,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
   .tl .blk { font-size: 10.5px; padding: 0 6px; height: 28px; top: 22px; } .tl .blk.btc { top: 56px; height: 18px; font-size: 10px; }
   .tl .ph { font-size: 12px; }
   .band { top: 14px; height: 46px; grid-template-columns: auto repeat(3, auto); padding: 0 12px; }
-  .band b { font-size: 13px; } .band .cell { height: 34px; padding: 0 10px; } .band .cell strong { font-size: 18px; } .band .cell small { font-size: 8.5px; }
+  .band b { font-size: 13px; } .band .cell { height: 34px; padding: 0 10px; } .band .cell strong { font-size: 18px; } .band .cell small { font-size: 8.5px; } .band .cell.clock strong { font-size: 22px; }
   .band .cell:last-child { display: none; }
   .win { border-width: 4px; border-radius: 16px; }
   .win::before, .win::after { display: none; }
@@ -144,7 +146,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
   <section class="tl" id="tl"></section>
   <section class="win">
     <div class="band"><b>BTC 1-Min<br>Dynamics</b>
-      <div class="cell"><strong id="clk">—</strong><small>Taipei time</small></div>
+      <div class="cell clock"><strong id="clk">—</strong><small id="clkd">Taipei time</small></div>
       <div class="cell"><strong id="rate">—</strong><small>Trades / sec</small></div>
       <div class="cell"><strong id="flow">—</strong><small>Buy share · 60s</small></div>
       <div class="cell" style="justify-self:end;border:0"><small id="ohlc">—</small></div></div>
@@ -250,7 +252,7 @@ function charts() {
 
 function clocks() {
   const tp = Feed.tzNow('Asia/Taipei');
-  $('clk').textContent = `${tp.hh}:${tp.mm}`;
+  $('clk').innerHTML = `${tp.hh}:${tp.mm}<em>:${tp.ss}</em>`; $('clkd').textContent = `Taipei · ${tp.date}`;
   $('date').textContent = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Taipei', month: 'long', day: 'numeric', year: 'numeric' }) + ' · TPE ' + tp.str + ' · NYC ' + Feed.tzNow('America/New_York').str;
   timeline();
 }

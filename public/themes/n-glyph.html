@@ -24,7 +24,8 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 .mx { position: relative; margin-top: 18px; min-height: 0; }
 .mx canvas, .h4 canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .list { margin-top: 18px; display: flex; flex-direction: column; min-height: 0; grid-row: 2 / 4; grid-column: 2; overflow: hidden; }
-.list .hd { font-weight: 600; font-size: clamp(28px, 5.4vh, 46px); letter-spacing: -.03em; color: #2c2c2f; line-height: 1; margin-bottom: 8px; }
+.list .hd { font-weight: 600; font-size: clamp(28px, 5.4vh, 46px); letter-spacing: -.03em; color: #f5f5f5; line-height: 1; margin-bottom: 8px; display: flex; align-items: baseline; gap: 12px; white-space: nowrap; }
+.list .hd small { font-family: 'JetBrains Mono'; font-size: 10.5px; font-weight: 400; letter-spacing: .08em; color: var(--mute); text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }   /* 時鐘取代原本的 MARKETS 標題 */
 .row { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border-bottom: 1px solid #1a1a1c; }
 .row .tk { font-weight: 700; font-size: clamp(22px, 4.4vh, 38px); letter-spacing: -.03em; line-height: 1; color: var(--lime); }
 .row .tk small { display: block; font-family: 'Noto Sans TC'; font-weight: 500; font-size: 11px; color: var(--mute); letter-spacing: 0; margin-top: 3px; }
@@ -68,7 +69,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
   .wrap { grid-template-rows: clamp(84px, 24vh, 120px) minmax(0, 1fr) 30px 20px; grid-template-columns: minmax(0, 1fr) 250px; padding: 10px 18px 8px; }
   .banner { border-radius: 30px; padding: 0 24px; }
   .banner .side b { font-size: 28px; }
-  .list .hd { display: none; }
+  .list .hd { font-size: 22px; margin-bottom: 2px; } .list .hd small { display: none; }
   .row .tk { font-size: 18px; } .row .tk small { display: none; } .row .rt b { font-size: 14px; }
   .foot span { display: none; }
 }
@@ -81,7 +82,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
     <div class="side"><div style="margin-bottom:6px"><i style="display:inline-block;width:8px;height:8px;background:var(--lime);margin-right:8px;animation:bl 1s steps(2) infinite"></i>LIVE · BTC / USDT · BINANCE SPOT · <span id="xtra" class="xtra"></span></div><b id="pct">—</b>H <span id="h">—</span> · L <span id="l">—</span><br>AMP <span id="amp">—</span> · <span id="clk">—</span></div>
   </div>
   <div class="mx"><canvas id="cv"></canvas></div>
-  <div class="list" id="list"><div class="hd">MARKETS</div></div>
+  <div class="list" id="list"><div class="hd"><span id="ck">--:--</span><small id="hdl">MARKETS</small></div></div>
   <div class="h4"><canvas id="c4h"></canvas></div>
   <div class="foot"><span>1 column = 1 minute · ◎ up body · ▢ down body · ✕ large drop · ✚ wick · ■ volume spike (top 10%, height = volume) · 4H bars = return per 4 hours</span><b>MARKET<br>INTERFACE</b></div>
 </div>
@@ -95,7 +96,8 @@ const $ = (id) => document.getElementById(id);
 const LIME = '#d2ff1f', GREY = '#9a9aa0';
 const cls = (v) => (v >= 0 ? 'u' : 'd');
 Feed.start({ '1m': 200, '4h': 90 });
-Feed.on('mode', () => { if (Feed.mode === 'crypto') document.querySelector('.list .hd').textContent = 'SIGNALS'; });
+let LIST_T = 'MARKETS';
+Feed.on('mode', () => { if (Feed.mode === 'crypto') LIST_T = 'SIGNALS'; });
 Feed.mountExtras('#xtra');
 
 // 符號
@@ -236,7 +238,7 @@ function renderList() {
   });
 }
 Feed.on('markets', renderList);
-function clocks() { $('clk').textContent = 'TPE ' + Feed.tzNow('Asia/Taipei').str; }
+function clocks() { const t = Feed.tzNow('Asia/Taipei'); $('clk').textContent = 'TPE ' + t.str; $('ck').textContent = `${t.hh}:${t.mm}`; $('hdl').textContent = `${LIST_T} · TPE ${t.date}`; }
 setInterval(clocks, 1000); clocks();
 
 let last = 0, l4 = 0;
