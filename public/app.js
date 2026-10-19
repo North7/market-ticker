@@ -10,7 +10,7 @@ const store = {
 // 圖表一律顯示本地時間（lightweight-charts 預設用 UTC）
 const TZ = -new Date().getTimezoneOffset() * 60;
 const REST = 'https://api.binance.com/api/v3/klines';
-const WS = 'wss://stream.binance.com:9443/stream?streams=';
+const WS = 'wss://stream.binance.com:443/stream?streams=';
 const SYM = 'btcusdt';
 const MAIN_TFS = ['1s', '1m', '5m', '15m'];
 const HI_TFS = ['4h', '1d', '1w'];

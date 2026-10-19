@@ -1,7 +1,8 @@
 // 五個設計方案共用的即時資料：Binance BTC + 本機 /api/markets
 (function () {
   const REST = 'https://api.binance.com/api/v3/klines';
-  const WS = 'wss://stream.binance.com:9443/stream?streams=';
+  // 9443 埠在部分網路（公司、學校、某些 Wi-Fi）會被擋，連不上就輪下一個
+  const WS_HOSTS = ['wss://stream.binance.com:443', 'wss://data-stream.binance.vision', 'wss://stream.binance.com:9443'];
   const TF_SEC = { '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400 };
   const S = { price: null, prev: null, dir: 0, ticker: null, bars: {}, limit: {}, markets: [], trades: [], ticks: [] };
   const L = {};
@@ -26,17 +27,21 @@
 
   const BIG_USD = 200000;
   let lastHi = 0, lastLo = 0;
-  function onTrade(d) {
-    const p = +d.p;
+  function setPrice(p, T) {
     S.prev = S.price; S.price = p;
     if (S.prev != null && p !== S.prev) S.dir = p > S.prev ? 1 : -1;
     for (const tf in S.bars) {
       const a = S.bars[tf], last = a[a.length - 1];
       if (!last) continue;
       const sec = TF_SEC[tf];
-      if (d.T / 1000 >= last.t + sec) upsert(tf, { t: Math.floor(d.T / 1000 / sec) * sec, o: p, h: p, l: p, c: p, v: 0 });
+      if (T / 1000 >= last.t + sec) upsert(tf, { t: Math.floor(T / 1000 / sec) * sec, o: p, h: p, l: p, c: p, v: 0 });
       else { last.c = p; if (p > last.h) last.h = p; if (p < last.l) last.l = p; }
     }
+  }
+  function onTrade(d) {
+    const p = +d.p;
+    lastTrade = Date.now();
+    setPrice(p, d.T);
     // 最近 3 分鐘逐筆（示波器、買賣力道用）
     S.ticks.push({ T: d.T, p, q: +d.q, m: d.m });
     if (S.ticks[0].T < d.T - 180000) { let k = 0; while (k < S.ticks.length && S.ticks[k].T < d.T - 180000) k++; S.ticks.splice(0, k); }
@@ -68,25 +73,50 @@
       const first = S.ticks.length ? S.ticks[0].T : Infinity;
       const old = rows.filter((x) => x.T < first).map((x) => ({ T: x.T, p: +x.p, q: +x.q, m: x.m }));
       S.ticks.unshift(...old);
+      // 即時串流還沒進來前，先用最後一筆成交價顯示
+      if (S.price == null && old.length) S.price = old[old.length - 1].p;
     } catch { /* 沒補到就從現在開始累積 */ }
   }
 
-  let ws, retry = 0, lastMsg = 0;
+  let ws, retry = 0, lastMsg = 0, lastTrade = 0, host = 0;
   function connect() {
     const streams = ['btcusdt@aggTrade', 'btcusdt@ticker', ...Object.keys(S.limit).map((tf) => `btcusdt@kline_${tf}`)];
-    ws = new WebSocket(WS + streams.join('/'));
-    ws.onopen = () => { retry = 0; lastMsg = Date.now(); emit('status', true); };
+    const me = ws = new WebSocket(`${WS_HOSTS[host]}/stream?streams=${streams.join('/')}`);
+    let got = false;
+    // 被擋的埠常常不會報錯，只是一直連不上 → 8 秒沒打開就換下一個
+    const guard = setTimeout(() => { if (me.readyState !== 1) me.close(); }, 8000);
+    ws.onopen = () => { clearTimeout(guard); lastMsg = Date.now(); emit('status', true); };
     ws.onmessage = (ev) => {
+      if (!got) { got = true; retry = 0; }
       lastMsg = Date.now();
       const { stream, data } = JSON.parse(ev.data);
       if (stream.endsWith('@aggTrade')) onTrade(data);
       else if (stream.endsWith('@ticker')) { S.ticker = { c: +data.c, o: +data.o, h: +data.h, l: +data.l, p: +data.p, P: +data.P, q: +data.q, v: +data.v }; emit('ticker'); }
       else if (data.k) { const k = data.k; upsert(k.i, { t: k.t / 1000, o: +k.o, h: +k.h, l: +k.l, c: +k.c, v: +k.v }); }
     };
-    ws.onclose = () => { emit('status', false); setTimeout(() => { Object.keys(S.limit).forEach(loadBars); connect(); }, Math.min(30000, 1000 * 2 ** retry++)); };
-    ws.onerror = () => ws.close();
+    ws.onclose = () => {
+      clearTimeout(guard);
+      if (me !== ws) return;
+      emit('status', false);
+      if (!got) host = (host + 1) % WS_HOSTS.length;
+      setTimeout(() => { Object.keys(S.limit).forEach(loadBars); connect(); }, got ? 1000 : Math.min(30000, 500 * 2 ** retry++));
+    };
+    ws.onerror = () => me.close();
   }
   setInterval(() => { if (ws && ws.readyState === 1 && Date.now() - lastMsg > 15000) ws.close(); }, 5000);
+
+  // 保底：串流 10 秒沒有成交進來，就用 REST 每 3 秒抓一次 24H 行情，價格不會停在「—」
+  async function pollTicker() {
+    if (Date.now() - lastTrade < 10000) return;
+    try {
+      const d = await (await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT', { cache: 'no-store' })).json();
+      if (Date.now() - lastTrade < 10000 || !d.lastPrice) return;
+      S.ticker = { c: +d.lastPrice, o: +d.openPrice, h: +d.highPrice, l: +d.lowPrice, p: +d.priceChange, P: +d.priceChangePercent, q: +d.quoteVolume, v: +d.volume };
+      setPrice(+d.lastPrice, Date.now());
+      emit('ticker');
+    } catch { /* 下次再試 */ }
+  }
+  setInterval(pollTicker, 3000);
 
   // ---- 模式：本機有 server.py 就顯示台美股（stocks）；連不到（例如 GitHub Pages）就換成加密指標（crypto）
   // 網址加 ?mode=crypto 或 ?mode=stocks 可強制（外殼的網址參數也會傳給主題）
