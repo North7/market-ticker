@@ -17,6 +17,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      CF_READY: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}   # 2026-11-11：Cloudflare Pages 並行部署
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -32,6 +34,22 @@ jobs:
           grep -rl '__BUILT__' public | xargs sed -i "s|__BUILT__|$T|g"
           printf '{"version":"%s","built":"%s","sha":"%s"}\n' "$V" "$T" "$(git rev-parse --short HEAD)" > public/version.json
           echo "Deploying $V ($T)"
+      - name: 確認 Cloudflare Pages 專案存在（第一次會建立）
+        if: env.CF_READY == 'true'
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create market-ticker --production-branch=main
+      - name: 同時部署到 Cloudflare Pages（失敗不影響 GitHub Pages）
+        if: env.CF_READY == 'true'
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name=market-ticker --branch=main --commit-dirty=true
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
