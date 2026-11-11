@@ -9,7 +9,7 @@
 
 ### 線上版（GitHub Pages）
 
-<https://north7.github.io/market-ticker/> 不用安裝，但沒有本機伺服器，所以拿不到台美股，
+<https://ticker.aronlab.dev/> 不用安裝，但沒有本機伺服器，所以拿不到台美股，
 六張小卡改成加密指標（純前端直連各交易所公開 API）：
 
 | 卡片 | 內容 | 來源 |
