@@ -69,10 +69,9 @@
 
   // ---------------------------------------------------------------- 格式
   const pad2 = (n) => String(n).padStart(2, '0');
-  const WD = ['日', '一', '二', '三', '四', '五', '六'];
   FX.time = (t, tf = '1m') => {
     const d = new Date(t * 1000), hm = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`, md = `${d.getMonth() + 1}/${d.getDate()}`;
-    if (tf === '1d') return `${md}（${WD[d.getDay()]}）`;
+    if (tf === '1d') return tr(`${md}（${I18N.wd(d.getDay())}）`, `${I18N.wd(d.getDay())} ${md}`);
     if (tf === '4h' || tf === '1h') return `${md} ${hm}`;
     return hm;
   };
@@ -178,14 +177,14 @@
   FX.rows = (b, o = {}) => {
     const f = o.fmt || ((v) => fmt(v, o.dec ?? (Math.abs(v) >= 1000 ? 0 : 2)));
     const ch = b.o ? (b.c / b.o - 1) * 100 : 0, cls = ch >= 0 ? 'up' : 'down';
-    if (o.close) return [[o.label || '數值', f(b.c), o.color ? o.color(b) : '']];
-    const rows = [['開', f(b.o)], ['高', f(b.h)], ['低', f(b.l)], ['收', f(b.c), cls], ['漲跌', pctTxt(ch), cls]];
-    if (b.v != null && o.vol !== false) rows.push(['量', (b.v >= 1000 ? (b.v / 1000).toFixed(1) + 'K' : b.v.toFixed(1)) + (o.volUnit || ' BTC')]);
+    if (o.close) return [[o.label || tr('數值', 'Value'), f(b.c), o.color ? o.color(b) : '']];
+    const rows = [[tr('開', 'Open'), f(b.o)], [tr('高', 'High'), f(b.h)], [tr('低', 'Low'), f(b.l)], [tr('收', 'Close'), f(b.c), cls], [tr('漲跌', 'Change'), pctTxt(ch), cls]];
+    if (b.v != null && o.vol !== false) rows.push([tr('量', 'Vol'), (b.v >= 1000 ? (b.v / 1000).toFixed(1) + 'K' : b.v.toFixed(1)) + (o.volUnit || ' BTC')]);
     return rows;
   };
 
   // ---------------------------------------------------------------- 指標詳情（點卡片）
-  const DESC = {
+  const DESC_ZH = {
     WHALE: '單筆成交金額 ≥ 10 萬美元的大單（Binance 現貨＋永續合約）。買方主動成交算買入、賣方主動算賣出，數值是近 1 小時的淨買入金額，曲線為每 5 分鐘累計。',
     LIQ: '槓桿倉位被強制平倉的金額（Binance＋Bybit 即時推播）。多單爆倉代表下跌時被迫賣出，空單爆倉代表上漲時被迫買入。沒有免費歷史資料，從開頁開始累積。',
     TAKER: 'Binance 永續合約每 5 分鐘的主動買量 ÷ 主動賣量。大於 1 代表市價買單較多，小於 1 代表市價賣單較多，曲線為近 4 小時。',
@@ -199,12 +198,27 @@
     SPY: 'SPDR S&P 500 ETF，追蹤美國標普 500 指數。曲線為當日 5 分 K，虛線為前一交易日收盤。',
     QQQ: 'Invesco QQQ，追蹤 Nasdaq-100 指數。曲線為當日 5 分 K，虛線為前一交易日收盤。',
   };
+  const DESC_EN = {
+    WHALE: 'Single trades of $100K or more (Binance spot + perpetuals). Taker buys count as buying, taker sells as selling. The value is net buying over the last hour; the curve is the 5-minute running total.',
+    LIQ: 'Leveraged positions force-closed by the exchange (Binance + Bybit live feeds). Long liquidations mean forced selling into a drop; short liquidations mean forced buying into a rise. No free history exists, so it accumulates from when the page opened.',
+    TAKER: 'Binance perpetuals taker buy volume ÷ taker sell volume, every 5 minutes. Above 1 means more market buys, below 1 more market sells. The curve covers the last 4 hours.',
+    CBP: 'Coinbase BTC-USD minus Binance BTCUSDT. A positive gap is often read as stronger US spot demand. The curve is the per-minute gap over the last 2 hours.',
+    FNG: 'Daily crypto sentiment index from alternative.me: 0 is extreme fear, 100 extreme greed, built from volatility, volume, social and trend inputs. The curve covers the last 30 days.',
+    TREND: 'How far the price sits from its 200-day simple moving average; positive means above the long-term average. RSI(14) uses 4-hour and daily closes: above 70 runs hot, below 30 runs cold. The curve is the last 60 daily closes.',
+    TAIEX: 'Taiwan Stock Exchange Capitalization Weighted Index. The curve is today\'s 5-minute bars; the dashed line is yesterday\'s close.',
+    2330: 'TSMC (TWSE 2330). The curve is today\'s 5-minute bars; the dashed line is yesterday\'s close.',
+    '0050': 'Yuanta Taiwan 50 ETF, tracking Taiwan\'s 50 largest companies. The curve is today\'s 5-minute bars; the dashed line is yesterday\'s close.',
+    2454: 'MediaTek (TWSE 2454). The curve is today\'s 5-minute bars; the dashed line is yesterday\'s close.',
+    SPY: 'SPDR S&P 500 ETF, tracking the S&P 500. The curve is today\'s 5-minute bars; the dashed line is the previous session\'s close.',
+    QQQ: 'Invesco QQQ, tracking the Nasdaq-100. The curve is today\'s 5-minute bars; the dashed line is the previous session\'s close.',
+  };
+  const DESC = I18N.en ? DESC_EN : DESC_ZH;
   const TF = { WHALE: '5m', LIQ: '5m', TAKER: '5m', CBP: '1m', FNG: '1d', TREND: '1d' };
   let sheet = null;
   FX.detail = (id) => {
     if (sheet) sheet.close();
     const back = document.createElement('div'); back.className = 'fx-back';
-    back.innerHTML = `<div class="fx-sheet" role="dialog"><div class="fx-hd"><h2></h2><small class="fx-code"></small><button class="fx-x" aria-label="關閉">✕</button></div>
+    back.innerHTML = `<div class="fx-sheet" role="dialog"><div class="fx-hd"><h2></h2><small class="fx-code"></small><button class="fx-x" aria-label="${tr('關閉', 'Close')}">✕</button></div>
       <div class="fx-v"></div><div class="fx-c"></div><div class="fx-sub"></div><div class="fx-chart"><canvas></canvas></div><div class="fx-cap"><span class="fx-c1"></span><span class="fx-c2"></span></div>
       <div class="fx-grid"></div><p class="fx-p"></p></div>`;
     document.body.appendChild(back);
@@ -217,7 +231,7 @@
       q('h2').textContent = s.name; q('.fx-code').textContent = `${s.code} · ${Feed.venue(s)}`;
       q('.fx-v').textContent = Feed.val(s);
       q('.fx-c').textContent = cr ? Feed.chgTxt(s) : `${Feed.chgTxt(s)}　${s.chg >= 0 ? '+' : '−'}${fmt(Math.abs(s.chg || 0), s.dec)}`; q('.fx-c').className = 'fx-c ' + (up ? 'fx-up' : 'fx-down');
-      q('.fx-sub').textContent = cr ? Feed.sub(s) : `${s.isOpen ? '交易中' : '已收盤'} · 振幅 ${(s.amp || 0).toFixed(2)}%`;
+      q('.fx-sub').textContent = cr ? Feed.sub(s) : `${s.isOpen ? tr('交易中', 'Open') : tr('已收盤', 'Closed')} · ${tr('振幅', 'Range')} ${(s.amp || 0).toFixed(2)}%`;
       q('.fx-p').textContent = DESC[s.id] || '';
       const bars = s.bars || [];
       geo = bars.length ? Draw.candles(cv, bars, cr
@@ -230,14 +244,14 @@
       const tf = TF[s.id] || '5m';
       q('.fx-c1').textContent = bars.length ? FX.time(bars[0].t, tf) : '';
       q('.fx-c2').textContent = bars.length ? FX.time(bars[bars.length - 1].t, tf) : '';
-      const cells = cr ? [['數值', Feed.val(s)], ['變化', Feed.chgTxt(s)], ['資料源', Feed.venue(s)]]
-        : [['開盤', fmt(s.open, s.dec)], ['最高', fmt(s.high, s.dec)], ['最低', fmt(s.low, s.dec)], ['昨收', fmt(s.prevClose, s.dec)]];
+      const cells = cr ? [[tr('數值', 'Value'), Feed.val(s)], [tr('變化', 'Change'), Feed.chgTxt(s)], [tr('資料源', 'Source'), Feed.venue(s)]]
+        : [[tr('開盤', 'Open'), fmt(s.open, s.dec)], [tr('最高', 'High'), fmt(s.high, s.dec)], [tr('最低', 'Low'), fmt(s.low, s.dec)], [tr('昨收', 'Prev close'), fmt(s.prevClose, s.dec)]];
       q('.fx-grid').innerHTML = cells.map(([k, v]) => `<div>${k}<b>${v ?? '—'}</b></div>`).join('');
     };
     const s0 = S.markets.find((m) => m.id === id);
     const cr0 = s0 && s0.market === 'CR';
     const dispose = FX.inspect(q('.fx-chart'), FX.candleHit(() => geo, () => (S.markets.find((m) => m.id === id) || {}).bars, cr0
-      ? { tf: TF[id], close: true, label: (s0 && s0.name) || '數值', fmt: (v) => (Math.abs(v) >= 1000 ? fmt(v, 0) : (+v).toFixed(Math.abs(v) < 10 ? 2 : 1)) }
+      ? { tf: TF[id], close: true, label: (s0 && s0.name) || tr('數值', 'Value'), fmt: (v) => (Math.abs(v) >= 1000 ? fmt(v, 0) : (+v).toFixed(Math.abs(v) < 10 ? 2 : 1)) }
       : { tf: '5m', vol: false }));
     Feed.on('markets', paint);
     const close = () => { back.classList.remove('on'); dispose(); setTimeout(() => back.remove(), 260); sheet = null; };
@@ -299,15 +313,15 @@
         const t = performance.now(); if (t - lastRing < 600 && ev.usd < 1e6) return; lastRing = t;
         const size = Math.min(260, 70 + 60 * Math.log10(ev.usd / 2e5 + 1) * 2.4);
         ring(ev.side === 'buy' ? cssv('up') : cssv('down'), size, ev.usd >= 1e6 ? 2 : 1);
-        if (ev.usd >= 1e6) pill(`${ev.side === 'buy' ? '大單買入' : '大單賣出'} ${money(ev.usd)}`, ev.side === 'buy' ? cssv('up') : cssv('down'));
+        if (ev.usd >= 1e6) pill(`${ev.side === 'buy' ? tr('大單買入', 'Big buy') : tr('大單賣出', 'Big sell')} ${money(ev.usd)}`, ev.side === 'buy' ? cssv('up') : cssv('down'));
       } else if (ev.type === 'high' || ev.type === 'low') {
         const hi = ev.type === 'high';
         flash(hi ? 'fx-hi' : 'fx-lo'); ring(hi ? cssv('up') : cssv('down'), 320, 3);
-        pill(`創 24H ${hi ? '新高' : '新低'} ${fmt(ev.price, 0)}`, hi ? cssv('up') : cssv('down'));
+        pill(tr(`創 24H ${hi ? '新高' : '新低'} ${fmt(ev.price, 0)}`, `New 24H ${hi ? 'high' : 'low'} ${fmt(ev.price, 0)}`), hi ? cssv('up') : cssv('down'));
       } else if (ev.type === 'liq') {
         const a = o.shake ? document.querySelector(o.shake) : anchor();
         if (a && !reduce) { a.classList.remove('fx-shake'); void a.offsetWidth; a.classList.add('fx-shake'); }
-        pill(`${ev.side === 'long' ? '多單爆倉' : '空單爆倉'} ${money(ev.usd)}`, ev.side === 'long' ? cssv('down') : cssv('up'));
+        pill(`${ev.side === 'long' ? tr('多單爆倉', 'Longs liquidated') : tr('空單爆倉', 'Shorts liquidated')} ${money(ev.usd)}`, ev.side === 'long' ? cssv('down') : cssv('up'));
       }
     });
   };

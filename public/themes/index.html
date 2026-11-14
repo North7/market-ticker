@@ -26,25 +26,35 @@ a.card:hover .frame { outline-color: #888; }
 </style>
 </head>
 <body>
-<h1>Market Ticker — 主題總覽</h1>
-<p class="sub">每個都是即時資料。點擊縮圖單獨開啟；日常使用請開首頁，用 1–7 或 ← → 切換。</p>
+<h1 data-en="Market Ticker — Themes">Market Ticker — 主題總覽</h1>
+<p class="sub" data-en="Every theme runs on live data. Click a preview to open it alone; for everyday use open the home page and switch with 1–7 or ← →.">每個都是即時資料。點擊縮圖單獨開啟；日常使用請開首頁，用 1–7 或 ← → 切換。</p>
 <div class="grid" id="grid"></div>
+<script src="i18n.js"></script>
 <script>
 const C = [
   ['1', 'b-signal.html', 'Signal', '點陣', 'BTC 橘 × 暖灰 LED 點陣；橘色圓盤隨 24H 區間位置升降；日夜配色自動或手動切換。'],
   ['2', 'd-orbit.html', 'Orbit', '軌道', '外環 30 天 4H、內環 1 分 K、秒針掃描。'],
   ['3', 'm-mission.html', 'Mission', '任務', '鼠尾草綠＋橘的任務控制台：貨櫃牌、交易時段甘特圖、螺栓窗框 K 線。'],
   ['4', 'n-glyph.html', 'Glyph', '符號', '黑底螢光萊姆：K 線由 ◎ ▢ ✕ ＋ 符號矩陣排出，爆量分鐘是實心色塊。'],
-  ['5', 'o-glow.html', 'Glow', '發光', '深色便當格：萊姆價格卡、發光走勢、4H 收盤倒數、藍光成交額。'],
+  ['5', 'o-glow.html', 'Glow', '發光', '深色便當格：萊姆價格卡、發光走勢、台北時鐘、藍光成交額。'],
   ['6', 'p-wave.html', 'Wave', '波形', 'K 線空間海報：可 360° 拖動旋轉的 3D 線框 K 線（深度＝成交量）＋點陣球、一小時 6 層、2 秒報酬標本盒。'],
   ['7', 'r-glass.html', 'Glass', '玻璃', 'Liquid Glass＋visionOS 視窗：絲帶桌布色溫＝24H 漲跌、厚玻璃與游標反光、拖動查價、24H 區間環、4H 成交量。'],
 ];
+const C_EN = {
+  1: 'BTC orange × warm grey LED dot matrix; the orange disc rises and falls with the 24H range position; day/night colors switch automatically or by hand.',
+  2: 'Outer ring 30 days of 4H bars, inner ring 1-minute bars, a sweeping second hand.',
+  3: 'Sage and orange mission console: container plates, a trading-session timeline, candles in a bolted window frame.',
+  4: 'Fluorescent lime on black: candles drawn from a matrix of ◎ ▢ ✕ ＋ glyphs; heavy-volume minutes are solid blocks.',
+  5: 'Dark bento grid: lime price card, glowing trend line, Taipei clock, blue turnover.',
+  6: 'Candle-space poster: 3D wireframe price ridge or candles you can drag 360° (depth = volume), plus a dot sphere, six 10-minute layers and a 2-second return specimen box.',
+  7: 'Liquid Glass + visionOS window: silk wallpaper warmth = 24H change, thick glass with cursor glare, drag to read prices, 24H range ring, 4H volume.',
+};
 const grid = document.getElementById('grid');
 for (const [k, file, name, zh, desc] of C) {
   const a = document.createElement('a');
   a.className = 'card'; a.href = file; a.target = '_blank';
   a.innerHTML = `<div class="frame"><iframe src="${file}" loading="lazy" tabindex="-1"></iframe></div>
-    <div class="meta"><b>${k}</b><h2>${name}</h2><span>${zh}</span></div><div class="desc">${desc}</div>`;
+    <div class="meta"><b>${k}</b><h2>${name}</h2>${I18N.en ? '' : `<span>${zh}</span>`}</div><div class="desc">${I18N.en ? C_EN[k] : desc}</div>`;
   grid.appendChild(a);
 }
 const fit = () => document.querySelectorAll('.frame').forEach((f) => { f.querySelector('iframe').style.transform = `scale(${f.clientWidth / 1440})`; });

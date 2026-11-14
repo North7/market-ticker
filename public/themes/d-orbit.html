@@ -66,6 +66,7 @@ body { background: radial-gradient(circle at 33% 50%, #12141a 0%, var(--bg) 60%)
 </div>
 <div class="legend" id="legend"><div><i></i>outer orbit · 4H closes · 30 days</div><div><i style="opacity:.5"></i>inner orbit · 1M candles · 60 minutes</div><div><i style="opacity:.25"></i>sweep · seconds</div><div><i style="opacity:.5"></i>orbs · line vs prev close · arc = day range</div></div>
 
+<script src="i18n.js?v=__VERSION__"></script>
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
 <script src="fx.js?v=__VERSION__"></script>
@@ -91,7 +92,7 @@ FX.inspect('#cv', (x, y) => {
   let t = (Math.atan2(dy, dx) + Math.PI / 2 - TAU * GAP / 2) % TAU; if (t < 0) t += TAU;
   t /= TAU * (1 - GAP); if (t > 1) return null;   // 頂端的縫＝現在，沒有資料
   const n = ring.d.length, i = Math.round(t * (n - 1)), b = ring.d[i], a = ang(i, n), rr = ring.rad(b.c);
-  return { x: g.cx + Math.cos(a) * rr, y: g.cy + Math.sin(a) * rr, vline: false, title: ring === g.inn ? FX.time(b.t, '1m') + ' · 1 分 K' : FX.time(b.t, '4h') + ' · 4H', rows: FX.rows(b) };
+  return { x: g.cx + Math.cos(a) * rr, y: g.cy + Math.sin(a) * rr, vline: false, title: ring === g.inn ? FX.time(b.t, '1m') + tr(' · 1 分 K', ' · 1m') : FX.time(b.t, '4h') + ' · 4H', rows: FX.rows(b) };
 });
 FX.events({ anchor: '#price', ax: 0.5, ay: 0.55, glow: '#price', shake: '.price' });
 FX.flow({ anchor: '#price', alpha: 0.6 });

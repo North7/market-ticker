@@ -96,7 +96,7 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
 <div class="wrap">
   <div class="top"><span class="nm"><span class="dot"></span><b>Signal</b> — BTC / USDT</span><span id="xtra" class="xtra"></span>
     <span class="sp">TPE <b id="tpe">--</b></span>
-    <span class="scheme" id="scheme" title="日夜配色"><button data-s="auto">Auto</button><button data-s="light">Day</button><button data-s="dark">Night</button></span></div>
+    <span class="scheme" id="scheme" title="日夜配色" data-en-title="Color scheme"><button data-s="auto">Auto</button><button data-s="light">Day</button><button data-s="dark">Night</button></span></div>
   <section class="field" id="field">
     <canvas id="cv"></canvas>
     <div class="stat" id="stat"><div class="chg" id="pct">--</div><span>24H HIGH<b id="h">--</b></span><span>LOW<b id="l">--</b></span><span>AMP<b id="amp">--</b></span><span>VOL<b id="qv">--</b></span></div>
@@ -108,6 +108,7 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; font-family: 
   </section>
 </div>
 
+<script src="i18n.js?v=__VERSION__"></script>
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
 <script src="fx.js?v=__VERSION__"></script>
@@ -323,7 +324,7 @@ FX.inspect('#cv', (x, y) => {
   const k = Math.floor((x - g.ox) / g.P) - 2;
   if (k < 0 || k >= g.data.length || y < (g.chartTop - 1) * g.P) return null;
   const b = g.data[k];
-  return { x: g.ox + (k + 2) * g.P + g.P / 2, y: g.oy + g.rowOf(b.c) * g.P + g.P / 2, title: FX.time(b.t, '1m') + ' · 1 分', rows: FX.rows(b) };
+  return { x: g.ox + (k + 2) * g.P + g.P / 2, y: g.oy + g.rowOf(b.c) * g.P + g.P / 2, title: FX.time(b.t, '1m') + tr(' · 1 分', ' · 1m'), rows: FX.rows(b) };
 });
 FX.flow({ anchor: '#stat', alpha: 0.5 });
 FX.enter(['.top', '.field', '.b4h', '.col']);

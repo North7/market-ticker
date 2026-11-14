@@ -129,6 +129,8 @@
   S.mode = forcedMode();
   let stockTimer = null;
 
+  // 本機台股的名稱（server.py 給中文）
+  const EN_NAME = { TAIEX: 'TAIEX', 2330: 'TSMC', '0050': 'Taiwan 50 ETF', 2454: 'MediaTek' };
   async function pollMarkets() {
     try {
       const r = await fetch('/api/markets', { cache: 'no-store' });
@@ -143,7 +145,7 @@
         const hi = Math.max(s.high ?? s.price, s.prevClose ?? s.price, s.price);
         const pos = hi > lo ? (s.price - lo) / (hi - lo) : 0.5;
         const dec = s.id === 'TAIEX' || s.market === 'US' ? 2 : s.price >= 1000 ? 0 : 2;
-        return { ...s, chg, pct, amp, pos, dec, rangeLo: lo, rangeHi: hi };
+        return { ...s, name: I18N.en ? EN_NAME[s.id] || s.name : s.name, chg, pct, amp, pos, dec, rangeLo: lo, rangeHi: hi };
       });
       emit('markets');
     } catch {
@@ -184,7 +186,7 @@
     for (let k = 11; k >= 0; k--) { const a = now - (k + 1) * 300e3, b = now - k * 300e3; for (const x of list) if (x.T >= a && x.T < b) acc += f(x); out.push(acc); }
     return series(out, Math.floor((now - HOUR) / 1000), 300);
   }
-  const ago = () => { const m = Math.round((Date.now() - CR.since) / 60000); return m < 60 ? `開頁 ${m} 分鐘內` : '近 1 小時'; };
+  const ago = () => { const m = Math.round((Date.now() - CR.since) / 60000); return m < 60 ? tr(`開頁 ${m} 分鐘內`, `Since open · ${m} min`) : tr('近 1 小時', 'Last 1 h'); };
 
   function buildCrypto() {
     trim(CR.whales); trim(CR.liqs);
@@ -193,41 +195,41 @@
     // 1 鯨魚買賣
     { const buy = CR.whales.filter((x) => x.side === 'buy').reduce((a, x) => a + x.usd, 0), sell = CR.whales.filter((x) => x.side === 'sell').reduce((a, x) => a + x.usd, 0);
       const net = buy - sell, share = buy + sell ? buy / (buy + sell) : 0.5, big = CR.whales.reduce((m, x) => (!m || x.usd > m.usd ? x : m), null);
-      out.push({ ...base, id: 'WHALE', code: 'WHALE', icon: 'WH', name: '鯨魚買賣', venue: '現貨＋期貨 ≥$100K', price: net, display: signed(net, money), chg: net, pct: (share - 0.5) * 100,
-        chgText: CR.whales.length ? `買 ${Math.round(share * 100)}%` : '等待大單', pos: share, prevClose: 0, amp: share * 5, posLabel: '買方',
-        sub: `${CR.whales.length} 筆 · ${big ? '最大 ' + money(big.usd) + (big.side === 'buy' ? ' 買' : ' 賣') : ago()}`, bars: cumulative(CR.whales, (x) => (x.side === 'buy' ? x.usd : -x.usd)) }); }
+      out.push({ ...base, id: 'WHALE', code: 'WHALE', icon: 'WH', name: tr('鯨魚買賣', 'Whale flow'), venue: tr('現貨＋期貨 ≥$100K', 'Spot + perps ≥$100K'), price: net, display: signed(net, money), chg: net, pct: (share - 0.5) * 100,
+        chgText: CR.whales.length ? tr(`買 ${Math.round(share * 100)}%`, `Buy ${Math.round(share * 100)}%`) : tr('等待大單', 'Waiting for size'), pos: share, prevClose: 0, amp: share * 5, posLabel: tr('買方', 'Buyers'),
+        sub: `${CR.whales.length} ${tr('筆', CR.whales.length === 1 ? 'trade' : 'trades')} · ${big ? tr('最大 ', 'Max ') + money(big.usd) + (big.side === 'buy' ? tr(' 買', ' buy') : tr(' 賣', ' sell')) : ago()}`, bars: cumulative(CR.whales, (x) => (x.side === 'buy' ? x.usd : -x.usd)) }); }
     // 2 爆倉
     { const longs = CR.liqs.filter((x) => x.side === 'long').reduce((a, x) => a + x.usd, 0), shorts = CR.liqs.filter((x) => x.side === 'short').reduce((a, x) => a + x.usd, 0);
       const tot = longs + shorts, ls = tot ? longs / tot : 0.5, big = CR.liqs.reduce((m, x) => (!m || x.usd > m.usd ? x : m), null);
-      out.push({ ...base, id: 'LIQ', code: 'LIQ', icon: 'LQ', name: '爆倉', venue: 'Binance＋Bybit', price: tot, display: money(tot), chg: shorts - longs, pct: (0.5 - ls) * 100,
-        chgText: tot ? `多單 ${Math.round(ls * 100)}%` : '暫無爆倉', pos: ls, prevClose: 0, amp: ls * 5, posLabel: '多單',
-        sub: big ? `最大 ${money(big.usd)} ${big.side === 'long' ? '多單' : '空單'}` : ago(), bars: cumulative(CR.liqs, (x) => x.usd) }); }
+      out.push({ ...base, id: 'LIQ', code: 'LIQ', icon: 'LQ', name: tr('爆倉', 'Liquidations'), venue: tr('Binance＋Bybit', 'Binance + Bybit'), price: tot, display: money(tot), chg: shorts - longs, pct: (0.5 - ls) * 100,
+        chgText: tot ? tr(`多單 ${Math.round(ls * 100)}%`, `Longs ${Math.round(ls * 100)}%`) : tr('暫無爆倉', 'None yet'), pos: ls, prevClose: 0, amp: ls * 5, posLabel: tr('多單', 'Longs'),
+        sub: big ? `${tr('最大', 'Max')} ${money(big.usd)} ${big.side === 'long' ? tr('多單', 'long') : tr('空單', 'short')}` : ago(), bars: cumulative(CR.liqs, (x) => x.usd) }); }
     // 3 主動買賣比（期貨 taker）
     { const t = CR.taker, last = t[t.length - 1];
       const ratio = last ? last.r : 1, share = ratio / (1 + ratio);
-      out.push({ ...base, id: 'TAKER', code: 'TAKER', icon: 'TK', name: '主動買賣比', venue: 'Binance 期貨 · 5 分', price: ratio, display: ratio.toFixed(2), chg: ratio - 1, pct: (ratio - 1) * 100,
-        chgText: `買 ${Math.round(share * 100)}%`, pos: share, prevClose: 1, amp: share * 5, posLabel: '買方', slots: 48,
-        sub: last ? `買 ${money(last.buy * (S.price || 0))} · 賣 ${money(last.sell * (S.price || 0))}` : '—', bars: series(t.map((x) => x.r), t.length ? Math.floor(t[0].T / 1000) : 0, 300) }); }
+      out.push({ ...base, id: 'TAKER', code: 'TAKER', icon: 'TK', name: tr('主動買賣比', 'Taker buy/sell'), venue: tr('Binance 期貨 · 5 分', 'Binance futures · 5m'), price: ratio, display: ratio.toFixed(2), chg: ratio - 1, pct: (ratio - 1) * 100,
+        chgText: tr(`買 ${Math.round(share * 100)}%`, `Buy ${Math.round(share * 100)}%`), pos: share, prevClose: 1, amp: share * 5, posLabel: tr('買方', 'Buyers'), slots: 48,
+        sub: last ? `${tr('買', 'Buy')} ${money(last.buy * (S.price || 0))} · ${tr('賣', 'Sell')} ${money(last.sell * (S.price || 0))}` : '—', bars: series(t.map((x) => x.r), t.length ? Math.floor(t[0].T / 1000) : 0, 300) }); }
     // 4 Coinbase 溢價
     { const prem = CR.cb != null && S.price ? CR.cb - S.price : 0, pp = S.price ? prem / S.price * 100 : 0;
-      out.push({ ...base, id: 'CBP', code: 'CB PREM', icon: 'CB', name: 'Coinbase 溢價', venue: 'Coinbase − Binance', price: prem, display: signed(prem, (v) => '$' + v.toFixed(1)), chg: prem, pct: pp,
-        chgText: signed(pp, (v) => v.toFixed(3) + '%'), pos: clamp01(0.5 + pp / 0.2), prevClose: 0, amp: clamp01(0.5 + pp / 0.2) * 5, posLabel: '溢價', slots: 120,
-        sub: prem >= 0 ? '美國現貨買盤較強' : '美國現貨買盤較弱', bars: CR.cbHist }); }
+      out.push({ ...base, id: 'CBP', code: 'CB PREM', icon: 'CB', name: tr('Coinbase 溢價', 'Coinbase premium'), venue: 'Coinbase − Binance', price: prem, display: signed(prem, (v) => '$' + v.toFixed(1)), chg: prem, pct: pp,
+        chgText: signed(pp, (v) => v.toFixed(3) + '%'), pos: clamp01(0.5 + pp / 0.2), prevClose: 0, amp: clamp01(0.5 + pp / 0.2) * 5, posLabel: tr('溢價', 'Premium'), slots: 120,
+        sub: prem >= 0 ? tr('美國現貨買盤較強', 'US spot demand stronger') : tr('美國現貨買盤較弱', 'US spot demand weaker'), bars: CR.cbHist }); }
     // 5 恐懼貪婪
     { const f = CR.fng, now = f[f.length - 1], prev = f[f.length - 2];
       const v = now ? now.v : 50, ZH = { 'Extreme Fear': '極度恐懼', Fear: '恐懼', Neutral: '中性', Greed: '貪婪', 'Extreme Greed': '極度貪婪' };
-      out.push({ ...base, id: 'FNG', code: 'F&G', icon: 'FG', name: '恐懼貪婪', venue: 'alternative.me · 每日', price: v, display: String(v), chg: v - 50, pct: v - 50,
-        chgText: now ? ZH[now.c] || now.c : '—', pos: v / 100, prevClose: 50, amp: v / 20, posLabel: '指數', slots: 30,
-        sub: prev ? `昨日 ${prev.v} · 7 日均 ${Math.round(f.slice(-7).reduce((a, x) => a + x.v, 0) / Math.min(7, f.length))}` : '—', bars: series(f.map((x) => x.v), f.length ? f[0].t : 0, 86400) }); }
+      out.push({ ...base, id: 'FNG', code: 'F&G', icon: 'FG', name: tr('恐懼貪婪', 'Fear & Greed'), venue: tr('alternative.me · 每日', 'alternative.me · daily'), price: v, display: String(v), chg: v - 50, pct: v - 50,
+        chgText: now ? (I18N.en ? now.c : ZH[now.c] || now.c) : '—', pos: v / 100, prevClose: 50, amp: v / 20, posLabel: tr('指數', 'Index'), slots: 30,
+        sub: prev ? `${tr('昨日', 'Yesterday')} ${prev.v} · ${tr('7 日均', '7d avg')} ${Math.round(f.slice(-7).reduce((a, x) => a + x.v, 0) / Math.min(7, f.length))}` : '—', bars: series(f.map((x) => x.v), f.length ? f[0].t : 0, 86400) }); }
     // 6 200 日線乖離：現價相對 200 日均線的百分比（純數值，不下牛熊結論）＋ 4H RSI(14)
     { const dc = CR.daily.map((b) => b.c), ma200 = sma(dc, 200), px = S.price || dc[dc.length - 1];
       const r4 = rsi((S.bars['4h'] || []).map((b) => b.c)), r1d = rsi(dc);
       const dev = ma200 && px ? (px / ma200 - 1) * 100 : null, chg = dev != null ? px - ma200 : 0;
       const d60 = dc.slice(-60);
-      out.push({ ...base, id: 'TREND', code: 'MA200', icon: 'MA', name: '200 日線乖離', venue: 'Binance 日線 · RSI(14)', price: chg,
+      out.push({ ...base, id: 'TREND', code: 'MA200', icon: 'MA', name: tr('200 日線乖離', '200-day MA gap'), venue: tr('Binance 日線 · RSI(14)', 'Binance daily · RSI(14)'), price: chg,
         display: dev != null ? signed(dev, (v) => v.toFixed(1) + '%') : '—', chg, pct: dev || 0,
         chgText: r4 != null ? `RSI ${Math.round(r4)}` : '—', pos: r4 != null ? r4 / 100 : 0.5, prevClose: ma200 || 0, amp: (r4 || 50) / 20, posLabel: 'RSI 4H', slots: 60,
-        sub: ma200 ? `200 日線 ${fmt(ma200, 0)} · RSI 4H ${r4 != null ? Math.round(r4) : '—'} · 1D ${r1d != null ? Math.round(r1d) : '—'}` : '—',
+        sub: ma200 ? `${tr('200 日線', '200D MA')} ${fmt(ma200, 0)} · RSI 4H ${r4 != null ? Math.round(r4) : '—'} · 1D ${r1d != null ? Math.round(r1d) : '—'}` : '—',
         bars: series(d60, CR.daily.length ? CR.daily[CR.daily.length - d60.length].t : 0, 86400) }); }
     S.markets = out;
     emit('markets');
@@ -287,7 +289,7 @@
   // 頂部資訊列小字：加密模式下顯示 ETH 和穩定幣總供給
   function extrasText() {
     const e = CR.eth, st = CR.stable;
-    return [e ? `ETH ${fmt(e.price, 1)} ${pct(e.P)}` : null, st ? `穩定幣 ${money(st.total)}（7 日 ${pct(st.wk)}）` : null].filter(Boolean).join(' · ');
+    return [e ? `ETH ${fmt(e.price, 1)} ${pct(e.P)}` : null, st ? tr(`穩定幣 ${money(st.total)}（7 日 ${pct(st.wk)}）`, `Stablecoins ${money(st.total)} (7d ${pct(st.wk)})`) : null].filter(Boolean).join(' · ');
   }
 
   // 顯示用小工具：股票模式照舊；加密指標用自己的文字
@@ -301,7 +303,7 @@
     const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', weekday: 'short', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
       .formatToParts(new Date()).map((x) => [x.type, x.value]));
     const zh = { Sun: '日', Mon: '一', Tue: '二', Wed: '三', Thu: '四', Fri: '五', Sat: '六' }[p.weekday];
-    return { wd: p.weekday, wdZh: zh, mo: p.month, dd: p.day, hh: p.hour, mm: p.minute, ss: p.second, str: `${p.hour}:${p.minute}:${p.second}`, date: `${+p.month}/${+p.day}（${zh}）` };
+    return { wd: p.weekday, wdZh: zh, mo: p.month, dd: p.day, hh: p.hour, mm: p.minute, ss: p.second, str: `${p.hour}:${p.minute}:${p.second}`, date: tr(`${+p.month}/${+p.day}（${zh}）`, `${p.weekday} ${+p.month}/${+p.day}`) };
   }
 
   window.Feed = {

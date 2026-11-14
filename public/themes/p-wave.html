@@ -89,7 +89,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
 
   <section class="stage fx-lock" id="stage">
     <canvas id="cv"></canvas>
-    <div class="modes" id="modes"><button data-m="ridge">Ridge 山脊</button><button data-m="candle">Candles K 線</button></div>
+    <div class="modes" id="modes"><button data-m="ridge" data-en="Ridge">Ridge 山脊</button><button data-m="candle" data-en="Candles">Candles K 線</button></div>
     <div class="px">
       <span class="sc">Bitcoin · last trade</span>
       <div class="big" id="price">—</div>
@@ -107,6 +107,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
   <footer class="foot" id="foot"><div class="note">x 時間 · y 價格 · 深度＝成交量 ｜ 藍漲 粉跌 ｜ 拖動旋轉</div></footer>
 </div>
 
+<script src="i18n.js?v=__VERSION__"></script>
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
 <script src="fx.js?v=__VERSION__"></script>
@@ -142,7 +143,9 @@ function wireBox(ctx, P, alpha = 0.32) {
 const NC = 60, VIEWS = { ridge: { yaw: 0.62, pitch: 0.58 }, candle: { yaw: 0.5, pitch: 0.24 } };
 // 兩種主圖：ridge＝山脊（山頂＝價格、厚度＝成交量）、candle＝3D K 線；記住上次選擇
 let MODE = (() => { try { return localStorage.getItem('wave.mode') || 'ridge'; } catch { return 'ridge'; } })();
-const MODE_TXT = { ridge: ['Price Ridge｜價格山脊', 'x 時間 · 山高＝價格 · 山厚＝成交量 ｜ 藍漲 粉跌 ｜ 拖動旋轉'], candle: ['Candle Space｜K 線空間', 'x 時間 · y 價格 · 深度＝成交量 ｜ 藍漲 粉跌 ｜ 拖動旋轉'] };
+const MODE_TXT = I18N.en
+  ? { ridge: ['Price Ridge', 'x time · height = price · thickness = volume  |  blue up, pink down  |  drag to rotate'], candle: ['Candle Space', 'x time · y price · depth = volume  |  blue up, pink down  |  drag to rotate'] }
+  : { ridge: ['Price Ridge｜價格山脊', 'x 時間 · 山高＝價格 · 山厚＝成交量 ｜ 藍漲 粉跌 ｜ 拖動旋轉'], candle: ['Candle Space｜K 線空間', 'x 時間 · y 價格 · 深度＝成交量 ｜ 藍漲 粉跌 ｜ 拖動旋轉'] };
 function paintMode() {
   document.querySelectorAll('#modes button').forEach((b) => b.classList.toggle('on', b.dataset.m === MODE));
   document.querySelector('.hd .t').textContent = MODE_TXT[MODE][0]; document.querySelector('.note').textContent = MODE_TXT[MODE][1];
@@ -425,20 +428,20 @@ FX.inspect('#stage', (x, y) => {
   let best = null, bd = 900;
   for (const q of g.pts) { const dd = (q.p[0] - x) ** 2 + (q.p[1] - y) ** 2; if (dd < bd) { bd = dd; best = q; } }
   if (!best) return null;
-  return { x: best.p[0], y: best.p[1], vline: false, title: FX.time(best.b.t) + ' · 1 分 K', rows: FX.rows(best.b) };
+  return { x: best.p[0], y: best.p[1], vline: false, title: FX.time(best.b.t) + tr(' · 1 分 K', ' · 1m'), rows: FX.rows(best.b) };
 });
-FX.inspect('#sp1 .box', () => ({ x: 0, y: 0, vline: false, dot: false, title: '球體 · 最近 60 秒（12 段 5 秒報酬）', rows: [['上漲段', `${r12.filter((v) => v > 0).length} / 12`], ['最大漲', FX.pct(Math.max(...r12) * 100), 'up'], ['最大跌', FX.pct(Math.min(...r12) * 100), 'down']] }));
+FX.inspect('#sp1 .box', () => ({ x: 0, y: 0, vline: false, dot: false, title: tr('球體 · 最近 60 秒（12 段 5 秒報酬）', 'Sphere · last 60 s (12 × 5 s returns)'), rows: [[tr('上漲段', 'Up steps'), `${r12.filter((v) => v > 0).length} / 12`], [tr('最大漲', 'Largest rise'), FX.pct(Math.max(...r12) * 100), 'up'], [tr('最大跌', 'Largest drop'), FX.pct(Math.min(...r12) * 100), 'down']] }));
 FX.inspect('#sp2 .box', (x, y) => {
   const g = layerGeo; if (!g) return null;
   let k = 0; g.ys.forEach((yy, i) => { if (Math.abs(yy - y) < Math.abs(g.ys[k] - y)) k = i; });
   const s = g.seg[k], a = s[0].o, b = s[s.length - 1].c;
-  return { x, y: g.ys[k], vline: false, title: `${FX.time(s[0].t)}–${FX.time(s[s.length - 1].t + 60)} · 10 分`, rows: [['振幅', g.amps[k].toFixed(2) + '%'], ['漲跌', FX.pct((b / a - 1) * 100), b >= a ? 'up' : 'down']] };
+  return { x, y: g.ys[k], vline: false, title: `${FX.time(s[0].t)}–${FX.time(s[s.length - 1].t + 60)} · ${tr('10 分', '10m')}`, rows: [[tr('振幅', 'Range'), g.amps[k].toFixed(2) + '%'], [tr('漲跌', 'Change'), FX.pct((b / a - 1) * 100), b >= a ? 'up' : 'down']] };
 });
 FX.inspect('#sp3 .box', (x) => {
   const g = waveGeo; if (!g) return null;
   const x0 = g.P(-1, 0.5, 1)[0], x1 = g.P(1, 0.5, 1)[0], k = Math.max(0, Math.min(59, Math.round((x - x0) / (x1 - x0) * 60 - 0.5 + g.frac)));
   const v = g.r[k] * 100, back = (59 - k) * 2;
-  return { x, y: 20, vline: true, dot: false, title: back ? `${back} 秒前 · 2 秒報酬` : '最新 2 秒', rows: [['報酬', FX.pct(v), v >= 0 ? 'up' : 'down']] };
+  return { x, y: 20, vline: true, dot: false, title: back ? tr(`${back} 秒前 · 2 秒報酬`, `${back} s ago · 2 s return`) : tr('最新 2 秒', 'Latest 2 s'), rows: [[tr('報酬', 'Return'), FX.pct(v), v >= 0 ? 'up' : 'down']] };
 });
 FX.events({ anchor: '#price', ax: 0.4, ay: 0.55, glow: '#price', shake: '.px', ringWidth: 1, ringAlpha: 0.7 });
 FX.flow({ anchor: '#price', alpha: 0.55 });

@@ -159,6 +159,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
   <section class="tiles" id="tiles"></section>
 </div>
 
+<script src="i18n.js?v=__VERSION__"></script>
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
 <script src="fx.js?v=__VERSION__"></script>
@@ -185,8 +186,8 @@ function timeline() {
   segs.forEach(([a, b], k) => { html += `<div class="blk b" style="left:${pctX(a)};width:${((b - a) / 24 * 100)}%">${k ? '' : '⚑ NYSE · NASDAQ'}</div>`; });
   html += `<div class="blk btc" style="left:0;width:100%">BTC · 24 / 7 · always on</div>`;
   const tw = S.markets.find((m) => m.market === 'TW'), us = S.markets.find((m) => m.market === 'US');
-  html += `<div class="note a" style="left:${pctX(9)}">台股 ${(tw ? tw.isOpen : clockOpen(tp, 9, 13.5)) ? '交易中' : '休市'}${tw ? `<br>加權 ${pct(tw.pct)}` : ''}</div>`;
-  html += `<div class="note b" style="left:${pctX(Math.min(21, usOpen % 24))}">美股 ${(us ? us.isOpen : clockOpen(ny, 9.5, 16)) ? '交易中' : '休市'}${us ? `<br>SPY ${pct(us.pct)}` : ''}</div>`;
+  html += `<div class="note a" style="left:${pctX(9)}">${tr('台股', 'Taiwan')} ${(tw ? tw.isOpen : clockOpen(tp, 9, 13.5)) ? tr('交易中', 'open') : tr('休市', 'closed')}${tw ? `<br>${tr('加權', 'TAIEX')} ${pct(tw.pct)}` : ''}</div>`;
+  html += `<div class="note b" style="left:${pctX(Math.min(21, usOpen % 24))}">${tr('美股', 'US')} ${(us ? us.isOpen : clockOpen(ny, 9.5, 16)) ? tr('交易中', 'open') : tr('休市', 'closed')}${us ? `<br>SPY ${pct(us.pct)}` : ''}</div>`;
   html += `<div class="now" style="left:${pctX(nowH)}"><b>${tp.hh}:${tp.mm}</b></div>`;
   el.innerHTML = html;
 }

@@ -154,7 +154,7 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
 <body>
 <div class="grid">
   <div class="c price">
-    <div class="top"><span class="pill"><i></i>BTC / USDT · LIVE</span><span style="margin-left:auto"></span><span class="pill mini">H <span id="h">—</span></span><span class="pill mini">L <span id="l">—</span></span><span class="pill mini" id="clk">—</span><div class="arrow" id="dirArrow" title="24H 方向">↗</div></div>
+    <div class="top"><span class="pill"><i></i>BTC / USDT · LIVE</span><span style="margin-left:auto"></span><span class="pill mini">H <span id="h">—</span></span><span class="pill mini">L <span id="l">—</span></span><span class="pill mini" id="clk">—</span><div class="arrow" id="dirArrow" title="24H 方向" data-en-title="24H direction">↗</div></div>
     <div class="v" id="price">—</div>
   </div>
   <div class="c chg"><canvas id="cchg"></canvas><span class="lab">Last 60 min · dot = high</span><span class="pill">24H</span>
@@ -170,6 +170,7 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
   <div class="c stocks" id="stocks"><div class="hd"><h3 id="wlTitle">Watchlist</h3><span class="k" id="wlSub">TWSE · NYSE · NASDAQ</span></div></div>
 </div>
 
+<script src="i18n.js?v=__VERSION__"></script>
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
 <script src="fx.js?v=__VERSION__"></script>
@@ -218,12 +219,12 @@ const lineHit = (geo, tf, label) => (x) => {
   const i = Math.max(0, Math.min(g.d.length - 1, Math.round((x - g.X(0)) / (g.X(1) - g.X(0))))), b = g.d[i];
   return { x: g.X(i), y: g.Y(b.c), title: `${FX.time(b.t, tf)} · ${label}`, rows: FX.rows(b) };
 };
-FX.inspect('#c1m', lineHit(() => geoMain, '1m', '1 分'));
-FX.inspect('#cchg', lineHit(() => geoChg, '1m', '1 分'));
+FX.inspect('#c1m', lineHit(() => geoMain, '1m', tr('1 分', '1m')));
+FX.inspect('#cchg', lineHit(() => geoChg, '1m', tr('1 分', '1m')));
 FX.inspect('#cturn', (x) => {
   const g = geoTurn; if (!g || g.d.length < 2) return null;
   const i = Math.max(0, Math.min(g.d.length - 1, Math.round((x - g.X(0)) / (g.X(1) - g.X(0))))), b = g.d[i];
-  return { x: g.X(i), y: g.Y(b.v), title: FX.time(b.t, '4h') + ' · 4H', rows: [['成交量', fmt(b.v, 0) + ' BTC'], ['約', '$' + Feed.fmtBig(b.v * b.c)]] };
+  return { x: g.X(i), y: g.Y(b.v), title: FX.time(b.t, '4h') + ' · 4H', rows: [[tr('成交量', 'Volume'), fmt(b.v, 0) + ' BTC'], [tr('約', '≈'), '$' + Feed.fmtBig(b.v * b.c)]] };
 });
 FX.inspect('#c4h', (x) => {
   const g = geo4h; if (!g) return null;
@@ -340,7 +341,7 @@ function bars4h() {
 function countdown() {
   const tn = Feed.tzNow('Asia/Taipei'), ny = Feed.tzNow('America/New_York'), u = Feed.tzNow('UTC');
   $('hh').textContent = tn.hh; $('mm').textContent = tn.mm; $('ss').textContent = tn.ss;
-  $('cdDay').textContent = tn.date; $('cdO').textContent = `紐約 ${ny.hh}:${ny.mm} · UTC ${u.hh}:${u.mm}`;
+  $('cdDay').textContent = tn.date; $('cdO').textContent = `${tr('紐約', 'NYC')} ${ny.hh}:${ny.mm} · UTC ${u.hh}:${u.mm}`;
   $('clk').textContent = 'TPE ' + tn.str;
 }
 setInterval(countdown, 1000); countdown();

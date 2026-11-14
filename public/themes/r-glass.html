@@ -181,32 +181,33 @@ body { background: #1a1030; color: var(--label); overflow: hidden; font-family: 
     <div class="hd"><span class="dots"><i></i><i></i><i></i></span></div>
     <h2 id="sideT">市場</h2>
     <div class="list" id="list"></div>
-    <div class="ft"><span id="xtra"></span><br>桌布色溫＝24H 漲跌：越暖漲越多、越冷跌越多</div>
+    <div class="ft"><span id="xtra"></span><br><span data-en="Wallpaper warmth = 24H change: warmer is up more, cooler is down more">桌布色溫＝24H 漲跌：越暖漲越多、越冷跌越多</span></div>
   </aside>
   <section class="content">
     <header class="top">
-      <div class="t"><h1>Bitcoin</h1><span>BTC-USDT · Binance 現貨</span></div>
+      <div class="t"><h1>Bitcoin</h1><span data-en="BTC-USDT · Binance spot">BTC-USDT · Binance 現貨</span></div>
       <div class="seg" id="seg"><i class="thumb"></i><button data-r="1H">1H</button><button data-r="4H">4H</button><button data-r="1D">1D</button><button data-r="1W">1W</button><button data-r="1M">1M</button></div>
-      <div class="clock"><b id="tpe">—</b><span>台北 · 紐約 <span id="nyc">—</span></span></div>
+      <div class="clock"><b id="tpe">—</b><span><span data-en="Taipei · New York">台北 · 紐約</span> <span id="nyc">—</span></span></div>
     </header>
     <div class="hero"><div class="price" id="price">—</div><div class="chg" id="chg">—</div></div>
     <div class="bento">
       <div class="tile chart" id="chartBox"><canvas id="cv"></canvas></div>
       <div class="right">
-        <div class="tile ring"><span class="lab">24H 區間位置</span><canvas id="rg"></canvas>
-          <div class="mid"><b id="pos">—<small>%</small></b><span>距最低 <span id="fromL">—</span></span></div>
-          <div class="ends"><span class="chip">低 <b id="rl">—</b></span><span class="chip">高 <b id="rh">—</b></span></div></div>
-        <div class="tile bars" id="barsBox"><span class="lab">4H 成交量<em>近 2 天</em></span><canvas id="bv"></canvas></div>
+        <div class="tile ring"><span class="lab" data-en="24H range position">24H 區間位置</span><canvas id="rg"></canvas>
+          <div class="mid"><b id="pos">—<small>%</small></b><span><span data-en="above low">距最低</span> <span id="fromL">—</span></span></div>
+          <div class="ends"><span class="chip"><span data-en="L">低</span> <b id="rl">—</b></span><span class="chip"><span data-en="H">高</span> <b id="rh">—</b></span></div></div>
+        <div class="tile bars" id="barsBox"><span class="lab" data-en="4H volume<em>last 2 days</em>">4H 成交量<em>近 2 天</em></span><canvas id="bv"></canvas></div>
       </div>
       <div class="stats">
-        <div class="tile stat"><span>24H 成交額</span><b id="q">—</b></div>
-        <div class="tile stat"><span>24H 振幅</span><b id="amp">—</b></div>
-        <div class="tile stat"><span>24H 開盤</span><b id="o">—</b></div>
+        <div class="tile stat"><span data-en="24H turnover">24H 成交額</span><b id="q">—</b></div>
+        <div class="tile stat"><span data-en="24H range">24H 振幅</span><b id="amp">—</b></div>
+        <div class="tile stat"><span data-en="24H open">24H 開盤</span><b id="o">—</b></div>
       </div>
     </div>
   </section>
 </div>
 
+<script src="i18n.js?v=__VERSION__"></script>
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
 <script src="fx.js?v=__VERSION__"></script>
@@ -251,7 +252,7 @@ function wall(t) {
 }
 
 // ---------------------------------------------------------------- 範圍切換
-const RANGES = { '1H': ['1m', 60, '過去 1 小時'], '4H': ['1m', 240, '過去 4 小時'], '1D': ['5m', 288, '過去 24 小時'], '1W': ['4h', 42, '過去 7 天'], '1M': ['4h', 180, '過去 30 天'] };
+const RANGES = { '1H': ['1m', 60, tr('過去 1 小時', 'Past hour')], '4H': ['1m', 240, tr('過去 4 小時', 'Past 4 hours')], '1D': ['5m', 288, tr('過去 24 小時', 'Past 24 hours')], '1W': ['4h', 42, tr('過去 7 天', 'Past 7 days')], '1M': ['4h', 180, tr('過去 30 天', 'Past 30 days')] };
 const store = { get(k, d) { try { return localStorage.getItem('glass.' + k) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('glass.' + k, v); } catch { /* ignore */ } } };
 let RANGE = RANGES[store.get('range', '1D')] ? store.get('range', '1D') : '1D';
 function paintSeg(animate) {
@@ -367,7 +368,7 @@ FX.inspect('#barsBox', (x) => {
   const g = barGeo; if (!g) return null;
   const i = Math.floor((x - g.L) / g.bw); if (i < 0 || i >= g.d.length) return null;
   const b = g.d[i];
-  return { x: g.L + i * g.bw + g.bw / 2, y: g.B - (g.B - g.T) * (b.v / g.mx), vline: false, title: FX.time(b.t, '4h') + ' · 4H', rows: [['成交量', fmt(b.v, 0) + ' BTC'], ['約', '$' + fmtBig(b.v * b.c)], ['漲跌', FX.pct((b.c / b.o - 1) * 100), b.c >= b.o ? 'up' : 'down']] };
+  return { x: g.L + i * g.bw + g.bw / 2, y: g.B - (g.B - g.T) * (b.v / g.mx), vline: false, title: FX.time(b.t, '4h') + ' · 4H', rows: [[tr('成交量', 'Volume'), fmt(b.v, 0) + ' BTC'], [tr('約', '≈'), '$' + fmtBig(b.v * b.c)], [tr('漲跌', 'Change'), FX.pct((b.c / b.o - 1) * 100), b.c >= b.o ? 'up' : 'down']] };
 });
 
 // ---------------------------------------------------------------- 標題價格（拖動時換成該點）
@@ -378,14 +379,14 @@ function header() {
   if (scrub != null && g && g.d[scrub]) {
     const b = g.d[scrub], diff = b.c - g.base, [tf] = RANGES[RANGE];
     setPrice(fmt(b.c));
-    $('chg').innerHTML = `<b class="${cls(diff)}">${sign(diff)}${fmt(Math.abs(diff))}（${pct(diff / g.base * 100)}）</b><span>${FX.time(b.t, tf === '1m' ? '1m' : '4h')}</span>`;
+    $('chg').innerHTML = `<b class="${cls(diff)}">${sign(diff)}${fmt(Math.abs(diff))}${tr('（', ' (')}${pct(diff / g.base * 100)}${tr('）', ')')}</b><span>${FX.time(b.t, tf === '1m' ? '1m' : '4h')}</span>`;
     return;
   }
   if (S.price == null) return;
   setPrice(fmt(S.price));
   const d = rangeBars(); if (!d.length) return;
   const base = d[0].o, diff = S.price - base;
-  $('chg').innerHTML = `<b class="${cls(diff)}">${sign(diff)}${fmt(Math.abs(diff))}（${pct(diff / base * 100)}）</b><span>${RANGES[RANGE][2]}</span>`;
+  $('chg').innerHTML = `<b class="${cls(diff)}">${sign(diff)}${fmt(Math.abs(diff))}${tr('（', ' (')}${pct(diff / base * 100)}${tr('）', ')')}</b><span>${RANGES[RANGE][2]}</span>`;
 }
 
 Feed.on('ticker', () => {
@@ -400,8 +401,9 @@ Feed.on('ticker', () => {
 // ---------------------------------------------------------------- 側邊清單
 const rows = {};
 const icoCls = (s) => (s.id === 'BTC' ? 'btc' : s.market === 'TW' ? 'tw' : s.market === 'US' ? 'us' : 'cr');
-const icoTxt = (s) => (s.id === 'BTC' ? '₿' : s.id === 'TAIEX' ? '加權' : s.icon || String(s.code).replace(/\s.*/, '').slice(0, 4));
-Feed.on('mode', () => { if (Feed.mode === 'crypto') $('sideT').textContent = '比特幣與指標'; else $('sideT').textContent = '比特幣 · 台股 · 美股'; });
+const icoTxt = (s) => (s.id === 'BTC' ? '₿' : s.id === 'TAIEX' ? tr('加權', 'TW') : s.icon || String(s.code).replace(/\s.*/, '').slice(0, 4));
+$('sideT').textContent = tr('市場', 'Markets');
+Feed.on('mode', () => { if (Feed.mode === 'crypto') $('sideT').textContent = tr('比特幣與指標', 'Bitcoin & signals'); else $('sideT').textContent = tr('比特幣 · 台股 · 美股', 'Bitcoin · Taiwan · US'); });
 function renderList() {
   const items = [{ id: 'BTC', code: 'BTC', name: 'Bitcoin', price: S.price, chg: S.ticker ? S.ticker.P : 0, pct: S.ticker ? S.ticker.P : 0 }, ...S.markets];
   items.forEach((s) => {

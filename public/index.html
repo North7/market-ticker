@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Ticker">
 <meta name="theme-color" content="#000000">
 <title>Market Ticker</title>
+<script src="themes/i18n.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400&family=Noto+Sans+TC:wght@500&display=swap" rel="stylesheet">
@@ -56,15 +57,19 @@ body.idle, body.idle * { cursor: none !important; }
 @media (hover: none) { .dock button i, .help { display: none; } }   /* 觸控裝置沒有鍵盤，不顯示按鍵提示 */
 @media (max-width: 600px) { .dock { bottom: calc(12px + env(safe-area-inset-bottom)); gap: 2px; padding: 5px; } .dock button { padding: 8px 10px; font-size: 12.5px; } .dock .sep { margin: 0 2px; } }
 .nofs .fsbtn, .nofs .dock .fs { display: none; }
+.dock .lang { display: inline-flex; margin-left: 4px; padding: 2px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }   /* 語言切換：放在選單裡，低調 */
+.dock .lang button { padding: 4px 9px; font-family: 'Geist Mono', 'Noto Sans TC', monospace; font-size: 11px; letter-spacing: .04em; color: rgba(255,255,255,.45); }
+.dock .lang button.on { color: #fff; background: rgba(255,255,255,.14); }
+@media (max-width: 600px) { .dock .lang button { padding: 4px 7px; } }
 .dock .ver { padding: 0 10px 0 6px; font-family: 'Geist Mono', monospace; font-size: 10.5px; color: rgba(255,255,255,.38); white-space: nowrap; }   /* 版本只出現在底部選單裡，不擋畫面 */
 </style>
 </head>
 <body>
 <div id="stage"></div>
 <nav class="dock" id="dock"></nav>
-<button class="fsbtn" id="fsbtn" title="全螢幕（F）"><svg viewBox="0 0 24 24"><path id="fsIcon" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+<button class="fsbtn" id="fsbtn"><svg viewBox="0 0 24 24"><path id="fsIcon" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 <div class="toast" id="toast"></div>
-<div class="help" id="help">1–7 / ← → 切換主題<br>A 自動輪播 · F 全螢幕</div>
+<div class="help" id="help"></div>
 
 <script>
 const THEMES = [
@@ -93,30 +98,45 @@ let auto = store.get('auto', false), autoTimer = null;
 // ---- 底部選單
 THEMES.forEach((t, i) => {
   const b = document.createElement('button');
-  b.innerHTML = `<i>${(i + 1) % 10}</i>${t.name}<small>${t.zh}</small>`;
+  b.className = 'th';
   b.onclick = () => go(i);
   dock.appendChild(b);
 });
 dock.insertAdjacentHTML('beforeend', '<span class="sep"></span>');
 const autoBtn = document.createElement('button');
 autoBtn.className = 'auto';
-autoBtn.innerHTML = '<i>A</i>輪播';
 autoBtn.onclick = () => setAuto(!auto);
 dock.appendChild(autoBtn);
 const fsBtn = document.createElement('button');
 fsBtn.className = 'fs';
-fsBtn.innerHTML = '<i>F</i><span id="fsTxt">全螢幕</span>';
 fsBtn.onclick = toggleFull;
 dock.appendChild(fsBtn);
-dock.insertAdjacentHTML('beforeend', '<span class="ver" id="ver"></span>');
+dock.insertAdjacentHTML('beforeend', '<span class="seg lang" id="lang" role="group" aria-label="語言 Language"><button data-l="zh" lang="zh-Hant">中</button><button data-l="en" lang="en">EN</button></span><span class="ver" id="ver"></span>');
+$('lang').querySelectorAll('button').forEach((b) => (b.onclick = () => setLang(b.dataset.l)));
 $('fsbtn').onclick = toggleFull;
 const ICON_IN = 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5', ICON_OUT = 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5';
 const onFs = () => {
   const on = !!fsEl();
-  $('fsTxt').textContent = on ? '退出' : '全螢幕';
+  $('fsTxt').textContent = on ? tr('退出', 'Exit') : tr('全螢幕', 'Full screen');
   $('fsIcon').setAttribute('d', on ? ICON_OUT : ICON_IN);
-  $('fsbtn').title = on ? '退出全螢幕（F）' : '全螢幕（F）';
+  $('fsbtn').title = on ? tr('退出全螢幕（F）', 'Exit full screen (F)') : tr('全螢幕（F）', 'Full screen (F)');
 };
+// 介面文字：中文版主題名後面帶中文小字，英文版只留名字
+function paintText() {
+  dock.querySelectorAll('button.th').forEach((b, i) => { const t = THEMES[i]; b.innerHTML = `<i>${(i + 1) % 10}</i>${t.name}${I18N.en ? '' : `<small>${t.zh}</small>`}`; });
+  autoBtn.innerHTML = `<i>A</i>${tr('輪播', 'Auto')}`;
+  fsBtn.innerHTML = '<i>F</i><span id="fsTxt"></span>';
+  onFs();
+  $('help').innerHTML = tr('1–7 / ← → 切換主題<br>A 自動輪播 · F 全螢幕 · L 語言', '1–7 / ← → switch theme<br>A auto-rotate · F full screen · L language');
+  $('lang').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.l === I18N.lang));
+}
+// 切換語言：記住選擇，主題重新載入（主題的字是載入時決定的）
+function setLang(l) {
+  if (l === I18N.lang) return;
+  I18N.set(l); paintText();
+  const u = new URL(location.href); if (u.searchParams.has('lang')) { u.searchParams.delete('lang'); history.replaceState(null, '', u); }
+  go(idx, true); toast(l === 'en' ? 'English' : '中文');
+}
 document.addEventListener('fullscreenchange', onFs); document.addEventListener('webkitfullscreenchange', onFs);
 
 function paintDock() {
@@ -210,6 +230,7 @@ function onKey(e) {
   else if (k === 'ArrowLeft') go(idx - 1);
   else if (k === 'a' || k === 'A') setAuto(!auto);
   else if (k === 'f' || k === 'F') toggleFull();
+  else if (k === 'l' || k === 'L') setLang(I18N.en ? 'zh' : 'en');
   else return;
   wake();
 }
@@ -246,7 +267,7 @@ setInterval(() => { const r = () => Math.round((Math.random() - 0.5) * 6); stage
 // ---- 版本顯示與自動更新：線上版每 5 分鐘、或切回分頁時檢查，有新版就帶新版本號重新載入（繞過快取）
 $('ver').textContent = DEPLOYED ? `${VERSION} · ${BUILT}` : 'local';
 if (DEPLOYED) {
-  if (store.get('ver', null) && store.get('ver', null) !== VERSION) setTimeout(() => toast(`已更新 ${VERSION}`), 600);
+  if (store.get('ver', null) && store.get('ver', null) !== VERSION) setTimeout(() => toast(tr(`已更新 ${VERSION}`, `Updated ${VERSION}`)), 600);
   store.set('ver', VERSION);
   const checkVersion = async () => {
     try {
@@ -259,6 +280,7 @@ if (DEPLOYED) {
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkVersion(); });
 }
 
+paintText();
 go(idx, true);
 document.body.classList.add('idle');
 </script>

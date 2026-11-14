@@ -86,6 +86,7 @@ body { background: var(--bg); color: var(--fg); overflow: hidden; font-family: '
   <div class="foot"><span>1 column = 1 minute · ◎ up body · ▢ down body · ✕ large drop · ✚ wick · ■ volume spike (top 10%, height = volume) · 4H bars = return per 4 hours</span><b>MARKET<br>INTERFACE</b></div>
 </div>
 
+<script src="i18n.js?v=__VERSION__"></script>
 <script src="feed.js?v=__VERSION__"></script>
 <script src="draw.js?v=__VERSION__"></script>
 <script src="fx.js?v=__VERSION__"></script>
@@ -121,7 +122,7 @@ FX.inspect('#cv', (x) => {
   const g = glyphGeo; if (!g) return null;
   const c = Math.floor(x / g.G); if (c < 0 || c >= g.d.length) return null;
   const b = g.d[c];
-  return { x: c * g.G + g.G / 2, y: g.R(b.c) * g.G + g.G / 2, title: FX.time(b.t, '1m') + ' · 1 分', rows: FX.rows(b) };
+  return { x: c * g.G + g.G / 2, y: g.R(b.c) * g.G + g.G / 2, title: FX.time(b.t, '1m') + tr(' · 1 分', ' · 1m'), rows: FX.rows(b) };
 });
 FX.inspect('#c4h', (x) => {
   const g = geo4h; if (!g) return null;
